@@ -1,14 +1,15 @@
 <template>
 	<view class="content">
-		<!-- <image class="logo" src="/static/zongjie.webp"></image> -->
-		<view class="text-area">
-			<text class="title">{{msg}}</text>
-		</view>
 		<view>
 			<button open-type="chooseAvatar" @chooseavatar="onChooseAvatar" class="avatar-btn">
 				<image v-if="avatarUrl" :src="avatarUrl" class="avatar"></image>
-				<text v-else class="login-text">登录</text>
+				<text v-else class="login-text">获取用户信息</text>
 			</button>
+		</view>
+		<view>
+			<button type="warn" @click="handleLogin">微信登录</button>
+			code: {{'' + code}}
+			openid: {{'' + openid}}
 		</view>
 	</view>
 </template>
@@ -21,57 +22,30 @@
 	export default {
 		data() {
 			return {
-				msg: '杰米多多',
-				avatarUrl: ''
+				avatarUrl: '',
+				code: '',
+				openid: ''
 			}
-		},
-		onLoad() {
-
 		},
 		methods: {
 			onChooseAvatar(e) {
-					this.avatarUrl = e.detail.avatarUrl
-					this.handleLogin()
-				},
-				// 微信登录：先拿 code，再调后端换取 openid
-				handleLogin() {
-					uni.login({
-						provider: 'weixin',
-						success: async (res) => {
-							if (!res.code) {
-								uni.showToast({
-									title: '获取 code 失败',
-									icon: 'none'
-								})
-								return
-							}
-							try {
-								// 后端返回结构 { code, data: { openid, session_key } }
-								const data = await wxLogin(res.code)
-								console.log('wxLogin 返回：', data)
-								if (data.code === 200 && data.data) {
-									// openid 是后端识别用户的唯一标识，前端不保存、不展示，后续用 token 鉴权
-									console.log('登录成功，openid：', data.data.openid)
-									uni.showToast({
-										title: '登录成功',
-										icon: 'success'
-									})
-								} else {
-									uni.showToast({
-										title: data.msg || '登录失败',
-										icon: 'none'
-									})
-								}
-							} catch (e) {
-								console.error('登录请求失败：', e)
-								uni.showToast({
-									title: '网络错误',
-									icon: 'none'
-								})
-							}
-						}
-					})
-				}
+				this.avatarUrl = e.detail.avatarUrl
+			},
+			handleLogin() {
+				uni.login({
+					success: (res) => {
+						this.code = res.code
+						console.log('用户的code为：' + res.code)
+						// 拿 code 调后端换 openid
+						wxLogin(res.code)
+						.then(res => {
+							this.openid = res.data.openid
+							console.log('用户的openid为 ' + res.data.openid)
+						})
+
+					}
+				})
+			}
 		}
 	}
 </script>
@@ -119,7 +93,7 @@
 	}
 
 	.login-text {
-		padding: 20px 40px;
+		padding: 40rpx 80rpx;
 		background: limegreen;
 		color: #fff;
 	}
