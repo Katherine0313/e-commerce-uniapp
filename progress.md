@@ -1,5 +1,100 @@
 # 进度日志
 
+## 会话 5：2026-10-01（顶部导航栏机型适配）
+
+### 当前状态
+- **阶段：** 9 - 顶部导航栏机型适配（已完成）
+- **开始时间：** 2026-10-01
+
+### 背景
+
+用户反馈自定义顶部导航栏 `TopBar.vue` 切换机型（尤其华为）时出现两个问题：搜索框贴边、搜索框被上下裁切。先澄清 `safeAreaInsets` 与本组件的关系，再定位到胶囊按钮反推逻辑在部分机型的数据异常。
+
+### 已执行操作
+
+1. 澄清 `safeAreaInsets`：顶部安全区已由 `statusBarHeight` 覆盖，底部由 `TabBar.vue` 的
+   `env(safe-area-inset-bottom)` 覆盖，本项目无需再引入。
+2. 定位「搜索框贴边」：`rightSafeArea = windowWidth - menuRect.left` 使搜索框右边缘精确等于
+   胶囊左边缘（间距 0），华为胶囊偏右时贴边更明显。
+3. 修复贴边：`rightSafeArea = sysInfo.windowWidth - menuRect.left + 8`（补 8px 间距）。
+4. 定位「搜索框上下裁切」：`navContentHeight = (menuRect.top - statusBarHeight) * 2 + menuRect.height`
+   反推依赖 `menuRect.top`，华为部分机型返回偏小，内容区高度 < 搜索框（60rpx=30px），上下被裁切。
+5. 修复裁切：`navContentHeight = Math.max(44, ...)`，设 44px 下限（与 data 默认值一致）。
+6. 更新三个规划文件。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `pages/index/component/TopBar.vue` | `rightSafeArea` 加 8px 间距；`navContentHeight` 加 `Math.max(44, ...)` 下限；补注释 |
+| `task_plan.md` / `findings.md` / `progress.md` | 按本轮改动更新 |
+
+### 测试结果
+
+| 测试 | 预期 | 实际 | 状态 |
+|------|------|------|------|
+| 华为机型搜索框与胶囊有间距 | 不贴边 | 待验证 | 待用户验证 |
+| 华为机型搜索框完整显示 | 不被裁切 | 待验证 | 待用户验证 |
+
+### 遗留事项
+
+- 需在微信开发者工具切华为机型实测确认。
+- 「四周留白」问题用户暂缓，未定位。
+
+---
+
+## 会话 4：2026-09-30（前端对接微服务）
+
+### 当前状态
+- **阶段：** 8 - 前端对接微服务（已完成）
+- **开始时间：** 2026-09-30
+
+### 背景
+
+用户告知「后端已启用微服务，不同模块有不同端口」，要求前端对接，避免前端项目无法启动。
+
+### 已执行操作
+
+1. 探索后端 `e-commerce-boot`：已拆成 Maven 多模块 8 服务（gateway + 7 业务），端口规划
+   gateway 8080 / auth 9001 / shop 9002 / product 9003 / order 9004 / aftersale 9005 / user 9006 / file 9007；
+   其中仅 user-service 承载小程序登录/用户资料业务，其余为占位空壳。
+2. 确认后端 `task_plan.md` 的前端对接约定：接口路径 `/api/**` 不变，前端 baseURL 指向网关 8080。
+3. 核对前端 `utils/server-api.js`：`BASE_URL = 'http://127.0.0.1:8080'` 已指向网关，
+   四个接口（`/api/wxlogin`、`/api/user/profile`、`/api/user/avatar`、`/api/user/name`）路径与
+   user-service 的 `WxLoginController` / `UserController` 完全一致 → **前端无需改端口，已对接好**。
+4. **`utils/server-api.js` 补注释**：在 `BASE_URL` 上方固化「统一走网关、各微服务端口对前端透明」
+   的约定与端口规划表，方便后续对接商品/订单等模块时照此扩展（无逻辑改动）。
+5. 验证 gateway 路由前缀：解压本地 maven 仓库 `spring-cloud-gateway-server-webflux-5.0.3.jar`，
+   其 `spring-configuration-metadata.json` 含 `spring.cloud.gateway.server.webflux.routes`，
+   → 后端 `gateway/application.yml` 的 `server.webflux.routes` 配置合法，路由能生效。
+6. 顺带确认 `utils/` 已纳入 git（`git ls-files utils/` 含 `server-api.js`、`token.js`），
+   早先记录的「utils 未跟踪」遗留已消除。
+7. 更新 `task_plan.md` / `findings.md` / `progress.md`。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `utils/server-api.js` | `BASE_URL` 上方补注释（端口规划表 + 统一走网关约定），无逻辑改动 |
+| `task_plan.md` / `findings.md` / `progress.md` | 按本轮改动更新 |
+
+### 测试结果
+
+| 测试 | 预期 | 实际 | 状态 |
+|------|------|------|------|
+| 前端 `BASE_URL` vs 网关端口 | 8080 | `http://127.0.0.1:8080` 匹配 | 通过 |
+| 前端四接口路径 vs user-service Controller | 一致 | 全部匹配 | 通过 |
+| gateway 路由前缀是否合法 | `spring.cloud.gateway.server.webflux.routes` | gateway 5.0.3 元数据含该属性 | 通过 |
+| 端到端（前端→网关→user-service） | 可跑通 | **未执行**（依赖后端 Nacos + user-service + gateway 启动） | 待用户验证 |
+
+### 遗留事项
+
+- **端到端未实测**：后端需先起 Nacos（`docker-compose.yml`）+ user-service（依赖 MySQL）+ gateway，
+  前端才能从 8080 走通登录链路。前端侧无需再改。
+- `index.vue` 剩余问题与 `avatar-upload.md` 接口表未加 `/api/user/name` 等旧遗留不变。
+
+---
+
 ## 会话 3：2026-09-30（昵称前端接入）
 
 ### 当前状态

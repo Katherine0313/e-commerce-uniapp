@@ -10,12 +10,12 @@
 
 ## 下一步
 
-把 `utils/` 目录纳入 git 跟踪（`utils/server-api.js`、`utils/token.js` 目前是未跟踪状态，
-换机器 clone 后 `pages/index/index.vue` 会因找不到模块而编译失败）。等待用户确认。
+顶部导航栏适配已完成，待微信开发者工具切华为机型实测确认；端到端跑通仍依赖后端把
+Nacos + user-service + gateway 三个服务启动（前端无需再改代码）。
 
 ## 当前阶段
 
-阶段 7：昵称前端接入
+阶段 9：顶部导航栏机型适配（已完成）
 
 ## 各阶段
 
@@ -52,8 +52,8 @@
 
 ### 阶段 6：收尾
 - [x] 生成 `task_plan.md` / `findings.md` / `progress.md`
-- [ ] 将 `utils/` 纳入 git 跟踪（待用户确认）
-- **状态：** in_progress
+- [x] 将 `utils/` 纳入 git 跟踪（已确认：`git ls-files utils/` 已含两个文件）
+- **状态：** complete
 
 ### 阶段 7：昵称前端接入
 - [x] 探查后端本次改动，确认新接口 `POST /api/user/name`
@@ -63,13 +63,29 @@
 - [x] 更新三个规划文件
 - **状态：** complete
 
+### 阶段 8：前端对接微服务
+- [x] 探索后端微服务拆分：8 服务（gateway 8080 + 7 业务 9001~9007），仅 user-service 承载业务
+- [x] 确认前端对接方式：统一走网关 8080，路径 `/api/**` 不变，不直连各服务端口
+- [x] 确认 `utils/server-api.js` 的 `BASE_URL` 已指向网关，四个接口路径与 user-service 一致
+- [x] 在 `BASE_URL` 上方补注释，固化「统一走网关」约定与端口规划表
+- [x] 验证 gateway 路由前缀 `spring.cloud.gateway.server.webflux.routes` 合法（gateway 5.0.3 配置元数据确认）
+- [x] 更新三个规划文件
+- **状态：** complete
+
+### 阶段 9：顶部导航栏机型适配
+- [x] 澄清 `safeAreaInsets` 与本组件关系（顶部=statusBarHeight、底部=env()，无需引入）
+- [x] 修复搜索框贴边：`rightSafeArea = windowWidth - menuRect.left + 8`
+- [x] 修复搜索框上下裁切：`navContentHeight = Math.max(44, ...)`
+- [x] 更新三个规划文件
+- **状态：** complete
+
 ## 关键问题
 
 1. **昵称要不要做？** ~~后端无更新昵称的接口，前端也没有 `nickname` 输入入口。~~
    **已解决**：后端已补 `POST /api/user/name`，前端已接 `type="nickname"` 输入框。
 2. **已登录用户怎么换头像？** 目前 `chooseAvatar` 按钮只在未登录分支渲染，登录后没有入口。
    （昵称已不存在此问题：两个分支都放了输入框）
-3. **`utils/` 未纳入 git**，是否提交？（这是"跑不通"级别的问题，唯一建议处理项）
+3. ~~**`utils/` 未纳入 git**，是否提交？~~ **已解决**：`git ls-files utils/` 确认两个文件已跟踪。
 
 ## 已做决策
 
@@ -83,6 +99,7 @@
 | 昵称输入框在未登录/已登录两个分支各放一个 | 与既有的「登录前选头像、登录后上传」模式对称；只放未登录分支的话，登录后想改昵称只能先退出 |
 | 未登录时填的昵称只暂存在 `nickname`，登录后再提交 | 提交接口要带 token，登录前调用必然 401 |
 | 昵称与后端一致时不重复提交 | 避免每次 `onLoad` 恢复登录态都白跑一次写库 |
+| 前端统一走网关 8080，不直连各微服务端口 | 后端已定「路径 `/api/**` 不变，前端 baseURL 指向网关」；各模块端口由网关收敛，前端无需感知 |
 
 ## 遇到的错误
 

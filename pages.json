@@ -1,14 +1,68 @@
 {
-	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+	"easycom": {
+			"autoscan": true,
+			"custom": {
+				// uni-ui 规则如下配置
+				"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+			}
+		},
+	"pages":[
 		{
-			"path": "pages/index/index",
+			"path":"pages/index/index",
 			"style": {
-				"navigationBarTitleText": "杰米多多"
+				// 关掉原生导航栏，改用全局组件 CustomNavbar
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/category/category",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/cart/cart",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/my",
+			"style": {
+				"navigationStyle": "custom"
 			}
 		}
 	],
+	"tabBar": {
+		// 关掉原生 tabBar，改由全局组件 CustomTabBar 渲染（字体图标，矢量不糊）
+		// list 仅用于让 uni.switchTab 识别哪些是 tab 页，图标/配色都在组件里控制，这里不再配置
+		"custom": true,
+		"color": "#333333",
+		"selectedColor": "#FF6700",
+		"backgroundColor": "#ffffff",
+		"borderStyle": "white",
+		"list":[
+			{
+				"pagePath": "pages/index/index",
+				"text": "首页"
+			},
+			{
+				"pagePath": "pages/category/category",
+				"text": "分类"
+			},
+			{
+				"pagePath": "pages/cart/cart",
+				"text": "购物车"
+			},
+			{
+				"pagePath": "pages/my/my",
+				"text": "我的"
+			}
+		]
+	},
 	"globalStyle": {
-		"navigationBarTextStyle": "black",
+		// 导航栏整体是品牌橙，状态栏文字用白色才有对比
+		"navigationBarTextStyle": "white",
 		"navigationBarTitleText": "杰米多多",
 		"navigationBarBackgroundColor": "#F8F8F8",
 		"backgroundColor": "#F8F8F8"
