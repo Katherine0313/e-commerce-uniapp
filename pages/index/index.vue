@@ -8,7 +8,8 @@
 
 		<!-- 前台分类面板：手机 / 笔记本 / 平板 / 相机 / 手表 / 耳机 -->
 		<CategoryPanel @select="handleCategorySelect" />
-
+		<!-- 热门推荐 -->
+		<HotPanel />
 		<!-- 已登录：展示用户信息 -->
 		<view v-if="isLogin" class="user-box">
 			<image v-if="userInfo.avatar" :src="userInfo.avatar" class="avatar"></image>
@@ -39,10 +40,13 @@
 		uploadAvatar
 	} from '../../utils/server-api.js'
 	// 前台分类面板：首页金刚区
-	import CategoryPanel from '../../components/CategoryPanel.vue'
+	import CategoryPanel from './component/CategoryPanel.vue'
+	// 热门推荐
+	import HotPanel from './component/HotPanel.vue'
 	export default {
 		components: {
-			CategoryPanel
+			CategoryPanel,
+			HotPanel
 		},
 		data() {
 			return {
@@ -77,7 +81,10 @@
 						this.doLogin(res.code)
 					}),
 					fail: () => {
-						uni.showToast({ title: '登录失败，请重试', icon: 'none' })
+						uni.showToast({
+							title: '登录失败，请重试',
+							icon: 'none'
+						})
 					}
 				})
 			},
@@ -122,7 +129,10 @@
 					this.store.setAvatar(url)
 					this.avatarUrl = ''
 				}).catch((err) => {
-					uni.showToast({ title: (err && err.message) || '头像上传失败', icon: 'none' })
+					uni.showToast({
+						title: (err && err.message) || '头像上传失败',
+						icon: 'none'
+					})
 				})
 			},
 			// 退出登录：清掉本地登录态，回到未登录状态

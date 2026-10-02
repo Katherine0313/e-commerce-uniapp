@@ -72,7 +72,7 @@
 				const menuRect = uni.getMenuButtonBoundingClientRect()
 				if (menuRect && menuRect.height) {
 					// 胶囊上下留白相等，用它反推导航内容区高度；华为部分机型反推偏小，44px 下限防搜索框被裁切
-					this.navContentHeight = Math.max(44,(menuRect.top - this.statusBarHeight) * 2 + menuRect.height)
+					this.navContentHeight = Math.max(50,(menuRect.top - this.statusBarHeight) * 2 + menuRect.height)
 					this.rightSafeArea = sysInfo.windowWidth - menuRect.left + 8
 				}
 				// #endif
