@@ -150,6 +150,33 @@
   + 下限兜底（`Math.max(44, ...)` 抗异常偏小）。
 - `safeAreaInsets` 未引入：顶部=statusBarHeight、底部=env() 已覆盖，左右竖屏为 0。
 
+### 轮播图组件（2026-10-02，`components/CustomSwiper.vue`）
+
+- 把首页轮播图抽成全局组件 `CustomSwiper`，`main.js` 全局注册后各页面直接写 `<CustomSwiper />`
+  （`pages/index/index.vue:7` 已用）。
+- 组件 props：`list`（图片路径数组，默认 4 张 `/static/image/swiper/1~4.webp`）、`height`、
+  `autoplay`、`interval`、`duration`、`circular`、`indicatorDots`、`indicatorColor`、
+  `indicatorActiveColor`；事件 `change`（抛出当前下标）、`click`（抛出点击下标）。
+- **Vue3 全局注册踩坑**：正确 API 是 `app.component(name, comp)`，**不是** `app._component`。
+  `_component` 是编译产物 `app.js` 里出现过的内部命名，误抄会导致运行期
+  `app._component is not a function`（`main.js:37`）。
+- **组件改名后编译缓存不会自动清**：`Swiper.vue` → `CustomSwiper.vue` 后，
+  `unpackage/dist/dev/.sourcemap/mp-weixin/components/` 残留旧 `Swiper.js.map`，增量编译仍去找
+  `Swiper.wxml` → `ENOENT`。需关微信开发者工具（否则 `Device or resource busy`）删 `unpackage/dist` 重编译。
+
+### 前台分类组件（2026-10-02，`components/CategoryPanel.vue`）
+
+- 首页「金刚区」分类面板：6 个分类（手机/笔记本/平板/相机/手表/耳机），3 列 × 2 行宫格。
+- **图标方案演进**：先试 iconfont 字体（`static/category/iconfont.css`），后因字体图标单色、无
+  "原有颜色"（颜色全靠 CSS `color`），且与全局 `static/icon/iconfont.css` 同名 `font-family` 冲突，
+  最终改用 png（`static/image/category/*.png` 6 张），`<image mode="aspectFit">` + `border-radius: 30rpx` 圆角。
+- **注册方式**：`pages/index/index.vue` 局部注册（`import` + `components`），未进 `main.js` 全局注册
+  —— 组件只在首页用，且当时 `main.js` 状态不稳。全局/局部/easycom 的选择标准是「复用范围」。
+- **交互**：点击某项 `$emit('select', item)` 把整项抛给页面，`handleCategorySelect` 用 `switchTab` 跳分类页。
+- 数据目前是 `data` 里写死的 6 项（含 img 路径），后续接 `getCategories()` 时需建 分类 id→png 映射。
+- 相关坑：`@import` 相对路径从 `components/` 到根是 `../` 不是 `../../`；微信开发者工具
+  「过滤无依赖文件」会误删 uni-app 懒加载组件（报 `Component is not found`）。
+
 ## 技术决策
 
 | 决策 | 理由 |
@@ -164,6 +191,9 @@
 | 前端统一走网关 8080，不直连各微服务端口 | 后端已定「路径 `/api/**` 不变，前端 baseURL 指向网关」；端口差异由网关收敛 |
 | `navContentHeight` 用 `Math.max(44, 反推值)` 兜底 | 华为部分机型 `menuRect.top` 异常偏小，反推高度小于搜索框会上下裁切；44 与微信标准内容区高度及 data 默认值一致 |
 | `rightSafeArea` 在胶囊避让基础上 +8px | 原公式让搜索框右边缘精确贴胶囊（间距 0），华为胶囊偏右时贴边明显；4~8px 为推荐区间，取 8 保底 |
+| Vue3 全局注册组件用 `app.component()` | `app._component` 不是合法 API，运行期直接 `is not a function` |
+| 分类图标用 png 而非 iconfont 字体 | 字体图标单色、无原色，png 彩色更好看；也避开两套 iconfont 同名 `font-family` 冲突 |
+| `CategoryPanel` 局部注册 | 只在首页用，不污染全局 |
 
 ## 遇到的问题
 
@@ -175,6 +205,11 @@
 | ~~昵称永远显示「微信用户」~~ | **已解决**：后端补 `/api/user/name`，前端补 `type="nickname"` 输入框 |
 | 切华为机型搜索框贴边 | `rightSafeArea` 补 +8px 间距 |
 | 切华为机型搜索框上下被裁切 | `navContentHeight` 加 `Math.max(44, ...)` 下限 |
+| 组件改名后 `ENOENT: components/Swiper.wxml` | 编译缓存残留，关开发者工具删 `unpackage/dist` 重编译 |
+| `app._component is not a function` | `main.js` Vue3 分支误写，改为 `app.component()` |
+| `@import` 相对路径 `../../` 找不到 css | 组件在 `components/` 下，到根 `static` 是 `../` |
+| 微信开发者工具 `Component is not found` | 「过滤无依赖文件」误删懒加载组件，关闭该功能 |
+| iconfont 字体图标"没有原有颜色" | 字体图标是单色字符，颜色靠 CSS `color`；改用 png |
 
 ## 资源
 

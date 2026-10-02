@@ -1,5 +1,95 @@
 # 进度日志
 
+## 会话 7：2026-10-02（前台分类组件）
+
+### 当前状态
+- **阶段：** 11 - 前台分类组件（进行中，展示层已完成）
+- **开始时间：** 2026-10-02
+
+### 背景
+
+首页需要「金刚区」分类入口。先做前台分类面板 `CategoryPanel` 的展示层，数据后端化与跳转联动留待后续。
+
+### 已执行操作
+
+1. 新建 `components/CategoryPanel.vue`：6 分类（手机/笔记本/平板/相机/手表/耳机）宫格，3 列 × 2 行。
+2. 图标方案两版：先试 iconfont 字体（`static/category/iconfont.css`，改 `font-family` 避开全局同名冲突），
+   用户嫌字体图标单色难看，改用 png（`static/image/category/*.png` 6 张），
+   `<image mode="aspectFit">` + `border-radius: 30rpx` 圆角。
+3. `pages/index/index.vue` 局部注册 `CategoryPanel`（`import` + `components`），插到轮播图下方，
+   加 `handleCategorySelect` 用 `switchTab` 跳分类页。
+4. 排查两个编译坑：`@import` 相对路径（`../../` → `../`）；微信开发者工具「过滤无依赖文件」
+   误删 uni-app 懒加载组件（报 `Component is not found`）。
+5. 确认 `main.js` 的 `_component` 已改为 `component`（会话 6 遗留解决），`CustomSwiper` 全局注册正确。
+6. 讨论前台分类后续三步：数据后端化 / 分类页 / 跳转联动；用户先聚焦"占位"（骨架屏方案已给出，未落地）。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `components/CategoryPanel.vue` | 新建：6 分类宫格，png 图标 + 圆角，`$emit('select')` |
+| `pages/index/index.vue` | 局部注册 CategoryPanel + 模板插入 + `handleCategorySelect` |
+| `main.js` | 全局注册 CustomSwiper（`app.component`，会话 6 遗留已解决） |
+| `static/image/category/*.png` | 6 张分类图标 |
+| `task_plan.md` / `findings.md` / `progress.md` | 记录本轮 |
+
+### 测试结果
+
+| 测试 | 预期 | 实际 | 状态 |
+|------|------|------|------|
+| 首页显示分类面板 | 6 个分类图标 + 中文名 | 待微信开发者工具验证 | 待验证 |
+
+### 遗留事项
+
+- 金刚区数据后端化：接 `getCategories()` + 建 分类 id→png 映射（当前写死 6 项）。
+- 分类页 `category.vue` 仍是占位；跳转联动（`switchTab` 不能带 query，需 store/Storage 传选中分类）。
+- 骨架屏占位方案已讨论，未落地。
+
+---
+
+## 会话 6：2026-10-02（轮播图组件改名编译报错）
+
+### 当前状态
+- **阶段：** 10 - 轮播图组件改名编译报错（进行中）
+- **开始时间：** 2026-10-02
+
+### 背景
+
+把首页轮播图抽成全局组件 `CustomSwiper`（原 `Swiper.vue` 改名），在 `main.js` 全局注册、
+`pages/index/index.vue` 用 `<CustomSwiper />` 后，微信开发者工具先报编译错、再报运行错。
+
+### 已执行操作
+
+1. 定位第一个错误 `ENOENT: components/Swiper.wxml`：项目源码已无 `Swiper` 引用，但
+   `unpackage/dist/dev/.sourcemap/mp-weixin/components/` 残留旧 `Swiper.js.map`
+   （记录 `components/Swiper.vue`）—— 组件改名后编译缓存未清，增量编译仍去找旧组件。
+   尝试删 `unpackage/dist` 被拒（`Device or resource busy`，微信开发者工具占用），
+   结论为需关工具后清理重编译。
+2. 定位第二个错误 `app._component is not a function`：`main.js:37` Vue3 分支误写
+   `app._component('CustomSwiper', CustomSwiper)`，Vue3 正确 API 是 `app.component()`。
+3. 用户要求更新三个规划文件（本文件 / `task_plan.md` / `findings.md`）。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `main.js` | 第 37 行 `app._component` 应改 `app.component`（已定位，**代码未改**，待应用） |
+| `task_plan.md` / `findings.md` / `progress.md` | 记录本轮两个错误与解决方案 |
+
+### 测试结果
+
+| 测试 | 预期 | 实际 | 状态 |
+|------|------|------|------|
+| 组件改名后编译 | 不再报 `Swiper.wxml` | 需清缓存重编译 | 待验证 |
+| 首页轮播图运行 | 无 `_component` 报错 | `main.js:37` 修复后待验证 | 待验证 |
+
+### 遗留事项
+
+- ~~`main.js:37` 的 `app._component` → `app.component` 修复尚未应用~~ **已解决**（后续已改为 `app.component`）。
+- 需关闭微信开发者工具，删除 `unpackage/dist` 后重新编译。
+
+---
+
 ## 会话 5：2026-10-01（顶部导航栏机型适配）
 
 ### 当前状态

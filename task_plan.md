@@ -10,12 +10,12 @@
 
 ## 下一步
 
-顶部导航栏适配已完成，待微信开发者工具切华为机型实测确认；端到端跑通仍依赖后端把
-Nacos + user-service + gateway 三个服务启动（前端无需再改代码）。
+前台分类组件展示层已完成（6 分类宫格 + png 图标 + 圆角）。下一步：金刚区数据后端化
+（接 `getCategories`，建 分类 id→png 映射），再做分类页与首页跳转联动。
 
 ## 当前阶段
 
-阶段 9：顶部导航栏机型适配（已完成）
+阶段 11：前台分类组件（进行中）
 
 ## 各阶段
 
@@ -79,6 +79,22 @@ Nacos + user-service + gateway 三个服务启动（前端无需再改代码）�
 - [x] 更新三个规划文件
 - **状态：** complete
 
+### 阶段 10：轮播图组件改名编译报错
+- [x] 定位 `ENOENT: components/Swiper.wxml` —— 组件 `Swiper.vue` 改名 `CustomSwiper.vue` 后编译缓存残留（`.sourcemap` 里还留 `Swiper.js.map`）
+- [x] 定位 `app._component is not a function` —— `main.js` Vue3 分支误写 `_component`（正确 API 为 `app.component`）
+- [x] 修复 `main.js`：`app._component('CustomSwiper', ...)` → `app.component(...)`（已改）
+- [x] 清缓存重编译验证
+- **状态：** complete
+
+### 阶段 11：前台分类组件
+- [x] 新建 `components/CategoryPanel.vue`（6 分类宫格，3 列 × 2 行）
+- [x] 图标方案从 iconfont 字体改为 png（`static/image/category/*.png` 6 张）
+- [x] `pages/index/index.vue` 局部注册 + 插入轮播图下方，点击 `switchTab` 到分类页
+- [x] 图标加 `border-radius` 圆角裁剪
+- [ ] 金刚区数据后端化（接 `getCategories`，建 分类 id→png 映射）
+- [ ] 分类页 + 首页跳转联动（带选中分类）
+- **状态：** in_progress
+
 ## 关键问题
 
 1. **昵称要不要做？** ~~后端无更新昵称的接口，前端也没有 `nickname` 输入入口。~~
@@ -100,6 +116,8 @@ Nacos + user-service + gateway 三个服务启动（前端无需再改代码）�
 | 未登录时填的昵称只暂存在 `nickname`，登录后再提交 | 提交接口要带 token，登录前调用必然 401 |
 | 昵称与后端一致时不重复提交 | 避免每次 `onLoad` 恢复登录态都白跑一次写库 |
 | 前端统一走网关 8080，不直连各微服务端口 | 后端已定「路径 `/api/**` 不变，前端 baseURL 指向网关」；各模块端口由网关收敛，前端无需感知 |
+| 分类图标用 png 而非 iconfont 字体 | 字体图标单色、无"原有颜色"，png 彩色更好看；也避开两套 iconfont 同名 `font-family` 冲突 |
+| `CategoryPanel` 用局部注册而非全局 | 只在首页用，不污染全局；且当时 `main.js` 状态不稳，局部注册更省事 |
 
 ## 遇到的错误
 
@@ -109,6 +127,11 @@ Nacos + user-service + gateway 三个服务启动（前端无需再改代码）�
 | 照抄 `avatar-upload.md` 的过时结论 | 1 | 该文件按 `MemberController` 记的，已按实际接口重写 |
 | `utils/server-api.js` 被截断，`uploadAvatar` 整个丢失 | 1 | 未自行改回，报告后由用户恢复 |
 | `GET /api/user/profile` 返回 **403**（非 401） | 1 | token 签名/过期都通过，只是 `type` 声明不符：本地存的是旧版后端签发的 `"member"` token，当前要求 `"user"`。清 Storage 重登解决 |
+| 组件改名后报 `ENOENT: components/Swiper.wxml` | 1 | 编译缓存残留：`.sourcemap` 里还留旧 `Swiper.js.map`，增量编译仍去找旧组件。关微信开发者工具删 `unpackage/dist` 重编译 |
+| 运行报 `app._component is not a function` | 1 | `main.js` Vue3 分支误写 `_component`，Vue3 全局注册应 `app.component()`，修正该行即可 |
+| `@import url("../../static/category/iconfont.css")` 编译报找不到 | 1 | 组件在 `components/` 下，到根 `static` 只上一级 `../`，多写一级跑到 `my-workspace/` 去了 |
+| 微信开发者工具报 `Component is not found` | 1 | 「过滤无依赖文件」误删 uni-app 懒加载组件（`() => "路径"`），关闭该功能即可 |
+| iconfont 字体图标"没有原有颜色 / 难看" | 1 | 字体图标本质是单色字符，颜色全靠 CSS `color`，无内建颜色；改用 png |
 
 ## 备注
 - 随着工作推进，将阶段状态从 `pending` 更新为 `in_progress`，再更新为 `complete`。

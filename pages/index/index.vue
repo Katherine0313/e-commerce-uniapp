@@ -3,6 +3,12 @@
 		<!-- 自定义顶部导航栏：橙色底 + 搜索框 -->
 		<CustomNavbar :showSearch="true" />
 
+		<!-- 首页轮播图 -->
+		<CustomSwiper />
+
+		<!-- 前台分类面板：手机 / 笔记本 / 平板 / 相机 / 手表 / 耳机 -->
+		<CategoryPanel @select="handleCategorySelect" />
+
 		<!-- 已登录：展示用户信息 -->
 		<view v-if="isLogin" class="user-box">
 			<image v-if="userInfo.avatar" :src="userInfo.avatar" class="avatar"></image>
@@ -32,7 +38,12 @@
 		getProfile,
 		uploadAvatar
 	} from '../../utils/server-api.js'
+	// 前台分类面板：首页金刚区
+	import CategoryPanel from '../../components/CategoryPanel.vue'
 	export default {
+		components: {
+			CategoryPanel
+		},
 		data() {
 			return {
 				avatarUrl: '', // 用户选择的头像临时地址
@@ -121,6 +132,12 @@
 					title: '已退出登录',
 					icon: 'none'
 				})
+			},
+			// 点击分类项：跳分类页（tab 页必须用 switchTab）
+			handleCategorySelect(item) {
+				uni.switchTab({
+					url: '/pages/category/category'
+				})
 			}
 		}
 	}
@@ -130,7 +147,7 @@
 	.content {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		/* 不能加 align-items:center，否则轮播图这类全宽子元素会被压成内容宽（0 宽看不见） */
 		justify-content: center;
 		/* 给固定定位的底部导航栏留出空间，内容才不会被压住 */
 		padding-bottom: 120rpx;
