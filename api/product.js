@@ -1,4 +1,4 @@
-import { request } from './server-api.js'
+import { request } from '../utils/server-api.js'
 
 // ===== 商品浏览接口 =====
 // 这些接口免登录，游客也能访问（后端 WebMvcConfig 白名单放行）。

@@ -1,5 +1,5 @@
 import { useUserStore } from '../store/user.js'
-import { wxLogin } from './server-api.js'
+import { wxLogin } from '../api/login.js'
 
 // 需要登录的操作（加购、下单）前调用：已登录直接放行，未登录则静默登录。
 // uni.login 只换 code，不弹授权框，用户全程无感；

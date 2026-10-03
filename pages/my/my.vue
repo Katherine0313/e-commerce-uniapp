@@ -34,7 +34,7 @@
 	} from '../../utils/auth.js'
 	import {
 		uploadAvatar
-	} from '../../utils/server-api.js'
+	} from '../../api/login.js'
 
 	export default {
 		data() {

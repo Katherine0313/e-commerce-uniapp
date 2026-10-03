@@ -38,7 +38,7 @@
 		wxLogin,
 		getProfile,
 		uploadAvatar
-	} from '../../utils/server-api.js'
+	} from '../../api/login.js'
 	// 前台分类面板：首页金刚区
 	import CategoryPanel from './component/CategoryPanel.vue'
 	// 热门推荐
