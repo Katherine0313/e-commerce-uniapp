@@ -1,5 +1,246 @@
 # 进度日志
 
+## 会话 13：2026-10-05（猜你喜欢接后端推荐接口）
+
+### 当前状态
+- **阶段：** 14 - 首页「猜你喜欢」模块（完成）
+- **开始时间：** 2026-10-05
+
+### 背景
+
+用户告知后端推荐接口已就绪，要求猜你喜欢的商品名称/价格/图片全部从后端拿，不再写死。
+
+### 已执行操作
+
+1. 确认后端接口：`RecommendController` → `GET /api/products/recommend?limit=10`，返回 `Result<List<ProductVO>>`
+   （免登录，未登录走销量热门兜底）；`ProductVO` 字段含 id/name/image/price/description，image 为相对路径 `/image/upload/N.webp`。
+2. `api/product.js` 新增 `getRecommend(limit)`，默认 limit=10。
+3. `components/Guess.vue` 删掉写死的 products 数组，改为 `mounted` 调 `getRecommend(10)` 填充；
+   新增 `imgUrl(item)` 给 image 补 `BASE_URL`（无图回退本地占位图）；名称/价格/图片全部来自后端。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `api/product.js` | 新增 `getRecommend(limit)` |
+| `components/Guess.vue` | 写死数据改为 `mounted` 调接口，图片补 BASE_URL |
+| `task_plan.md` / `findings.md` / `progress.md` | 记录本轮 |
+
+### 遗留事项
+
+- 端到端未实测：需后端 gateway + product-service + Python 推荐服务都起来后验证真实商品拉取。
+- 购物车页 `main.js` 注释写「猜你喜欢用于首页和购物车」，但购物车页仍占位，未挂 `<Guess>`。
+
+---
+
+## 会话 12：2026-10-05（首页「猜你喜欢」模块前端 UI）
+
+### 当前状态
+- **阶段：** 14 - 首页「猜你喜欢」模块（前端 UI 完成，写死商品占位，接口未接）
+- **开始时间：** 2026-10-05
+
+### 背景
+
+用户要求完善「猜你喜欢」模块（已在 `main.js` 全局注册为 `<Guess>`）。Python 推荐服务还没写，
+先写死几个商品占位把 UI 跑起来，后续再换接口。
+
+### 已执行操作
+
+1. 重建 `components/Guess.vue`：原文件模板是坏的（多根节点、`<scroll scroll-y>` 拼写错误），
+   重写为「标题 + 两列商品卡片网格（图/名/价）」，写死 8 个占位商品，字段对齐后端 `ProductVO`
+   （id/name/image/price），图片用本地 `/static/image/upload/N.webp`，点图 `$emit('select', id)`。
+2. `pages/index/index.vue`：在热门推荐（HotPanel）之后插入 `<Guess @select="handleProductSelect" />`，
+   复用现有 `handleProductSelect`（拉详情弹 ProductPopup），无需 import（全局注册）。
+3. 修图片底部圆角：卡片 `overflow:hidden` + `border-radius` 只裁卡片外边界（图片顶角），
+   图片底边在卡片内部不贴底边，给 `.goods-img` 单独加 `border-radius: 0 0 16rpx 16rpx`。
+4. 修标题居中：`.guess-header` 是 flex 容器，`text-align: center` 无效，改 `justify-content: center`。
+5. 标题装饰：左右渐变线 + 两侧小圆点（纯 CSS，品牌橙 #FF6700），未引入图片资源。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `components/Guess.vue` | 重写：标题 + 两列商品卡片网格，写死 8 个商品占位 |
+| `pages/index/index.vue` | HotPanel 之后插入 `<Guess>`，复用 handleProductSelect |
+| `task_plan.md` / `findings.md` / `progress.md` | 记录本轮 |
+
+### 遗留事项
+
+- 接口 `getRecommend(limit)` 未接（Python 推荐服务未落地）；后续替换组件 `products` 数组即可。
+- 图片目前用本地 `/static/image/upload/N.webp`，换接口后要按 `ProductPopup.cover` 补 `BASE_URL`。
+- 购物车页 `main.js` 注释写「猜你喜欢用于首页和购物车」，但购物车页仍占位，未挂 `<Guess>`。
+
+---
+
+## 会话 11：2026-10-04（重新探索后端三个 md，同步推荐服务进展）
+
+### 当前状态
+- **阶段：** 14 - 首页「猜你喜欢」模块（规划中，前端未动）
+- **开始时间：** 2026-10-04
+
+### 背景
+
+用户要求重新探索后端 `e-commerce-boot` 三个 md，把推荐服务（猜你喜欢）的最新进展同步到前端三个规划文件。
+
+### 已执行操作
+
+1. 重读后端 `task_plan.md` 阶段 9：Python 服务 + Java 桥接接口 `GET /api/products/recommend`
+   均已打勾，状态从「Java 桥接待落地」变为「Python 服务 + Java 桥接已端到端跑通，仅剩前端 UI / 订单表迁 MySQL」。
+2. 重读后端 `findings.md`「推荐服务（Python）方案」：新增「实现状态」节 —— `recommend-service/`
+   已落地 9 个文件（main/matrix/recommender/datasource），数据源读原 SQLite（有效下单 22 条、
+   在售商品 30 个、3 个用户）；冷启动口径定案为「未下单按销量降序推荐全量在售商品，无销量按 id 补位」。
+3. 同步前端三个规划文件：阶段 14 状态改为「后端已跑通，仅剩前端 UI」；findings 更新冷启动口径与数据现状。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `task_plan.md` / `findings.md` / `progress.md` | 同步后端推荐服务最新进展（Java 桥接已跑通 + 冷启动口径），无代码改动 |
+
+### 遗留事项
+
+- 前端「猜你喜欢」区块与接口接入未动工（阶段 14 pending）；后端已就绪，前端可开始。
+
+---
+
+## 会话 10：2026-10-04（首页「猜你喜欢」模块规划）
+
+### 当前状态
+- **阶段：** 14 - 首页「猜你喜欢」模块（规划中，前端未动）
+- **开始时间：** 2026-10-04
+
+### 背景
+
+后端已建 Python `recommend-service`（9009）推荐服务骨架并实测跑通，用户要求小程序首页新增
+「猜你喜欢」模块（按订单下单记录推商品）。本轮先探索后端三个 md 的推荐服务部分，结合后端接口契约
+更新前端三个规划文件，代码不动。
+
+### 已执行操作
+
+1. 读后端 `findings.md`「推荐服务（Python）方案」：推荐算法用 Python 写（Item-Item 商品共现
+   「买了又买」+ 销量热门兜底），数据源 `orders`/`order_items`（先 SQLite 后 MySQL），
+   冷启动未登录走热门；Java 桥接放 product-service，复用网关 `/api/products/**` 路由零改动。
+2. 读后端 `task_plan.md` 阶段 9：Python 服务 + 共现算法已完成；Java 桥接接口 `/api/products/recommend`、
+   前端区块、订单表迁 MySQL 均未做。
+3. 核对前端现状：`api/product.js`（getProducts/getProductDetail/getCategories）、
+   `pages/index/index.vue`（已接 HotPanel + ProductPopup）、`ProductPopup` 卡片字段
+   （id/name/image/price/description，image 相对路径补 BASE_URL）。
+4. 明确职责区分：推荐用 Python（非 Spring AI）；Spring AI 只用于聊天机器人 ai-agent-service。
+5. 更新前端三个规划文件（本文件 / `task_plan.md` / `findings.md`），新增阶段 14 规划。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `task_plan.md` / `findings.md` / `progress.md` | 新增阶段 14 规划 + 猜你喜欢接口契约，无代码改动 |
+
+### 测试结果
+
+| 测试 | 预期 | 实际 | 状态 |
+|------|------|------|------|
+| 后端推荐服务 | Python 可跑通 | 后端已实测（/health /recommend /train OK） | 通过（后端侧） |
+| 前端猜你喜欢区块 | — | 未开始，本轮只做规划 | 未开始 |
+
+### 遗留事项
+
+- 前端「猜你喜欢」区块与接口接入未动工（阶段 14 pending）。
+- 依赖后端 Java 桥接接口 `GET /api/products/recommend` 落地（后端 task_plan 阶段 9 未做）。
+- 「猜你喜欢」与「热门推荐（HotPanel）」是两个模块：前者按订单记录个性化，后者写死 id 的栏目占位。
+
+---
+
+## 会话 9：2026-10-03（悬浮式 AI 导购 Agent 前端规划）
+
+### 当前状态
+- **阶段：** 13 - 悬浮式 AI 导购 Agent（规划中，前端未动）
+- **开始时间：** 2026-10-03
+
+### 背景
+
+后端已建 ai-agent-service（9008）导购 Agent 骨架并实测跑通，用户要求小程序侧新增「悬浮式导购 Agent」。
+本轮先探索后端三个 md 的 Agent 部分，结合后端接口契约更新前端三个规划文件，代码不动。
+
+### 已执行操作
+
+1. 读后端 `findings.md`「AI 导购 Agent 服务」：定位完整 Agent（非 LLM 聊天壳），
+   Graph 工作流 / RAG / MCP / Function Calling 四大能力，Spring AI 2.0.1 + 硅基流动 DeepSeek。
+2. 读后端 `task_plan.md` 阶段 8 / `progress.md` 阶段 I：骨架已建、启动 / 对话 / Tool Calling / SSE / MCP 实测通过；
+   真实推荐待 product-service 启动（当前幻觉商品）、下单待 order-service。
+3. 读后端源码确认前端接口契约：`AiChatController` → `POST /api/agent/chat`（`Result<ChatReplyVO{reply}>`）、
+   `POST /api/agent/chat/stream`（SSE `Flux<String>`）；入参 `ChatRequestDTO{message}`；
+   网关已加 `/api/agent/**` 路由到 ai-agent-service，白名单已放行（免登录）。
+4. 更新前端三个规划文件（本文件 / `task_plan.md` / `findings.md`），新增阶段 13 规划。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `task_plan.md` / `findings.md` / `progress.md` | 新增阶段 13 规划 + Agent 接口契约，无代码改动 |
+
+### 测试结果
+
+| 测试 | 预期 | 实际 | 状态 |
+|------|------|------|------|
+| 后端对话接口 | 可调通 | 后端已实测（对话 / SSE / MCP 通过） | 通过（后端侧） |
+| 前端悬浮 Agent | — | 未开始，本轮只做规划 | 未开始 |
+
+### 遗留事项
+
+- 前端悬浮组件与接口接入未动工（阶段 13 pending）。
+- 小程序端 SSE 流式支持待真机验证（`enableChunked` + `onChunkReceived`），不确定时降级非流式 `/chat`。
+- 真实商品推荐依赖 product-service 启动（当前后端返回 DeepSeek 幻觉商品）；下单闭环依赖 order-service。
+
+---
+
+## 会话 8：2026-10-03（商品预览弹窗 + uni-popup）
+
+### 当前状态
+- **阶段：** 12 - 商品预览弹窗（已完成）
+- **开始时间：** 2026-10-03
+
+### 背景
+
+首页「热门推荐」面板点商品图要弹预览。先做了自写弹窗组件，随后发现图片不显示（后端 image 相对路径问题），
+修完后又按用户要求把自写弹窗换成 uni-ui 的 `uni-popup`。
+
+### 已执行操作
+
+1. 新建 `pages/index/component/HotPanel.vue`：热门推荐面板（4 色块 × 左右商品位，写死 id），点图 `$emit('select', id)`。
+2. 新建 `pages/index/component/ProductPopup.vue`：商品预览弹窗（图 / 名 / 价 / 描述 / 关闭），props `show`/`product`、`$emit('close')`。
+3. `pages/index/index.vue` 接入：`handleProductSelect(id)` → `getProductDetail(id)` → `showProductPopup = true`；弹窗显隐与商品数据都留在页面 data。
+4. 排查「弹窗看不到图片」：后端 `products.image` 存 `/image/upload/N.webp`（网关映射到 upload/image/），
+   小程序把开头的 `/` 当包内路径 → 空白；`cover` 补 `BASE_URL` 前缀解决。
+5. 按用户要求把弹窗外壳换成 `uni-popup`（easycom 免注册）：`watch: show` 桥接 `ref.open()/close()`，
+   内部 `opened` 标记防事件循环；z-index 99 → 1000 压过自定义 TabBar（`class="product-popup"` 双类名非 scoped 样式）。
+6. 排查发现 `swiper_preview.png`（项目根目录）是死文件：600×600 四宫格素材合图，无代码引用、不在 `static/` 下、
+   不会打进小程序包，却被 git 跟踪（369KB），待用户确认删除。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `pages/index/component/HotPanel.vue` | 新建：热门推荐面板，点图抛 id |
+| `pages/index/component/ProductPopup.vue` | 新建：商品预览弹窗，后用 uni-popup 重写外壳 |
+| `pages/index/index.vue` | 接 HotPanel + ProductPopup，`handleProductSelect` 拉详情弹窗 |
+| `task_plan.md` / `findings.md` / `progress.md` | 记录本轮 |
+
+### 测试结果
+
+| 测试 | 预期 | 实际 | 状态 |
+|------|------|------|------|
+| 点热门推荐商品图弹预览 | 弹窗显示商品图 / 名 / 价 | 待微信开发者工具验证 | 待验证 |
+| 弹窗内图片显示 | 显示后端商品图 | 已修（补 BASE_URL），待编译验证 | 待验证 |
+| 点遮罩 / 关闭按钮 | 都能关闭弹窗 | 待验证 | 待验证 |
+| 弹窗盖住底部导航栏 | 遮罩在 TabBar 之上 | 已修（z-index 1000），待验证 | 待验证 |
+
+### 遗留事项
+
+- `swiper_preview.png` 死文件待删（`git rm`，用户尚未确认）。
+- `HotPanel` 商品位写死 id、用本地 `/static/image/upload/N.webp` 占位，后续接 `getProducts` 换后端 `image`。
+- 金刚区数据后端化、分类页跳转联动仍属阶段 11 遗留，未做。
+
+---
+
 ## 会话 7：2026-10-02（前台分类组件）
 
 ### 当前状态

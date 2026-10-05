@@ -10,12 +10,12 @@
 
 ## 下一步
 
-前台分类组件展示层已完成（6 分类宫格 + png 图标 + 圆角）。下一步：金刚区数据后端化
-（接 `getCategories`，建 分类 id→png 映射），再做分类页与首页跳转联动。
+阶段 14「猜你喜欢」已完成（前端已接 `GET /api/products/recommend`，商品名称/价格/图片全来自后端）。
+下一步：阶段 13 悬浮式 AI 导购 Agent 前端（仍顺延中，后端骨架已跑通）。
 
 ## 当前阶段
 
-阶段 11：前台分类组件（进行中）
+阶段 14：首页「猜你喜欢」模块（完成）
 
 ## 各阶段
 
@@ -95,6 +95,29 @@
 - [ ] 分类页 + 首页跳转联动（带选中分类）
 - **状态：** in_progress
 
+### 阶段 12：商品预览弹窗（热门推荐 + uni-popup）
+- [x] 新建 `pages/index/component/HotPanel.vue`：热门推荐面板，4 色块 × 左右各一个商品位，点图 `$emit('select', id)`
+- [x] 新建 `pages/index/component/ProductPopup.vue`：商品预览弹窗（图 + 名 + 价 + 描述 + 关闭），props `show`/`product` 进、`$emit('close')` 出
+- [x] `pages/index/index.vue`：接 HotPanel 的 select → `getProductDetail` 拉详情 → `showProductPopup = true`，弹窗状态与商品数据留在页面 data
+- [x] 修复弹窗图片不显示：后端 image 字段是 `/image/upload/N.webp` 相对路径，小程序把开头的 `/` 当包内路径，前端补 `BASE_URL` 前缀
+- [x] 弹窗外壳改用 `uni-popup`（uni-ui，easycom 免注册）：`watch: show` ↔ `ref.open()/close()` 桥接；z-index 99 → 1000 压过自定义 TabBar
+- **状态：** complete
+
+### 阶段 13：悬浮式 AI 导购 Agent（前端）
+- [ ] 新建悬浮组件（悬浮球 + 聊天抽屉/半屏面板），全局或各 tabBar 页引入
+- [ ] 接 `POST /api/agent/chat`（非流式，body `{message}` → `Result<ChatReplyVO{reply}>`）
+- [ ] 接 `POST /api/agent/chat/stream`（SSE 流式 `Flux<String>` 打字机渲染；小程序端支持受限时降级非流式）
+- [ ] 消息列表 + 输入框 + 发送/清空；游客可用（后端白名单已放行 `/api/agent`）
+- [ ] 下单等敏感操作仍走 `ensureLogin`（`utils/auth.js`），Agent 只做导购引导
+- **状态：** pending（后端 Agent 骨架已跑通，前端未动；本轮仅更新三个 md）
+
+### 阶段 14：首页「猜你喜欢」模块（Python 推荐服务对接）
+- [x] 接口封装：`api/product.js` 新增 `getRecommend(limit)`，对应 `GET /api/products/recommend`（免登录，未登录走热门兜底）
+- [x] 新建首页「猜你喜欢」区块组件 `components/Guess.vue`：两列商品卡片（图/名/价），`mounted` 调 `getRecommend` 拉后端商品，点图 `$emit('select', id)`
+- [x] `pages/index/index.vue` 在热门推荐（`HotPanel`）之后插入 `<Guess @select="handleProductSelect" />`（全局注册，复用弹预览逻辑）
+- [x] 已登录带 token 走个性化（后端按 `UserContext.getUserId()` 调 Python），未登录自动热门兜底（前端统一带 token 请求，无需自己判断登录态）
+- **状态：** complete（前端已接 `getRecommend`，商品名称/价格/图片全部来自后端）
+
 ## 关键问题
 
 1. **昵称要不要做？** ~~后端无更新昵称的接口，前端也没有 `nickname` 输入入口。~~
@@ -119,6 +142,17 @@
 | 分类图标用 png 而非 iconfont 字体 | 字体图标单色、无"原有颜色"，png 彩色更好看；也避开两套 iconfont 同名 `font-family` 冲突 |
 | `CategoryPanel` 用局部注册而非全局 | 只在首页用，不污染全局；且当时 `main.js` 状态不稳，局部注册更省事 |
 
+| 弹窗放 `index.vue` 页面层，不放 HotPanel 内 | 数据（详情接口 + show 开关）归页面；弹窗是无状态展示组件，页面拉数据 props 传、事件回传；HotPanel 只抛 id 保持纯展示 |
+| 商品预览弹窗改用 `uni-popup` | 项目已装 uni-ui 且 easycom 已配，遮罩 / 居中 / 点遮罩关闭 / 滚动穿透都内置；用户要求换成 uni-popup |
+| 商品图 URL 统一补 `BASE_URL`，不拼 `/static` | 后端 `products.image` 存 `/image/upload/N.webp` 相对路径（网关映射到 upload/image/），小程序把 `/` 当包内路径；`/static/**` 只是前端本地占位图，与后端图不是同一份 |
+
+| AI 导购 Agent 前端统一走网关 `/api/agent/**` | 后端 ai-agent-service 在 9008，前端只连 8080；白名单已放行 `/api/agent`，游客可直连 |
+| 悬浮导购先做「对话 + 商品推荐」，下单留 HITL | 后端 `OrderTool.placeOrder` 依赖 order-service 未就绪；前端先引导，下单仍走原加购/下单链路 + `ensureLogin` |
+| 流式接口优先、非流式兜底 | 后端 `/chat` 与 `/chat/stream` 都有；小程序端 SSE 依赖 `enableChunked` 需真机，不确定时用 `/chat` 整段渲染 |
+
+| 猜你喜欢推荐算法用 Python 写，不用 Spring AI | 推荐是独立的 Python FastAPI 服务（Item-Item 共现 + 热门兜底）；Spring AI 只用于聊天机器人 ai-agent-service，两者职责不同 |
+| 猜你喜欢接口免登录、未登录走热门兜底 | 复用 `/api/products/**` 白名单，游客也能看首页；个性化只在已登录时生效，前端无需自己判断登录态 |
+
 ## 遇到的错误
 
 | 错误 | 尝试次数 | 解决方案 |
@@ -132,6 +166,8 @@
 | `@import url("../../static/category/iconfont.css")` 编译报找不到 | 1 | 组件在 `components/` 下，到根 `static` 只上一级 `../`，多写一级跑到 `my-workspace/` 去了 |
 | 微信开发者工具报 `Component is not found` | 1 | 「过滤无依赖文件」误删 uni-app 懒加载组件（`() => "路径"`），关闭该功能即可 |
 | iconfont 字体图标"没有原有颜色 / 难看" | 1 | 字体图标本质是单色字符，颜色全靠 CSS `color`，无内建颜色；改用 png |
+
+| 商品预览弹窗看不到图片 | 1 | 后端 `products.image` 存 `/image/upload/N.webp`，前端直接当 `image` 的 src，小程序把开头的 `/` 解析成包内路径 → 空白。补 `BASE_URL` 前缀（`http://127.0.0.1:8080/image/upload/N.webp`）解决 |
 
 ## 备注
 - 随着工作推进，将阶段状态从 `pending` 更新为 `in_progress`，再更新为 `complete`。

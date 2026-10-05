@@ -177,6 +177,106 @@
 - 相关坑：`@import` 相对路径从 `components/` 到根是 `../` 不是 `../../`；微信开发者工具
   「过滤无依赖文件」会误删 uni-app 懒加载组件（报 `Component is not found`）。
 
+### 商品预览弹窗（2026-10-03，`pages/index/component/HotPanel.vue` + `ProductPopup.vue`）
+
+- 首页「热门推荐」面板 `HotPanel`：4 色块，每块左右各一个商品位（写死商品 id 的占位数据），
+  点图只 `$emit('select', id)`，不拉数据 —— 纯展示组件，详情与弹窗都留给页面。
+- 弹窗组件 `ProductPopup`：无状态展示组件（props `show`/`product` 进、`$emit('close')` 出），
+  商品图 / 名 / 价 / 描述 / 关闭按钮；数据与显隐状态都归 `pages/index/index.vue` 的 data。
+- **弹窗放页面层不放 HotPanel 内的理由**：详情接口 + show 开关归页面；弹窗是整页遮罩，
+  复用方不止热门推荐（分类页/搜索页以后也能用）；挂进 flex 列布局的列表组件里语义和层叠都不对。
+- **商品图片链路（本轮踩坑）**：后端 `products.image` 存 `/image/upload/N.webp` 相对路径，
+  由网关路由到 product-service，`common/WebMvcConfig` 把 `/image/**` 映射到 `file:upload/image/`。
+  小程序里 `<image>` 的 src 以 `/` 开头会被解析成**包内路径**，不是服务器地址 → 空白。
+  前端需补 `BASE_URL`（`http://127.0.0.1:8080`）；`/static/image/upload/N.webp` 是前端本地占位图，另一回事。
+- **弹窗组件实现演进**：先自写（v-if + fixed 遮罩 + flex 居中），后按用户要求改用 `uni-popup`。
+  uni-ui 的 `uni-popup` 走 pages.json 已配的 easycom 规则（`^uni-(.*)`）免注册，
+  遮罩 / 居中 / 点遮罩关闭（`is-mask-click`）/ H5 滚动穿透都内置。
+- **uni-popup 是命令式 API**：`ref.open()` / `ref.close()`，而页面是 data 驱动，需 `watch: show`
+  桥接，并用内部 `opened` 标记对齐状态，避免 `change` 事件和 watch 来回触发死循环。
+- **z-index 冲突**：uni-popup 自带 `position: fixed; z-index: 99`，自定义 TabBar 是 999，会被压住。
+  通过 `<uni-popup class="product-popup">`（class 经 uni-app `u-c` 透传到根节点）+ 非 scoped 样式
+  `.product-popup.uni-popup { z-index: 1000; }`（双类名提高优先级，不依赖加载顺序）解决。
+
+### AI 导购 Agent（后端 ai-agent-service + 前端悬浮导购）
+
+**后端（2026-10-03 已建骨架并实测）**：
+
+- 新增微服务 `ai-agent-service`（端口 9008），定位「完整 Agent 而非 LLM 聊天壳」，保留
+  Graph 工作流（意图路由）/ RAG / MCP / Function Calling 四大能力。
+- 技术选型：Spring AI 2.0.1（官方，非 Alibaba）+ 硅基流动 DeepSeek（OpenAI 兼容）+
+  SimpleVectorStore 起步 + OpenFeign 调 product-service + MCP（spring-ai-starter-mcp-server-webmvc）。
+- 已实测通过：启动 + Nacos 注册、对话、Tool Calling、SSE 流式、MCP；
+  真实推荐待 product-service 启动（当前返回 DeepSeek 幻觉商品）、下单待 order-service。
+
+**前端对接契约（免登录，游客可用）**：
+
+- 网关已加路由 `Path=/api/agent,/api/agent/**` → `lb://ai-agent-service`（放在 `/api/**` 通配之前）；
+  common `WebMvcConfig.EXCLUDE_AUTH_PATHS` 已放行 `/api/agent`、`/api/agent/**`。
+- `POST /api/agent/chat`：body `{message}`，返回 `Result<ChatReplyVO>`（`ChatReplyVO{reply}`）。
+- `POST /api/agent/chat/stream`：`produces=text/event-stream`，body `{message}`，返回 `Flux<String>` 打字机。
+- 意图路由（`IntentRouter` 规则关键词）：RECOMMEND（推荐/查询，走 `ProductTool` 查 product-service）/
+  ORDER（下单，走 `OrderTool` HITL）/ QA（售后/规格，走 RAG）/ CHAT（闲聊）。
+
+**前端要做**：
+
+- 悬浮式导购：悬浮球 + 点击展开聊天抽屉/半屏面板，消息列表 + 输入框 + 发送。
+- 流式渲染打字机（SSE）；若小程序端 SSE 支持受限，先降级用非流式 `/chat`。
+- 游客可直接对话（免登录）；涉及下单等操作再走现有 `utils/auth.js` 的 `ensureLogin`。
+
+⚠️ **小程序端 SSE 坑（待真机验证）**：
+
+- 微信 `wx.request` 默认不支持流式响应；需 `enableChunked: true` + `onChunkReceived` 回调
+  （基础库 2.20.1+），**开发者工具不支持，需真机**。uni-app `uni.request` 透传该能力。
+- 若真机仍不可用，回退方案：非流式 `/api/agent/chat`，整段回复一次性渲染。
+
+### 首页「猜你喜欢」模块（Python 推荐服务，2026-10-04）
+
+> 小程序首页新增「猜你喜欢」区块，依据**订单表下单记录**（`orders` + `order_items` 的
+> `user_id → product_id` 关系）推荐商品。推荐算法**用 Python 写**（独立服务），Java 只做桥接；
+> Spring AI 是给聊天机器人（ai-agent-service）用的，与本模块无关。
+
+**后端方案（已定案，详见后端 findings「推荐服务（Python）方案」）**：
+
+- Python 推荐项目：`D:\study\my-workspace\wechat-workspace\recommender-python`（独立 Python 项目，
+  后端 findings 记为 `recommend-service/`，FastAPI 端口 9009）。
+- 算法：Item-Item 商品共现（「买了又买」）+ 销量热门兜底；协同过滤暂不做（用户×商品矩阵太稀疏，仅 3 个用户有下单记录）。
+- 数据源：先读原 Node 的 SQLite `orders/order_items`（有效下单 22 条、在售商品 30 个、3 个用户），order-service 落地后切 MySQL（`datasource` 抽象层）。
+- 冷启动兜底：未登录 / 未下单 → 按销量降序推荐全量在售商品（销量 = `sum(quantity)`，无销量商品按 id 排后补位）。
+
+**接口契约（前端对接依据）**：
+
+| 接口 | 方法 | 入参 | 返回 |
+|------|------|------|------|
+| `/api/products/recommend` | GET | `?limit=10`（可选） | `Result<List<ProductVO>>`，字段与商品列表一致（`id`/`name`/`image`/`price`/`description` 等） |
+
+- 免登录（复用 `/api/products/**` 白名单，网关路由零改动）；该接口已端到端跑通（Python → Java 桥接 → 网关）。
+- 登录态：后端按 `UserContext.getUserId()` 调 Python `/recommend?user_id`；未登录 → 请求 Python
+  不带 `user_id` → 走热门兜底。前端**无需**自己判断登录态，统一带 token 请求即可。
+- 底层 Python 接口 `GET /recommend?user_id=1&limit=10` → `{"product_ids":[...],"scores":[...]}`，
+  前端不直接接触，只经 Java 桥接接口拿 `ProductVO` 列表。
+
+**前端要做**（已完成，2026-10-05）：
+
+- 接口封装：`api/product.js` 新增 `getRecommend(limit)` → `GET /api/products/recommend`。
+- 首页新增「猜你喜欢」区块组件（复用 `ProductVO` 卡片：图/名/价），点商品图复用
+  `handleProductSelect` 弹 `ProductPopup` 预览。
+- `pages/index/index.vue` 在热门推荐（`HotPanel`）之后插入该区块。
+- 商品图相对路径 `/image/upload/N.webp` 仍要补 `BASE_URL`（与 `ProductPopup.cover` 同一处理）。
+
+**实现现状（2026-10-05）**：
+
+- 组件 `components/Guess.vue` 已重建（原文件模板是坏的：多根节点、`<scroll scroll-y>` 拼写错误），
+  现为「标题 + 两列商品卡片网格（图/名/价）」，`mounted` 调 `getRecommend(10)` 拉后端商品。
+- 商品名称/价格/图片全部来自后端 `ProductVO`（id/name/image/price）；图片经 `imgUrl(item)` 补 `BASE_URL`，
+  无图时回退本地 `/static/image/upload/{id}.webp`。
+- 标题样式：左右渐变装饰线 + 两侧小圆点，纯 CSS 实现，未引入图片资源（项目无现成 icon）。
+
+**与「热门推荐（HotPanel）」的区别**：
+
+- `HotPanel` 是写死商品 id 的「栏目/精选」占位面板（阶段 12），与个性化无关；
+- 「猜你喜欢」是**按用户下单记录**的个性化推荐，数据来自 Python 推荐服务 + Java 桥接接口。
+
 ## 技术决策
 
 | 决策 | 理由 |
@@ -195,6 +295,17 @@
 | 分类图标用 png 而非 iconfont 字体 | 字体图标单色、无原色，png 彩色更好看；也避开两套 iconfont 同名 `font-family` 冲突 |
 | `CategoryPanel` 局部注册 | 只在首页用，不污染全局 |
 
+| 商品预览弹窗用 `uni-popup` 而非自写遮罩 | 项目已装 uni-ui 且 easycom 已配；遮罩 / 居中 / 点遮罩关闭 / 滚动穿透都内置，自写要重复造且要处理 z-index 与 TabBar 层级 |
+| 商品图相对路径统一补 `BASE_URL` | 后端存 `/image/upload/N.webp`，小程序把 `/` 当包内路径；`/static/**` 只是本地占位，跟后端图不是同一份 |
+| 弹窗显隐用 `watch` 桥接命令式 `open/close` | uni-popup 是 ref 调用的命令式 API，页面是 data 驱动 show；加内部 `opened` 标记防 change 与 watch 互相触发 |
+
+| AI 导购 Agent 前端统一走网关 `/api/agent/**` | 后端 ai-agent-service 在 9008，前端只连 8080；白名单已放行，游客可直连 |
+| 悬浮导购先做「对话 + 商品推荐」，下单走 HITL 留后 | 后端 `OrderTool.placeOrder` 依赖 order-service 未就绪；前端先引导，下单仍走原加购/下单链路 + `ensureLogin` |
+| 流式优先、非流式兜底 | 后端两个接口都提供；小程序端 SSE 依赖 `enableChunked` 需真机，不确定时用 `/chat` 一次回整段 |
+
+| 猜你喜欢推荐算法用 Python 写，不用 Spring AI | 推荐是独立的 Python FastAPI 服务；Spring AI 只用于聊天机器人 ai-agent-service，两者职责不同 |
+| 猜你喜欢接口免登录、未登录走热门兜底 | 复用 `/api/products/**` 白名单，游客也能看首页；个性化只在已登录时生效 |
+
 ## 遇到的问题
 
 | 问题 | 解决方案 |
@@ -211,6 +322,13 @@
 | 微信开发者工具 `Component is not found` | 「过滤无依赖文件」误删懒加载组件，关闭该功能 |
 | iconfont 字体图标"没有原有颜色" | 字体图标是单色字符，颜色靠 CSS `color`；改用 png |
 
+| 商品预览弹窗看不到图片 | 后端 `products.image` 存 `/image/upload/N.webp` 相对路径，前端直接当 src，小程序把 `/` 解析成包内路径 → 空白；补 `BASE_URL` 前缀解决 |
+
+| 小程序端 SSE 流式接入方式待确认 | 微信 `wx.request` 需 `enableChunked` + `onChunkReceived`（基础库 2.20.1+，开发者工具不支持、需真机）；不确定则降级非流式 `/api/agent/chat` |
+
+| 猜你喜欢图片底部圆角"被剪掉" | 卡片 `overflow:hidden` + `border-radius` 只裁卡片外边界（图片顶角），图片底边在卡片内部不贴底边，需给 `.goods-img` 单独设 `border-radius: 0 0 16rpx 16rpx` |
+| 猜你喜欢标题 `text-align: center` 不生效 | `.guess-header` 是 flex 容器，`text-align` 只管行内文本，flex 子项居中要用 `justify-content: center` |
+
 ## 资源
 
 ### 项目根目录
@@ -219,6 +337,7 @@
 |------|---------|
 | 后端（Spring Boot） | `D:\study\my-workspace\wechat-workspace\e-commerce-boot` |
 | 前端（uni-app） | `D:\study\my-workspace\wechat-workspace\e-commerce-uniapp` |
+| 推荐服务（Python） | `D:\study\my-workspace\wechat-workspace\recommender-python` |
 
 ### 关键文件
 

@@ -8,8 +8,14 @@
 
 		<!-- 前台分类面板：手机 / 笔记本 / 平板 / 相机 / 手表 / 耳机 -->
 		<CategoryPanel @select="handleCategorySelect" />
-		<!-- 热门推荐 -->
-		<HotPanel />
+		<!-- 热门推荐：点商品图弹预览弹窗 -->
+		<HotPanel @select="handleProductSelect" />
+
+		<!-- 猜你喜欢：全局注册，点商品图复用 handleProductSelect 弹预览 -->
+		<Guess @select="handleProductSelect" />
+
+		<!-- 商品预览弹窗 -->
+		<ProductPopup :show="showProductPopup" :product="currentProduct" @close="handleProductClose" />
 		<!-- 已登录：展示用户信息 -->
 		<view v-if="isLogin" class="user-box">
 			<image v-if="userInfo.avatar" :src="userInfo.avatar" class="avatar"></image>
@@ -43,14 +49,23 @@
 	import CategoryPanel from './component/CategoryPanel.vue'
 	// 热门推荐
 	import HotPanel from './component/HotPanel.vue'
+	// 商品预览弹窗
+	import ProductPopup from './component/ProductPopup.vue'
+	// 商品详情接口（免登录，游客也能看）
+	import {
+		getProductDetail
+	} from '../../api/product.js'
 	export default {
 		components: {
 			CategoryPanel,
-			HotPanel
+			HotPanel,
+			ProductPopup
 		},
 		data() {
 			return {
 				avatarUrl: '', // 用户选择的头像临时地址
+				showProductPopup: false, // 商品预览弹窗显隐
+				currentProduct: {}, // 当前预览的商品
 				store: useUserStore() // 用户登录态 + 用户信息，统一走 Pinia
 			}
 		},
@@ -148,6 +163,19 @@
 				uni.switchTab({
 					url: '/pages/category/category'
 				})
+			},
+			// 点击热门推荐里的商品图：拉详情后弹预览
+			handleProductSelect(id) {
+				getProductDetail(id).then((res) => {
+					this.currentProduct = res
+					this.showProductPopup = true
+				}).catch(() => {
+					// 错误提示已在 request 封装里统一处理
+				})
+			},
+			// 关闭商品预览弹窗
+			handleProductClose() {
+				this.showProductPopup = false
 			}
 		}
 	}

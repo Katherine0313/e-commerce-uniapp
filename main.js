@@ -5,7 +5,8 @@ import CustomNavbar from './pages/index/component/TopBar.vue'
 import CustomTabBar from './pages/index/component/TabBar.vue'
 // 自定义轮播图，全局注册后各页面直接用 <CustomSwiper />
 import CustomSwiper from './components/CustomSwiper.vue'
-
+// 猜你喜欢，用于首页和购物车
+import Guess from './components/Guess.vue'
 // #ifndef VUE3
 import Vue from 'vue'
 import './uni.promisify.adaptor'
@@ -13,6 +14,7 @@ Vue.config.productionTip = false
 Vue.component('CustomNavbar', CustomNavbar)
 Vue.component('CustomTabBar', CustomTabBar)
 Vue.component('CustomSwiper',CustomSwiper)
+Vue.component('Guess',Guess)
 App.mpType = 'app'
 const app = new Vue({
 	...App
@@ -35,6 +37,8 @@ export function createApp() {
 	app.component('CustomTabBar', CustomTabBar)
 	// 全局注册自定义轮播图组件
 	app.component('CustomSwiper',CustomSwiper)
+	// 全局注册猜你喜欢组件
+	app.component('Guess',Guess)
 	// 创建 Pinia 实例并注册，统一管理全局状态
 	const pinia = createPinia()
 	app.use(pinia)
