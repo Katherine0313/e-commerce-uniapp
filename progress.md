@@ -1,5 +1,38 @@
 # 进度日志
 
+## 会话 16：2026-10-06（分类页右侧商品网格）
+
+### 当前状态
+- **阶段：** 16 - 分类页右侧商品网格（完成）
+- **开始时间：** 2026-10-06
+
+### 背景
+
+用户要求把分类页做完整：左侧分类从后端读取，右侧渲染对应分类的商品（每行两个，图片 + 价格 + 购物车图标），并支持首页分类面板点击跳转到对应分类。
+
+### 已执行操作
+
+1. 分类页左侧分类后端化：`category.vue` 的 `mounted` 调 `getCategories()`，按 `parentId` 拆一/二级分类，一级分类记下 `subIds`（二级分类 id）。
+2. 首页跳转联动：`index.vue` 的 `handleCategorySelect` 用 `uni.setStorageSync('selectedCategoryId', item.id)` 传选中分类再 `switchTab`；分类页 `applySelectedCategory()` 读 Storage 定位到对应下标后删除。
+3. 右侧商品网格：`mounted` 调 `getProducts()` 拉全量商品，`currentProducts` 按「一级分类 id + 其二级分类 id 集合」过滤；模板由「二级分类宫格」改为「商品网格」（每行两个，图片 + 名称 + 价格 + 购物车图标）。
+4. 卡片等高：商品名 1/2 行导致卡片高度不一致，卡片固定 `height` + 名称区固定两行高度、价格行贴底。
+5. 清理冗余：删未使用的 `subs` 字段、`currentCategory` 计算属性、`main-title` 标题，更新过时注释。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `pages/category/category.vue` | 左侧分类后端化 + 右侧商品网格 + 卡片等高 + 清理冗余 |
+| `pages/index/index.vue` | `handleCategorySelect` 用 Storage 传选中分类 id 再跳转 |
+| `task_plan.md` / `findings.md` / `progress.md` | 记录本轮 |
+
+### 遗留事项
+
+- 购物车图标是纯展示，未接「加购」逻辑（加购需登录 + order-service 接口，尚未开发）。
+- 部分商品后端 `category_id` 为 NULL（未挂到分类），分类页不显示，属后端数据现状。
+
+---
+
 ## 会话 15：2026-10-06（首页下拉刷新动画修复）
 
 ### 当前状态

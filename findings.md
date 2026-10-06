@@ -295,6 +295,16 @@
   - 热门推荐接口 `GET /api/products/hot` → `Result<List<HotSlotVO{title,product}>>`（或商品加 `is_hot` 标记、
     前端写死栏目名映射）；两接口都进免登录白名单，图片沿用「相对路径 + 前端补 `BASE_URL`」。
 
+### 分类页右侧商品（2026-10-06，`pages/category/category.vue`）
+
+- 左侧分类后端化：`mounted` 调 `getCategories()`，按 `parentId` 拆一/二级；一级分类记下 `subIds`（二级分类 id）。右侧由「二级分类宫格」改为「商品网格」后，二级分类名不再展示，`subs` 字段成死代码已删。
+- **商品与分类的关系**：商品挂在**二级分类**上（`products.category_id` → 二级分类 id），一级分类下无直接商品；后端种子数据还有 9 个 `category_id = NULL` 的商品（iPhone 15 Pro、华为 Pura 70 等），不属于任何分类，分类页不显示（首页热门/猜你喜欢仍可见）。
+- **商品过滤方式**：后端 `/api/products` 返回**全量上架商品**、无按分类过滤参数，前端拉全量后按「当前一级分类 id + 其二级分类 id 集合」过滤出对应商品（`currentProducts` 计算属性）。
+- **跳转联动**：`switchTab` 跳 tab 页不能带 query，用 `uni.setStorageSync('selectedCategoryId', id)` 传选中分类；分类页 `applySelectedCategory()` 读 Storage 定位到对应下标后 `removeStorageSync` 清掉（避免下次直接进分类页还停在旧分类）。
+- **tabBar 页二次进入**：分类页被 tabBar 缓存，`mounted` 只在首次触发，二次切回靠 `onShow` 定位；首次进入 `onShow` 先于分类数据返回，`findIndex` 找不到就**不清** Storage，等 `fetchCategories` 完成后再定位。
+- **卡片等高**：商品名 1/2 行导致卡片总高不一致、下一行错位；卡片固定 `height` + 名称区固定两行高度、价格行贴底解决。
+- **购物车图标**：复用全局 iconfont `icon-gouwuche1`（`App.vue` 已全局引入 `static/icon/iconfont.css`），橙色圆底做成加购按钮样子；目前纯展示，未接加购逻辑（加购需登录 + order-service 接口，未开发）。
+
 ## 技术决策
 
 | 决策 | 理由 |
@@ -325,6 +335,10 @@
 | 猜你喜欢接口免登录、未登录走热门兜底 | 复用 `/api/products/**` 白名单，游客也能看首页；个性化只在已登录时生效 |
 | 下拉刷新用 `scroll-view` 的 `refresher-enabled`，不用原生 `onPullDownRefresh` | 首页自定义 fixed 导航栏会盖住原生转圈（固定在页面顶部）；scroll-view 转圈在导航栏下方，不被遮挡且可自定义样式 |
 
+| 分类页商品按「一级分类 + 二级分类 id 集合」前端过滤 | 后端 `/api/products` 无分类过滤参数、返回全量；商品挂二级分类，一级分类无直接商品 |
+| 首页跳分类页用 Storage 传 `selectedCategoryId` | `switchTab` 不能带 query；存 id → 分类页 `onShow`/加载后定位 → 用完即删 |
+| 分类页定位选中分类放 `onShow` 且找不到不删 Storage | tabBar 页缓存，`mounted` 只跑一次；首次进入 `onShow` 先于数据返回，找到再删避免选不中/残留 |
+
 ## 遇到的问题
 
 | 问题 | 解决方案 |
@@ -349,6 +363,8 @@
 | 猜你喜欢标题 `text-align: center` 不生效 | `.guess-header` 是 flex 容器，`text-align` 只管行内文本，flex 子项居中要用 `justify-content: center` |
 
 | 首页下拉刷新看不到动画 | 本地接口秒回导致 `refreshing` 瞬间 true→false，转圈没渲染就复位；`Promise.all` 内联 `setTimeout` 延时保底展示 |
+
+| 分类页商品卡片高度不一致、对不齐 | 商品名 1/2 行导致卡片总高不同；卡片固定高度 + 名称区固定两行高度、价格行贴底 |
 
 ## 资源
 

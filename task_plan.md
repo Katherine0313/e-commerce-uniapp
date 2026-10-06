@@ -10,12 +10,11 @@
 
 ## 下一步
 
-阶段 15「首页下拉刷新」动画已修复；接「轮播图 + 热门推荐」进刷新需等后端提供 Banner 接口和热门推荐
-接口（Python 推荐服务写好后再继续）。
+分类页右侧商品网格已完成；「轮播图 Banner 接口」「热门推荐接口」仍需后端提供后再接进首页下拉刷新。
 
 ## 当前阶段
 
-阶段 15：首页下拉刷新（动画修复完成，接后端数据待后续）
+阶段 16：分类页右侧商品网格（完成）
 
 ## 各阶段
 
@@ -92,8 +91,8 @@
 - [x] `pages/index/index.vue` 局部注册 + 插入轮播图下方，点击 `switchTab` 到分类页
 - [x] 图标加 `border-radius` 圆角裁剪
 - [x] 金刚区数据后端化：`CategoryPanel` 改为 `mounted` 调 `getCategories()`，只取 `parentId == null` 的一级分类，名称/图片用后端 `name`/`image`（补 `BASE_URL`），删除写死的 6 项
-- [ ] 分类页 + 首页跳转联动（带选中分类）
-- **状态：** in_progress
+- [x] 分类页 + 首页跳转联动（带选中分类，Storage 传 `selectedCategoryId`）
+- **状态：** complete
 
 ### 阶段 12：商品预览弹窗（热门推荐 + uni-popup）
 - [x] 新建 `pages/index/component/HotPanel.vue`：热门推荐面板，4 色块 × 左右各一个商品位，点图 `$emit('select', id)`
@@ -126,6 +125,14 @@
 - [ ] 接「轮播图 Banner 接口」进刷新（等后端 `GET /api/banners`）
 - [ ] 接「热门推荐接口」进刷新（等后端 `GET /api/products/hot`）
 - **状态：** in_progress（动画已修，接后端数据待 Python 推荐服务 + 后端接口）
+
+### 阶段 16：分类页右侧商品网格
+- [x] 分类页 `category.vue` 左侧分类后端化：`mounted` 调 `getCategories()`，按 `parentId` 拆一/二级，一级分类记下 `subIds`（二级分类 id）
+- [x] 右侧「二级分类宫格」改为「商品网格」：`mounted` 调 `getProducts()` 拉全量商品，按「一级分类 id + 其二级分类 id 集合」前端过滤
+- [x] 商品卡片：每行两个，图片 + 名称 + 价格 + 购物车图标（iconfont `icon-gouwuche1`）
+- [x] 卡片固定高度 + 名称固定两行，解决不同名称长度下卡片等高对齐
+- [x] 清理冗余：删未使用的 `subs` 字段、`currentCategory` 计算属性、`main-title` 标题
+- **状态：** complete
 
 ## 关键问题
 
@@ -162,6 +169,9 @@
 | 猜你喜欢推荐算法用 Python 写，不用 Spring AI | 推荐是独立的 Python FastAPI 服务（Item-Item 共现 + 热门兜底）；Spring AI 只用于聊天机器人 ai-agent-service，两者职责不同 |
 | 猜你喜欢接口免登录、未登录走热门兜底 | 复用 `/api/products/**` 白名单，游客也能看首页；个性化只在已登录时生效，前端无需自己判断登录态 |
 | 分类接口单独放 `api/categories.js`，不与商品混在 `product.js` | 分类/商品是两个不同资源，按资源拆开；后端 `categories` 虽挂在 `ProductController` 下，前端按语义独立成文件 |
+| 分类页商品按「一级分类 + 二级分类 id 集合」前端过滤 | 后端 `/api/products` 无分类过滤参数、返回全量；商品挂在二级分类上（`products.category_id` → 二级分类 id），一级分类下无直接商品 |
+| 首页跳分类页用 Storage 传 `selectedCategoryId` | `switchTab` 跳 tab 页不能带 query；存 id → 分类页定位后删除 |
+| 分类页定位选中分类放 `onShow` 且找不到不删 Storage | tabBar 页缓存，`mounted` 只跑一次；首次进入 `onShow` 先于数据返回，找到再删避免选不中/残留 |
 
 ## 遇到的错误
 

@@ -220,7 +220,7 @@
 		display: flex;
 		flex-direction: column;
 		width: calc(50% - 8rpx);
-		height: 400rpx;
+		height: 440rpx;
 		margin-bottom: 20rpx;
 		background: #ffffff;
 		border-radius: 12rpx;
@@ -230,6 +230,8 @@
 	.goods-img {
 		width: 100%;
 		height: 260rpx;
+		/* flex 子项默认 flex-shrink:1，卡片空间不足时图片会被压矮；禁掉保证图片高度一致 */
+		flex-shrink: 0;
 	}
 
 	.goods-info {
@@ -249,6 +251,7 @@
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
 		overflow: hidden;
+		height:80rpx;
 	}
 
 	/* 价格 + 购物车图标一行：价格靠左，购物车靠右 */
