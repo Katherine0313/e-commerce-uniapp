@@ -190,6 +190,8 @@
 			},
 			// 点击分类项：跳分类页（tab 页必须用 switchTab）
 			handleCategorySelect(item) {
+				// switchTab 不能带 query，把选中分类 id 存 Storage，分类页加载后读它定位
+				uni.setStorageSync('selectedCategoryId', item.id)
 				uni.switchTab({
 					url: '/pages/category/category'
 				})

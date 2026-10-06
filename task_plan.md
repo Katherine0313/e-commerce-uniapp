@@ -10,12 +10,12 @@
 
 ## 下一步
 
-阶段 14「猜你喜欢」已完成（前端已接 `GET /api/products/recommend`，商品名称/价格/图片全来自后端）。
-下一步：阶段 13 悬浮式 AI 导购 Agent 前端（仍顺延中，后端骨架已跑通）。
+阶段 15「首页下拉刷新」动画已修复；接「轮播图 + 热门推荐」进刷新需等后端提供 Banner 接口和热门推荐
+接口（Python 推荐服务写好后再继续）。
 
 ## 当前阶段
 
-阶段 14：首页「猜你喜欢」模块（完成）
+阶段 15：首页下拉刷新（动画修复完成，接后端数据待后续）
 
 ## 各阶段
 
@@ -117,6 +117,15 @@
 - [x] `pages/index/index.vue` 在热门推荐（`HotPanel`）之后插入 `<Guess @select="handleProductSelect" />`（全局注册，复用弹预览逻辑）
 - [x] 已登录带 token 走个性化（后端按 `UserContext.getUserId()` 调 Python），未登录自动热门兜底（前端统一带 token 请求，无需自己判断登录态）
 - **状态：** complete（前端已接 `getRecommend`，商品名称/价格/图片全部来自后端）
+
+### 阶段 15：首页下拉刷新
+- [x] 定位「看不到动画」根因：本地接口秒回，`refreshing` 瞬间 true→false，转圈没渲染就复位
+- [x] 修复：`onRefresh` 的 `Promise.all` 内联 `setTimeout` 延时，保证动画至少展示一段时间
+- [x] 整合代码：去掉 `minDelay` 中间变量，延时 Promise 直接内联
+- [x] 确认用 `scroll-view` 的 `refresher-enabled` 而非原生 `onPullDownRefresh`（自定义 fixed 导航栏会盖住原生转圈）
+- [ ] 接「轮播图 Banner 接口」进刷新（等后端 `GET /api/banners`）
+- [ ] 接「热门推荐接口」进刷新（等后端 `GET /api/products/hot`）
+- **状态：** in_progress（动画已修，接后端数据待 Python 推荐服务 + 后端接口）
 
 ## 关键问题
 

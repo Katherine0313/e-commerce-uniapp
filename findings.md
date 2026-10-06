@@ -279,6 +279,22 @@
 - `HotPanel` 是写死商品 id 的「栏目/精选」占位面板（阶段 12），与个性化无关；
 - 「猜你喜欢」是**按用户下单记录**的个性化推荐，数据来自 Python 推荐服务 + Java 桥接接口。
 
+### 首页下拉刷新（2026-10-06）
+
+- 用 `scroll-view` 的 `refresher-enabled`，不用页面原生 `onPullDownRefresh`：首页是自定义 fixed 导航栏
+  （`TopBar.vue` 的 `.navbar-fixed { position: fixed; z-index: 99 }`），原生下拉转圈固定显示在页面顶部会被
+  导航栏盖住；`scroll-view` 转圈在滚动区顶部（导航栏下方），不被遮挡，且可自定义 `refresher-default-style` /
+  `refresher-background`。
+- **「看不到动画」根因**：`onRefresh` 重拉的「分类 + 猜你喜欢」都走本地网关 `127.0.0.1:8080` 秒回，
+  `refreshing` 在 `true` 后几十毫秒就被置回 `false`，转圈没渲染出来就复位。修复：`Promise.all` 内联
+  `setTimeout` 延时，保证动画至少展示一段时间。
+- **现状**：下拉刷新只重拉「分类 `getCategories` + 猜你喜欢 `getRecommend`」；「轮播图」「热门推荐」仍写死/
+  本地占位，不参与刷新，所以刷新前后数据基本不变、看不出效果。
+- **后端待提供（等 Python 推荐服务写好再继续）**：
+  - 轮播图 Banner 接口 `GET /api/banners` → `Result<List<BannerVO{id,image,link,sort}>>`；
+  - 热门推荐接口 `GET /api/products/hot` → `Result<List<HotSlotVO{title,product}>>`（或商品加 `is_hot` 标记、
+    前端写死栏目名映射）；两接口都进免登录白名单，图片沿用「相对路径 + 前端补 `BASE_URL`」。
+
 ## 技术决策
 
 | 决策 | 理由 |
@@ -307,6 +323,7 @@
 
 | 猜你喜欢推荐算法用 Python 写，不用 Spring AI | 推荐是独立的 Python FastAPI 服务；Spring AI 只用于聊天机器人 ai-agent-service，两者职责不同 |
 | 猜你喜欢接口免登录、未登录走热门兜底 | 复用 `/api/products/**` 白名单，游客也能看首页；个性化只在已登录时生效 |
+| 下拉刷新用 `scroll-view` 的 `refresher-enabled`，不用原生 `onPullDownRefresh` | 首页自定义 fixed 导航栏会盖住原生转圈（固定在页面顶部）；scroll-view 转圈在导航栏下方，不被遮挡且可自定义样式 |
 
 ## 遇到的问题
 
@@ -330,6 +347,8 @@
 
 | 猜你喜欢图片底部圆角"被剪掉" | 卡片 `overflow:hidden` + `border-radius` 只裁卡片外边界（图片顶角），图片底边在卡片内部不贴底边，需给 `.goods-img` 单独设 `border-radius: 0 0 16rpx 16rpx` |
 | 猜你喜欢标题 `text-align: center` 不生效 | `.guess-header` 是 flex 容器，`text-align` 只管行内文本，flex 子项居中要用 `justify-content: center` |
+
+| 首页下拉刷新看不到动画 | 本地接口秒回导致 `refreshing` 瞬间 true→false，转圈没渲染就复位；`Promise.all` 内联 `setTimeout` 延时保底展示 |
 
 ## 资源
 
