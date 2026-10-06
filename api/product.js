@@ -14,11 +14,6 @@ export function getProductDetail(id){
 	return request('/api/products/' + id, { method: 'GET' })
 }
 
-// 获取分类列表，对应 GET /api/categories
-export function getCategories(){
-	return request('/api/categories', { method: 'GET' })
-}
-
 // 获取猜你喜欢推荐列表，对应 GET /api/products/recommend（免登录，未登录走销量热门兜底）
 export function getRecommend(limit){
 	return request('/api/products/recommend?limit=' + (limit || 10), { method: 'GET' })

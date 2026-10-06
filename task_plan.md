@@ -91,7 +91,7 @@
 - [x] 图标方案从 iconfont 字体改为 png（`static/image/category/*.png` 6 张）
 - [x] `pages/index/index.vue` 局部注册 + 插入轮播图下方，点击 `switchTab` 到分类页
 - [x] 图标加 `border-radius` 圆角裁剪
-- [ ] 金刚区数据后端化（接 `getCategories`，建 分类 id→png 映射）
+- [x] 金刚区数据后端化：`CategoryPanel` 改为 `mounted` 调 `getCategories()`，只取 `parentId == null` 的一级分类，名称/图片用后端 `name`/`image`（补 `BASE_URL`），删除写死的 6 项
 - [ ] 分类页 + 首页跳转联动（带选中分类）
 - **状态：** in_progress
 
@@ -152,6 +152,7 @@
 
 | 猜你喜欢推荐算法用 Python 写，不用 Spring AI | 推荐是独立的 Python FastAPI 服务（Item-Item 共现 + 热门兜底）；Spring AI 只用于聊天机器人 ai-agent-service，两者职责不同 |
 | 猜你喜欢接口免登录、未登录走热门兜底 | 复用 `/api/products/**` 白名单，游客也能看首页；个性化只在已登录时生效，前端无需自己判断登录态 |
+| 分类接口单独放 `api/categories.js`，不与商品混在 `product.js` | 分类/商品是两个不同资源，按资源拆开；后端 `categories` 虽挂在 `ProductController` 下，前端按语义独立成文件 |
 
 ## 遇到的错误
 

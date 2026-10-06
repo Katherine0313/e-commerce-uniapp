@@ -60,6 +60,8 @@
 		},
 		created() {
 			this.initNavbarSize()
+			// 把总高度抛给页面：页面里的 scroll-view 要按它算确定高度（下拉刷新要求 scroll-view 有确定高度）
+			this.$emit('heightChange', this.totalHeight)
 		},
 		methods: {
 			// 按当前机型算出状态栏高度和胶囊按钮位置

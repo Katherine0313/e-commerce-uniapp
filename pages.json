@@ -11,6 +11,8 @@
 			"path":"pages/index/index",
 			"style": {
 				// 关掉原生导航栏，改用全局组件 CustomNavbar
+				// 下拉刷新改用 scroll-view 的 refresher-enabled 自绘：
+				// 原生下拉的转圈固定在页面顶部，会被 fixed 导航栏盖住
 				"navigationStyle": "custom"
 			}
 		},

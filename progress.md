@@ -1,5 +1,40 @@
 # 进度日志
 
+## 会话 14：2026-10-06（前台分类数据后端化）
+
+### 当前状态
+- **阶段：** 11 - 前台分类组件（金刚区数据后端化完成，跳转联动未做）
+- **开始时间：** 2026-10-06
+
+### 背景
+
+用户要求首页「金刚区」分类不再写死，改为从后端 `categories` 表拉取，名称用一级分类名称、图片用后端存的图。
+
+### 已执行操作
+
+1. 确认后端接口：`GET /api/categories`（`ProductController.listCategories`）返回 `List<CategoryVO>`
+   （id/name/parentId/image/status/...），`parentId == null` 为顶级分类，`image` 为相对路径 `/image/category/xxx.png`。
+2. 新建 `api/categories.js`：单独放 `getCategories()`（原来混在 `api/product.js`，分类与商品是两个资源，按资源拆开）。
+3. `api/product.js`：删除 `getCategories()`。
+4. `pages/index/component/CategoryPanel.vue`：删写死的 6 项，改为 `mounted` 调 `getCategories()`，
+   过滤 `parentId == null` 的一级分类；`imgUrl(item)` 给 `image` 补 `BASE_URL`；`:key` 用 `id`。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `api/categories.js` | 新建：`getCategories()` |
+| `api/product.js` | 删除 `getCategories()` |
+| `pages/index/component/CategoryPanel.vue` | 写死数据改为 `mounted` 调接口，过滤一级分类 + 图片补 BASE_URL |
+| `task_plan.md` / `findings.md` / `progress.md` | 记录本轮 |
+
+### 遗留事项
+
+- 分类页 `category.vue` 仍是占位；跳转联动（`switchTab` 不能带 query，需 store/Storage 传选中分类）。
+- 原写死的 `static/image/category/*.png` 本地图已无引用，待用户确认是否清理。
+
+---
+
 ## 会话 13：2026-10-05（猜你喜欢接后端推荐接口）
 
 ### 当前状态

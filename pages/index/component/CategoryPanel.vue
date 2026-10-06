@@ -1,35 +1,48 @@
 <template>
-	<!-- 前台分类面板：6 个分类宫格，点击抛出分类项，跳转交给页面处理 -->
+	<!-- 前台分类面板：一级分类宫格，来自后端 GET /api/categories，点击抛出分类项，跳转交给页面处理 -->
 	<view class="category-panel">
 		<view
 			v-for="item in categories"
-			:key="item.name"
+			:key="item.id"
 			class="category-item"
 			@click="handleSelect(item)"
 		>
-			<image class="category-icon" :src="item.img" mode="aspectFit"></image>
+			<image class="category-icon" :src="imgUrl(item)" mode="aspectFit"></image>
 			<text class="category-name">{{ item.name }}</text>
 		</view>
 	</view>
 </template>
 
 <script>
+	import { getCategories } from '../../../api/categories.js'
+	import { BASE_URL } from '../../../utils/server-api.js'
+
 	export default {
 		name: 'CategoryPanel',
 		data() {
 			return {
-				// 分类配置：img 对应 static/image/category 下的 png，name 是展示中文名
-				categories: [
-					{ img: '/static/image/category/shouji.png', name: '手机' },
-					{ img: '/static/image/category/bijiben.png', name: '笔记本' },
-					{ img: '/static/image/category/pingban.png', name: '平板' },
-					{ img: '/static/image/category/xiangji.png', name: '相机' },
-					{ img: '/static/image/category/shoubiao.png', name: '手表' },
-					{ img: '/static/image/category/erji.png', name: '耳机' }
-				]
+				// 一级分类列表：来自 GET /api/categories，只取 parentId 为空的顶级分类
+				categories: []
 			}
 		},
+		mounted() {
+			this.fetchCategories()
+		},
 		methods: {
+			// 拉一级分类：后端 categories 表 parentId 为 null 的是顶级分类，名称和图片都用后端的
+			// 返回 Promise，供页面下拉刷新时等请求结束
+			fetchCategories() {
+				return getCategories().then((list) => {
+					this.categories = (list || []).filter((item) => !item.parentId)
+				}).catch(() => {
+					// 错误提示已在 request 封装里统一处理
+				})
+			},
+			// 分类图：后端 image 是 /image/category/xxx.png 相对路径，小程序把开头的 / 当包内路径，需补 BASE_URL
+			imgUrl(item) {
+				const img = item.image
+				return img ? (img.indexOf('http') === 0 ? img : BASE_URL + img) : ''
+			},
 			// 点击某个分类：把整项抛给页面，跳分类页 / 筛选交给页面决定
 			handleSelect(item) {
 				this.$emit('select', item)

@@ -38,8 +38,9 @@
 		},
 		methods: {
 			// 拉猜你喜欢推荐：免登录，未登录后端走销量热门兜底
+			// 返回 Promise，供页面下拉刷新时等请求结束
 			fetchRecommend() {
-				getRecommend(10).then((list) => {
+				return getRecommend(10).then((list) => {
 					this.products = list || []
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理

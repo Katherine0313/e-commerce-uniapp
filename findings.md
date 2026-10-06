@@ -173,7 +173,9 @@
 - **注册方式**：`pages/index/index.vue` 局部注册（`import` + `components`），未进 `main.js` 全局注册
   —— 组件只在首页用，且当时 `main.js` 状态不稳。全局/局部/easycom 的选择标准是「复用范围」。
 - **交互**：点击某项 `$emit('select', item)` 把整项抛给页面，`handleCategorySelect` 用 `switchTab` 跳分类页。
-- 数据目前是 `data` 里写死的 6 项（含 img 路径），后续接 `getCategories()` 时需建 分类 id→png 映射。
+- 数据源已后端化（2026-10-06）：`mounted` 调 `getCategories()`，只取 `parentId == null` 的一级分类，
+  名称/图片用后端 `CategoryVO` 的 `name`/`image`；`image` 是 `/image/category/xxx.png` 相对路径，补 `BASE_URL`。
+  分类接口单独拆到 `api/categories.js`（原混在 `api/product.js`；分类与商品是两个资源，按资源拆开）。
 - 相关坑：`@import` 相对路径从 `components/` 到根是 `../` 不是 `../../`；微信开发者工具
   「过滤无依赖文件」会误删 uni-app 懒加载组件（报 `Component is not found`）。
 
