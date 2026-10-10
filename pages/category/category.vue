@@ -27,7 +27,7 @@
 				</view>
 				<!-- 商品网格：每行两个，卡片是 图片 + 名称 + 价格 + 购物车图标 -->
 				<view class="goods-grid">
-					<view class="goods-card" v-for="item in currentProducts" :key="item.id">
+					<view class="goods-card" v-for="item in currentProducts" :key="item.id" @click="handleProductClick(item)">
 						<image class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
 						<view class="goods-info">
 							<text class="goods-name">{{ item.name }}</text>
@@ -41,6 +41,10 @@
 			</scroll-view>
 		</view>
 
+		<!-- 商品加购弹窗：整页遮罩，放滚动区外，避免受 scroll-view 层叠影响 -->
+		<ProductPopup :show="showProductPopup" :product="currentProduct" @close="handleProductClose"
+			@add="handleAddCart" />
+
 		<!-- 自定义底部导航栏 -->
 		<CustomTabBar />
 	</view>
@@ -48,28 +52,30 @@
 
 <script>
 	import { getCategories } from '../../api/categories.js'
-	import { getProducts } from '../../api/product.js'
+	import { getProductsByCategory } from '../../api/product.js'
 	import { BASE_URL } from '../../utils/server-api.js'
+	// 商品加购弹窗
+	import ProductPopup from './component/ProductPopup.vue'
 
 	export default {
+		components: {
+			ProductPopup
+		},
 		data() {
 			return {
 				activeIndex: 0, // 当前选中一级分类下标，右侧商品跟着它联动
 				navHeight: 0, // 导航栏总高度（px），由 CustomNavbar 抛上来
-				// 一级分类：来自后端 GET /api/categories，只取 parentId 为空的顶级分类
+				// 一级父分类：来自后端 GET /api/categories（树形，children 是二级分类）
 				categories: [],
-				// 全量上架商品：来自后端 GET /api/products，按选中一级分类前端过滤（商品挂在二级分类上）
-				products: []
+				// 当前父类名下商品：按选中的一级分类懒加载（GET /api/products?categoryId=x）
+				currentProducts: [],
+				// 商品加购弹窗显隐
+				showProductPopup: false,
+				// 当前点击的商品
+				currentProduct: {}
 			}
 		},
 		computed: {
-			// 当前选中分类下的商品：一级分类没有直接商品，匹配它名下的二级分类 id
-			currentProducts() {
-				const cat = this.categories[this.activeIndex]
-				if (!cat) return []
-				const ids = [cat.id].concat(cat.subIds || [])
-				return this.products.filter((p) => ids.indexOf(p.categoryId) !== -1)
-			},
 			// 分类主体高度 = 整屏 - 导航栏占位高度，必须是确定值
 			bodyHeight() {
 				return 'calc(100vh - ' + this.navHeight + 'px)'
@@ -77,39 +83,42 @@
 		},
 		mounted() {
 			this.fetchCategories()
-			this.fetchProducts()
 		},
 		onShow() {
-			// 从首页分类面板切回来时页面已加载，重新定位选中分类
+			// 从首页分类面板切回来时页面已加载，重新定位选中分类并加载其商品
 			this.applySelectedCategory()
+			this.loadProducts()
 		},
 		methods: {
-			// 拉分类：后端 categories 表 parentId 为 null 的是顶级分类，二级分类 parentId 指向一级 id
+			// 拉分类：后端返回树形列表，每个元素就是一级父分类，children 是它的二级分类
 			fetchCategories() {
 				getCategories().then((list) => {
-					list = list || []
-					// 一级分类：parentId 为空的顶级分类
-					const top = list.filter((item) => !item.parentId)
-					// 每个一级分类记下它的二级分类 id，用于过滤商品
-					this.categories = top.map((item) => {
-						const subs = list.filter((sub) => sub.parentId === item.id)
+					// 一级父分类：children 记下它的二级分类 id，用于过滤商品
+					this.categories = (list || []).map((item) => {
 						return {
 							id: item.id,
 							name: item.name,
 							icon: this.imgUrl(item),
-							subIds: subs.map((sub) => sub.id)
+							subIds: (item.children || []).map((sub) => sub.id)
 						}
 					})
 					// 若从首页分类面板带过来选中分类，定位到对应下标
 					this.applySelectedCategory()
+					// 分类就绪后按当前父类懒加载商品
+					this.loadProducts()
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
 				})
 			},
-			// 拉全量上架商品：商品挂在二级分类上，前端按选中一级分类过滤
-			fetchProducts() {
-				getProducts().then((list) => {
-					this.products = list || []
+			// 按当前选中的父类（一级分类）懒加载其名下商品
+			loadProducts() {
+				const cat = this.categories[this.activeIndex]
+				if (!cat) {
+					this.currentProducts = []
+					return
+				}
+				getProductsByCategory(cat.id).then((list) => {
+					this.currentProducts = list || []
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
 				})
@@ -134,9 +143,27 @@
 			handleNavHeightChange(height) {
 				this.navHeight = height
 			},
-			// 点左侧一级分类：切换选中，右侧联动
+			// 点左侧一级分类：切换选中，懒加载该父类名下商品
 			handleSelect(index) {
 				this.activeIndex = index
+				this.loadProducts()
+			},
+			// 点击商品：记录商品并弹出加购弹窗
+			handleProductClick(item) {
+				this.currentProduct = item
+				this.showProductPopup = true
+			},
+			// 关闭加购弹窗
+			handleProductClose() {
+				this.showProductPopup = false
+			},
+			// 加入购物车：购物车逻辑后面再接，先占位
+			handleAddCart(item) {
+				// TODO: 接入购物车
+				uni.showToast({
+					title: '加购功能开发中',
+					icon: 'none'
+				})
 			}
 		}
 	}

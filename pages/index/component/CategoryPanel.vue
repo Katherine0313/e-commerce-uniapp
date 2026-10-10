@@ -21,7 +21,7 @@
 		name: 'CategoryPanel',
 		data() {
 			return {
-				// 一级分类列表：来自 GET /api/categories，只取 parentId 为空的顶级分类
+				// 一级父分类列表：来自 GET /api/categories（树形，每个元素就是一级父分类）
 				categories: []
 			}
 		},
@@ -33,7 +33,8 @@
 			// 返回 Promise，供页面下拉刷新时等请求结束
 			fetchCategories() {
 				return getCategories().then((list) => {
-					this.categories = (list || []).filter((item) => !item.parentId)
+					// 后端返回树形列表，每个元素就是一级父分类
+					this.categories = list || []
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
 				})

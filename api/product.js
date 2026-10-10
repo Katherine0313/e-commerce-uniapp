@@ -9,6 +9,11 @@ export function getProducts(){
 	return request('/api/products', { method: 'GET' })
 }
 
+// 按一级分类查商品，对应 GET /api/products?categoryId=x
+export function getProductsByCategory(categoryId){
+	return request('/api/products?categoryId=' + categoryId, { method: 'GET' })
+}
+
 // 获取商品详情，对应 GET /api/products/{id}
 export function getProductDetail(id){
 	return request('/api/products/' + id, { method: 'GET' })
