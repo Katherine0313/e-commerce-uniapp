@@ -45,6 +45,9 @@
 		<ProductPopup :show="showProductPopup" :product="currentProduct" @close="handleProductClose"
 			@add="handleAddCart" />
 
+		<!-- 登录弹窗：未登录点加购时弹出来提示（打开即静默登录），叠在商品弹窗上面（全局组件，免注册） -->
+		<LoginPopup :show="showLoginPopup" @close="handleLoginClose" />
+
 		<!-- 自定义底部导航栏 -->
 		<CustomTabBar />
 	</view>
@@ -53,9 +56,13 @@
 <script>
 	import { getCategories } from '../../api/categories.js'
 	import { getProductsByCategory } from '../../api/product.js'
+	import { addToCart } from '../../api/cart.js'
 	import { BASE_URL } from '../../utils/server-api.js'
 	// 商品加购弹窗
 	import ProductPopup from './component/ProductPopup.vue'
+	import {
+		useUserStore
+	} from '../../store/user.js'
 
 	export default {
 		components: {
@@ -72,7 +79,10 @@
 				// 商品加购弹窗显隐
 				showProductPopup: false,
 				// 当前点击的商品
-				currentProduct: {}
+				currentProduct: {},
+				// 登录弹窗显隐
+				showLoginPopup: false,
+				store: useUserStore() // 用户登录态，判断是否要走登录弹窗
 			}
 		},
 		computed: {
@@ -157,12 +167,34 @@
 			handleProductClose() {
 				this.showProductPopup = false
 			},
-			// 加入购物车：购物车逻辑后面再接，先占位
+			// 加入购物车：未登录先弹登录弹窗（打开即静默登录），关掉后再点一次加购就成
 			handleAddCart(item) {
-				// TODO: 接入购物车
-				uni.showToast({
-					title: '加购功能开发中',
-					icon: 'none'
+				if (!this.store.isLogin) {
+					// 商品弹窗保持打开，数量/增值保障的选择留在原地，登录后接着点即可
+					this.showLoginPopup = true
+					return
+				}
+				this.doAddCart(item)
+			},
+			// 关闭登录弹窗
+			handleLoginClose() {
+				this.showLoginPopup = false
+			},
+			// 真正的加购：调后端 POST /api/cart 落库，成功后关掉商品弹窗并提示
+			// 增值保障明细/费用后端暂未接收（order-service 固定写空数组），等启用后再随请求带上
+			doAddCart(item) {
+				const product = item.product || {}
+				if (!product.id) {
+					return
+				}
+				addToCart(product.id, item.quantity).then(() => {
+					this.showProductPopup = false
+					uni.showToast({
+						title: '已加入购物车',
+						icon: 'success'
+					})
+				}).catch(() => {
+					// 错误提示已在 request 封装里统一处理
 				})
 			}
 		}

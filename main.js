@@ -7,6 +7,8 @@ import CustomTabBar from './pages/index/component/TabBar.vue'
 import CustomSwiper from './components/CustomSwiper.vue'
 // 猜你喜欢，用于首页和购物车
 import Guess from './components/Guess.vue'
+// 登录弹窗，未登录点加购时弹出，静默登录后继续加购
+import LoginPopup from './components/LoginPopup.vue'
 // #ifndef VUE3
 import Vue from 'vue'
 import './uni.promisify.adaptor'
@@ -15,6 +17,7 @@ Vue.component('CustomNavbar', CustomNavbar)
 Vue.component('CustomTabBar', CustomTabBar)
 Vue.component('CustomSwiper',CustomSwiper)
 Vue.component('Guess',Guess)
+Vue.component('LoginPopup', LoginPopup)
 App.mpType = 'app'
 const app = new Vue({
 	...App
@@ -39,6 +42,8 @@ export function createApp() {
 	app.component('CustomSwiper',CustomSwiper)
 	// 全局注册猜你喜欢组件
 	app.component('Guess',Guess)
+	// 全局注册登录弹窗组件
+	app.component('LoginPopup', LoginPopup)
 	// 创建 Pinia 实例并注册，统一管理全局状态
 	const pinia = createPinia()
 	app.use(pinia)
