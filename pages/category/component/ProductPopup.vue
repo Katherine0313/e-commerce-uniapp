@@ -1,67 +1,79 @@
 <template>
 	<!-- 商品加购弹窗：遮罩 / 居中 / 点遮罩关闭都交给 uni-popup（uni-ui，easycom 免注册），里面放 图片 + 名称 + 加入购物车按钮 -->
-	<uni-popup ref="popup" class="product-popup" type="center" :is-mask-click="true" @change="handleChange">
-		<view class="popup-card">
-			<image v-if="cover" class="cover" :src="cover" mode="aspectFill"></image>
-			<text class="name">{{ product.name }}</text>
-			<text class="price">¥{{ product.price }}</text>
-			<!-- 服务保障：和后台 Mall.vue 的 assurance-row 一致，小程序没有 ant 图标，用 uni-ui 的 uni-icons 对应 -->
-			<view class="assurance-row">
-				<view class="assurance-item">
-					<uni-icons type="auth" size="15" color="#FF6700"></uni-icons>
-					<text class="assurance-text">正品保证</text>
-				</view>
-				<view class="assurance-item">
-					<uni-icons type="refreshempty" size="15" color="#FF6700"></uni-icons>
-					<text class="assurance-text">极速退款</text>
-				</view>
-				<view class="assurance-item">
-					<uni-icons type="calendar" size="15" color="#FF6700"></uni-icons>
-					<text class="assurance-text">七天无理由</text>
-				</view>
-				<view class="assurance-item">
-					<uni-icons type="location" size="15" color="#FF6700"></uni-icons>
-					<text class="assurance-text">全国联保</text>
-				</view>
-			</view>
-			<view class="quantity">
-				<text class="qty-label">数量</text>
-				<view class="qty-stepper">
-					<view class="qty-btn" @click="handleMinus">-</view>
-					<text class="qty-num">{{ quantity }}</text>
-					<view class="qty-btn" @click="handlePlus">+</view>
-				</view>
-			</view>
-			<!-- 增值保障：和后台 Mall.vue 的 insurance-section 一致，点卡片切换选中（橙边框 + 浅橙底） -->
-			<view class="insurance-section">
-				<text class="insurance-title">增值保障</text>
-				<view class="insurance-cards">
-					<view class="insurance-card" :class="{ active: selectedInsurance2 }"
-						@click="selectedInsurance2 = !selectedInsurance2">
-						<text class="insurance-name">一年意外保</text>
-						<text class="insurance-price">¥{{ insurance2 }}</text>
+	<!-- 外层多包一层 view：飞入动画要的落点必须在弹窗外面，否则会被弹窗收起动画（transform）带着一起动 -->
+	<view class="product-popup-wrap">
+		<uni-popup ref="popup" class="product-popup" type="center" :is-mask-click="true" @change="handleChange">
+			<view class="popup-card">
+				<image v-if="cover" class="cover" :src="cover" mode="aspectFill"></image>
+				<text class="name">{{ product.name }}</text>
+				<text class="price">¥{{ product.price }}</text>
+				<!-- 服务保障：和后台 Mall.vue 的 assurance-row 一致，小程序没有 ant 图标，用 uni-ui 的 uni-icons 对应 -->
+				<view class="assurance-row">
+					<view class="assurance-item">
+						<uni-icons type="auth" size="15" color="#FF6700"></uni-icons>
+						<text class="assurance-text">正品保证</text>
 					</view>
-					<view class="insurance-card" :class="{ active: selectedInsurance1 }"
-						@click="selectedInsurance1 = !selectedInsurance1">
-						<text class="insurance-name">全面保修</text>
-						<text class="insurance-price">¥{{ insurance1 }}</text>
+					<view class="assurance-item">
+						<uni-icons type="refreshempty" size="15" color="#FF6700"></uni-icons>
+						<text class="assurance-text">极速退款</text>
 					</view>
-					<view class="insurance-card" :class="{ active: selectedBattery }"
-						@click="selectedBattery = !selectedBattery">
-						<text class="insurance-name">电池无忧</text>
-						<text class="insurance-price">¥20</text>
+					<view class="assurance-item">
+						<uni-icons type="calendar" size="15" color="#FF6700"></uni-icons>
+						<text class="assurance-text">七天无理由</text>
+					</view>
+					<view class="assurance-item">
+						<uni-icons type="location" size="15" color="#FF6700"></uni-icons>
+						<text class="assurance-text">全国联保</text>
 					</view>
 				</view>
+				<view class="quantity">
+					<text class="qty-label">数量</text>
+					<view class="qty-stepper">
+						<view class="qty-btn" @click="handleMinus">-</view>
+						<text class="qty-num">{{ quantity }}</text>
+						<view class="qty-btn" @click="handlePlus">+</view>
+					</view>
+				</view>
+				<!-- 增值保障：和后台 Mall.vue 的 insurance-section 一致，点卡片切换选中（橙边框 + 浅橙底） -->
+				<view class="insurance-section">
+					<text class="insurance-title">增值保障</text>
+					<view class="insurance-cards">
+						<view class="insurance-card" :class="{ active: selectedInsurance2 }"
+							@click="selectedInsurance2 = !selectedInsurance2">
+							<text class="insurance-name">一年意外保</text>
+							<text class="insurance-price">¥{{ insurance2 }}</text>
+						</view>
+						<view class="insurance-card" :class="{ active: selectedInsurance1 }"
+							@click="selectedInsurance1 = !selectedInsurance1">
+							<text class="insurance-name">全面保修</text>
+							<text class="insurance-price">¥{{ insurance1 }}</text>
+						</view>
+						<view class="insurance-card" :class="{ active: selectedBattery }"
+							@click="selectedBattery = !selectedBattery">
+							<text class="insurance-name">电池无忧</text>
+							<text class="insurance-price">¥20</text>
+						</view>
+					</view>
+				</view>
+				<view class="add-btn" :class="{ loading: adding }" @click="handleAdd">{{ adding ? '加入中…' : '加入购物车' }}</view>
 			</view>
-			<view class="add-btn" @click="handleAdd">加入购物车</view>
-		</view>
-	</uni-popup>
+		</uni-popup>
+
+		<!-- 加购动画：抽成全局组件 FlyToCart（在 uni-popup 外面，避免被弹窗收起动画带着动）。动画跑完发 done，这里接住去关弹窗 -->
+		<FlyToCart ref="fly" @done="finishAdd" />
+	</view>
 </template>
 
 <script>
 	import {
 		BASE_URL
 	} from '../../../utils/server-api.js'
+	import {
+		addToCart
+	} from '../../../api/cart.js'
+	import {
+		useUserStore
+	} from '../../../store/user.js'
 	export default {
 		name: 'ProductPopup',
 		props: {
@@ -85,7 +97,10 @@
 				// 增值保障选中状态，命名和后台 Mall.vue 保持一致，便于两边对照
 				selectedInsurance1: false, // 全面保修
 				selectedInsurance2: false, // 一年意外保
-				selectedBattery: false // 电池无忧
+				selectedBattery: false, // 电池无忧
+				// 正在请求加购接口，按钮置灰防重复点
+				adding: false,
+				store: useUserStore() // 登录态，加购前先判断
 			}
 		},
 		watch: {
@@ -161,14 +176,37 @@
 			handlePlus() {
 				this.quantity++
 			},
-			// 点加入购物车：购物车逻辑后面再接，先把商品、数量和选中的增值保障抛给页面
+			// 点加入购物车：未登录先让页面弹登录弹窗（弹窗不关，登录回来再点一次即可）；
+			// 已登录就调后端落库，成功后飞入动画 + 提示，动画跑完再关弹窗
 			handleAdd() {
-				this.$emit('add', {
-					product: this.product,
-					quantity: this.quantity,
-					insurance_detail: this.insuranceDetail,
-					insurance_fee: Number(this.insuranceFee)
+				if (this.adding) {
+					return
+				}
+				if (!this.store.isLogin) {
+					this.$emit('needLogin')
+					return
+				}
+				if (!this.product.id) {
+					return
+				}
+				this.adding = true
+				// 增值保障明细/费用随请求带上，后端快照到购物车（不选则空数组 / 0）
+				addToCart(this.product.id, this.quantity, this.insuranceDetail, Number(this.insuranceFee)).then(() => {
+					this.adding = false
+					uni.showToast({
+						title: '已加入购物车',
+						icon: 'success'
+					})
+					// 起点是本组件里的商品图 .cover，把 this 传给 FlyToCart 让它做 .in(this) 查询
+					this.$refs.fly.play(this.cover, { scope: this })
+				}).catch(() => {
+					// 错误提示已在 request 封装里统一处理
+					this.adding = false
 				})
+			},
+			// 加购收尾：飞入动画跑完（FlyToCart 的 done 事件）后，通知页面关掉商品弹窗
+			finishAdd() {
+				this.$emit('close')
 			}
 		}
 	}
@@ -333,6 +371,11 @@
 		color: #ffffff;
 		background: #FF6700;
 		border-radius: 40rpx;
+	}
+
+	/* 请求中置灰，提示正在加购 */
+	.add-btn.loading {
+		opacity: 0.6;
 	}
 </style>
 

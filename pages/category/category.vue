@@ -41,12 +41,14 @@
 			</scroll-view>
 		</view>
 
-		<!-- 商品加购弹窗：整页遮罩，放滚动区外，避免受 scroll-view 层叠影响 -->
-		<ProductPopup :show="showProductPopup" :product="currentProduct" @close="handleProductClose"
-			@add="handleAddCart" />
+		<!-- 商品加购弹窗：整页遮罩，放滚动区外，避免受 scroll-view 层叠影响。加购请求在弹窗内部发 -->
+		<!-- 加 ref 是为了登录成功后回调它的 handleAdd，把被打断的那次加购接着做完 -->
+		<ProductPopup ref="productPopup" :show="showProductPopup" :product="currentProduct"
+			@close="handleProductClose" @needLogin="handleNeedLogin" />
 
-		<!-- 登录弹窗：未登录点加购时弹出来提示（打开即静默登录），叠在商品弹窗上面（全局组件，免注册） -->
-		<LoginPopup :show="showLoginPopup" @close="handleLoginClose" />
+		<!-- 登录弹窗：未登录点加购时弹出来提示（打开即静默登录），叠在商品弹窗上面（全局组件，免注册）。
+		     登录一成功就自动收起来并继续加购，不用用户手动关 -->
+		<LoginPopup :show="showLoginPopup" @close="handleLoginClose" @success="handleLoginSuccess" />
 
 		<!-- 自定义底部导航栏 -->
 		<CustomTabBar />
@@ -56,13 +58,9 @@
 <script>
 	import { getCategories } from '../../api/categories.js'
 	import { getProductsByCategory } from '../../api/product.js'
-	import { addToCart } from '../../api/cart.js'
 	import { BASE_URL } from '../../utils/server-api.js'
 	// 商品加购弹窗
 	import ProductPopup from './component/ProductPopup.vue'
-	import {
-		useUserStore
-	} from '../../store/user.js'
 
 	export default {
 		components: {
@@ -81,8 +79,7 @@
 				// 当前点击的商品
 				currentProduct: {},
 				// 登录弹窗显隐
-				showLoginPopup: false,
-				store: useUserStore() // 用户登录态，判断是否要走登录弹窗
+				showLoginPopup: false
 			}
 		},
 		computed: {
@@ -167,35 +164,22 @@
 			handleProductClose() {
 				this.showProductPopup = false
 			},
-			// 加入购物车：未登录先弹登录弹窗（打开即静默登录），关掉后再点一次加购就成
-			handleAddCart(item) {
-				if (!this.store.isLogin) {
-					// 商品弹窗保持打开，数量/增值保障的选择留在原地，登录后接着点即可
-					this.showLoginPopup = true
+			// 未登录点加购：弹登录弹窗（打开即静默登录）。商品弹窗不关，数量/增值保障的选择留在原地
+			handleNeedLogin() {
+				this.showLoginPopup = true
+			},
+			// 登录成功：收掉登录弹窗，并让商品弹窗把刚才那次加购接着做完（数量和保障选择都还在）。
+			// 若弹窗已被用户手动关掉（等于放弃这次加购），就不再补做
+			handleLoginSuccess() {
+				if (!this.showLoginPopup) {
 					return
 				}
-				this.doAddCart(item)
+				this.showLoginPopup = false
+				this.$refs.productPopup.handleAdd()
 			},
-			// 关闭登录弹窗
+			// 关闭登录弹窗（用户手动关或点遮罩）
 			handleLoginClose() {
 				this.showLoginPopup = false
-			},
-			// 真正的加购：调后端 POST /api/cart 落库，成功后关掉商品弹窗并提示
-			// 增值保障明细/费用后端暂未接收（order-service 固定写空数组），等启用后再随请求带上
-			doAddCart(item) {
-				const product = item.product || {}
-				if (!product.id) {
-					return
-				}
-				addToCart(product.id, item.quantity).then(() => {
-					this.showProductPopup = false
-					uni.showToast({
-						title: '已加入购物车',
-						icon: 'success'
-					})
-				}).catch(() => {
-					// 错误提示已在 request 封装里统一处理
-				})
 			}
 		}
 	}

@@ -9,6 +9,10 @@ import CustomSwiper from './components/CustomSwiper.vue'
 import Guess from './components/Guess.vue'
 // 登录弹窗，未登录点加购时弹出，静默登录后继续加购
 import LoginPopup from './components/LoginPopup.vue'
+// 飞入购物车动画，加购成功后各页面调 play() 触发
+import FlyToCart from './components/FlyToCart.vue'
+// 商品加购弹窗（数量/增值保障/加购按钮），首页和分类页共用
+import ProductPopup from './components/ProductPopup.vue'
 // #ifndef VUE3
 import Vue from 'vue'
 import './uni.promisify.adaptor'
@@ -18,6 +22,8 @@ Vue.component('CustomTabBar', CustomTabBar)
 Vue.component('CustomSwiper',CustomSwiper)
 Vue.component('Guess',Guess)
 Vue.component('LoginPopup', LoginPopup)
+Vue.component('FlyToCart', FlyToCart)
+Vue.component('ProductPopup', ProductPopup)
 App.mpType = 'app'
 const app = new Vue({
 	...App
@@ -44,6 +50,10 @@ export function createApp() {
 	app.component('Guess',Guess)
 	// 全局注册登录弹窗组件
 	app.component('LoginPopup', LoginPopup)
+	// 全局注册飞入购物车动画组件
+	app.component('FlyToCart', FlyToCart)
+	// 全局注册商品加购弹窗组件
+	app.component('ProductPopup', ProductPopup)
 	// 创建 Pinia 实例并注册，统一管理全局状态
 	const pinia = createPinia()
 	app.use(pinia)

@@ -3,21 +3,14 @@
 		<!-- 自定义顶部导航栏：tabBar 页没有上一级，只留标题 -->
 		<CustomNavbar title="我的" />
 
-		<!-- 已登录：展示用户信息，点头像可换 -->
-		<view v-if="isLogin" class="user-box">
+		<!-- 免登录：启动时已静默登录，这里直接展示用户信息，不再有登录/退出按钮 -->
+		<view class="user-box">
 			<!-- chooseAvatar 必须由用户点击触发，所以包在 button 里 -->
 			<button open-type="chooseAvatar" @chooseavatar="onChooseAvatar" class="avatar-btn">
 				<image v-if="userInfo.avatar" :src="userInfo.avatar" class="avatar"></image>
 				<view v-else class="avatar avatar-default">微</view>
 			</button>
 			<view class="nickname">{{ userInfo.name || '微信用户' }}</view>
-			<button type="default" class="btn" @click="handleLogout">退出登录</button>
-		</view>
-
-		<!-- 未登录：点一下就走静默登录，没有授权弹窗 -->
-		<view v-else class="user-box">
-			<view class="avatar avatar-default">微</view>
-			<button type="primary" class="btn" @click="handleLogin">微信登录</button>
 		</view>
 
 		<!-- 自定义底部导航栏 -->
@@ -33,6 +26,7 @@
 		ensureLogin
 	} from '../../utils/auth.js'
 	import {
+		getProfile,
 		uploadAvatar
 	} from '../../api/login.js'
 
@@ -45,20 +39,22 @@
 		computed: {
 			userInfo() {
 				return this.store.userInfo
-			},
-			isLogin() {
-				return this.store.isLogin
 			}
 		},
-		methods: {
-			// 静默登录：uni.login 拿 code 换 token，无需用户授权
-			async handleLogin() {
-				await ensureLogin()
-				uni.showToast({
-					title: '登录成功',
-					icon: 'success'
+		onShow() {
+			// 免登录：进页面确保已静默登录（已登录会短路），再补拉一次资料（昵称/头像），失败静默忽略
+			ensureLogin()
+				.then(() => getProfile())
+				.then((profile) => {
+					this.store.setUserInfo({
+						id: profile.id,
+						name: profile.name,
+						avatar: profile.avatar
+					})
 				})
-			},
+				.catch(() => {})
+		},
+		methods: {
 			// 换头像：chooseAvatar 给的是本地临时路径，必须上传后端换成可访问 URL
 			onChooseAvatar(e) {
 				const filePath = e.detail.avatarUrl
@@ -77,14 +73,6 @@
 						title: (err && err.message) || '头像上传失败',
 						icon: 'none'
 					})
-				})
-			},
-			// 退出登录：清掉本地 token 和用户信息
-			handleLogout() {
-				this.store.logout()
-				uni.showToast({
-					title: '已退出登录',
-					icon: 'none'
 				})
 			}
 		}
@@ -138,9 +126,5 @@
 		margin-top: 24rpx;
 		font-size: 32rpx;
 		font-weight: bold;
-	}
-
-	.btn {
-		margin-top: 40rpx;
 	}
 </style>

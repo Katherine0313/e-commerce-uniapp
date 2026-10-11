@@ -33,14 +33,19 @@
   `spring.cloud.gateway.routes`），已通过本地 maven 仓库 `spring-cloud-gateway-server-webflux-5.0.3.jar`
   的配置元数据确认合法。
 
-### 后端接口（权威来源：`e-commerce-boot/docs/openapi.yaml`）
+### 后端接口（权威来源：各服务的 springdoc Swagger，见 `e-commerce-boot/docs/swagger-addresses.md`）
+
+> 手写的 `docs/openapi.yaml` **已废弃并移除**，接口文档改由 springdoc 按代码注解实时生成：
+> 统一入口 `http://localhost:8080/swagger-ui.html`（网关聚合，可下拉切服务）。接口有疑问以**源码**为准。
 
 | 接口 | 方法 | 入参 | 返回 |
 |------|------|------|------|
-| `/api/wxlogin` | POST | `{ code }` | `Result<WxLoginVO>`：`token` / `id` / `name` / `avatar` |
+| `/api/wxlogin` | POST | `{ code }` | `Result<WxLoginVO>`：`token` / `id` / `avatar`（**无 `name`**） |
 | `/api/user/profile` | GET | 无（id 从 token 取） | `Result<UserProfileVO>`：`id` / `name` / `avatar` / `phone` / `sex` / `idNumber` / `createTime` |
 | `/api/user/avatar` | POST | `multipart/form-data` 字段 `file` | `Result<String>`：完整头像 URL |
 | `/api/user/name` | POST | `application/json`：`{ name }` | `Result<String>`：去除首尾空格后的昵称 |
+| `/api/cart` | POST | `application/json`：`{ productId, quantity }` | `Result<Void>`：无 data（**需登录**，已在购物车则累加数量） |
+| `/api/cart` | GET | 无 | `Result<List<CartVO>>`：含 `insuranceDetail` / `insuranceFee` 字段 |
 
 - 统一响应体 `Result<T> { success, data, message, code }`。
 - **失败时返回真实 HTTP 状态码**（400/401/403/413/500），不是恒 200，响应体仍是 `Result`。
@@ -122,7 +127,9 @@
   - 轮播图**后端没有接口**，用三个渐变色块占位（不依赖图片资源，`static/` 里也没图）。
   - 商品列表 `onLoad` 调 `getProducts()`（免登录）。
   - 「加入购物车」按钮 `@click` 里先 `await ensureLogin()` 再调加购接口 ——
-    **加购接口（order-service）尚未实现**，目前只弹 toast 占位。
+    ~~**加购接口（order-service）尚未实现**，目前只弹 toast 占位。~~
+    **已过时（2026-10-10）**：order-service 的 `CartController` / `OrderController` 已落地，加购链路已贯通，
+    见下文「登录弹窗与加购链路」；首页目前也没有加购入口（`pages/index/component/ProductPopup.vue` 是纯预览弹窗）。
 - `pages/my/my.vue`（本轮重写）：承接原 index.vue 的登录 UI（首页不再有登录入口）。
   未登录显示「微信登录」按钮（静默登录）；已登录显示头像 + 昵称 + 退出登录，
   点头像触发 `chooseAvatar` 换头像（微信要求必须用户点击）→ `uploadAvatar` 上传换 URL。
@@ -303,7 +310,58 @@
 - **跳转联动**：`switchTab` 跳 tab 页不能带 query，用 `uni.setStorageSync('selectedCategoryId', id)` 传选中分类；分类页 `applySelectedCategory()` 读 Storage 定位到对应下标后 `removeStorageSync` 清掉（避免下次直接进分类页还停在旧分类）。
 - **tabBar 页二次进入**：分类页被 tabBar 缓存，`mounted` 只在首次触发，二次切回靠 `onShow` 定位；首次进入 `onShow` 先于分类数据返回，`findIndex` 找不到就**不清** Storage，等 `fetchCategories` 完成后再定位。
 - **卡片等高**：商品名 1/2 行导致卡片总高不一致、下一行错位；卡片固定 `height` + 名称区固定两行高度、价格行贴底解决。
-- **购物车图标**：复用全局 iconfont `icon-gouwuche1`（`App.vue` 已全局引入 `static/icon/iconfont.css`），橙色圆底做成加购按钮样子；目前纯展示，未接加购逻辑（加购需登录 + order-service 接口，未开发）。
+- **购物车图标**：复用全局 iconfont `icon-gouwuche1`（`App.vue` 已全局引入 `static/icon/iconfont.css`），橙色圆底做成加购按钮样子；目前纯展示，未接加购逻辑（加购需登录 + order-service 接口，未开发；加购链路见下节）。
+
+### 登录弹窗与加购链路（2026-10-10）
+
+**后端现状（order-service，工作区未提交）**：
+
+- `CartController`（`@RequestMapping("/api/cart")`）：`GET` 列表、`POST` 加购、`PUT /{productId}` 改数量、
+  `DELETE /{productId}` 移除、`DELETE` 清空（可选 body `productIds` 批量）。**需登录**：
+  `/api/cart/**` 不在 `EXCLUDE_AUTH_PATHS` 内，`JwtInterceptor` 自动要求 user 令牌，当前用户取 `UserContext.getUserId()`。
+- `AddCartDTO` **只有 `productId` / `quantity`**；`CartServiceImpl.addItem` 硬编码
+  `.insuranceDetail("[]")` / `.insuranceFee(BigDecimal.ZERO)`（源码注释也写着「小程序暂未接入，字段保留供后续扩展」）。
+  而 `CartVO` / `Cart` 实体是有 `insuranceDetail` / `insuranceFee` 的（读列表时会 `parseInsurance`）。
+  → **前端选了增值保障也存不进去**，这是当前的功能缺口，不是前端 bug。
+
+**前端实现**：
+
+- `api/cart.js`（新建）：`addToCart(productId, quantity)` → `POST /api/cart`。
+- `components/LoginPopup.vue`（新建，全局注册）：**打开即静默登录**。
+  - 触发点是「未登录时点加入购物车」，不需要用户找登录入口。
+  - `watch.show` → `popup.open()` + `startLogin()`：`ensureLogin()` 拿到 token，**再总是补一次
+    `getProfile()`** 写回 store。原因：`ensureLogin()` 已有 token 时直接 return，而重开小程序后
+    `store.userInfo` 是 `{}`，不补这一次头像永远是空的（这是本轮修掉的一个真 bug）。
+  - 头像：能自动带出**后端已存的**头像；要换必须用户点 `<button open-type="chooseAvatar">` ——
+    微信不允许代码触发头像选择框，`getUserProfile` / `getUserInfo` 也已废弃（只返回灰色匿名头像）。
+  - 不收集昵称（用户明确要求）。
+  - 非 scoped 样式抬到 `z-index: 1100`，盖住商品弹窗（1000）和 tabBar（999）。
+- `pages/category/component/ProductPopup.vue`：加购逻辑收进组件自身，不再由页面代劳。
+  - `handleAdd()`：未登录 → `$emit('needLogin')`（**商品弹窗不关**，数量/增值保障选择留在原地）；
+    已登录 → `addToCart(product.id, quantity)`；`adding` 期间按钮置灰 + 文案「加入中…」防连点。
+  - 成功 → toast「已加入购物车」→ 播飞入动画 → 动画跑完 `$emit('close')` 收尾。
+- **飞入购物车动画**：`uni.createSelectorQuery()` 量 `.cover`（弹窗商品图）与 `.icon-gouwuche`
+  （tabBar 购物车，注意卡片上的图标是 `icon-gouwuche1`，类名不同不会误选）的中心点算位移；
+  抛物线的实现是**两层 transform 合成**——外层 `.fly-wrap` 横向 `linear` 匀速，内层 `.fly-img`
+  纵向用 `cubic-bezier(0.5, -0.6, 1, 1)`（y1 取负 → 先上后下）+ `scale(0.2)`。
+  飞入层必须放在 `uni-popup` **外面**（弹窗收起自带 transform，放里面会被带着动），`z-index: 1200`。
+- `category.vue`：`@add` → `@needLogin`，只负责 `showLoginPopup = true`；加购相关的 `handleAddCart` /
+  `doAddCart` 及 `addToCart`、`useUserStore`、`store` 一并删掉（判断已在组件内）。
+- `pages/index/index.vue`：删掉被注释的登录入口及其方法链、以及已登录的用户信息展示块；import 收窄到
+  `getProductDetail`。首页没有加购入口，故不渲染 `LoginPopup`。
+
+**增值保障（对齐后台 `Mall.vue`）**：`ProductPopup` 补了「服务保障」四项与「增值保障」三张卡片。
+价格为售价的 1% / 2% / 电池无忧 ¥20（与后台计费口径一致），选中态为橙边框 + 浅橙底。
+`insuranceDetail` / `insuranceFee` 两个 computed 已保留，等后端 `AddCartDTO` 补字段后直接带上。
+
+### C 端免登录（2026-10-10）
+
+用户拍板：**小程序 C 端前后端免登录，电商后台管理系统保持登录**。
+
+- 前端：`App.vue` onLaunch 启动即 `ensureLogin()`（`uni.login` 换 openid，无授权框）；`my.vue` 删登录/退出按钮、去 isLogin 分支，`onShow` 补拉 `getProfile()`。
+- 后端：C 端商品浏览本就在 `EXCLUDE_AUTH_PATHS` 免登录；加购/下单靠静默登录自动带的 token 定位 userId，接口无需改。
+- 手机号登录（`getPhoneNumber` → `POST /api/user/phone`）后端已实现、前端未接入，保留备用。
+- 头像历史问题：`upload/avatar/` 空 + `user.avatar` 恒 NULL + 账号 id 12→13 重建，即头像从未成功落库，非前端 bug。
 
 ## 技术决策
 
@@ -339,6 +397,17 @@
 | 首页跳分类页用 Storage 传 `selectedCategoryId` | `switchTab` 不能带 query；存 id → 分类页 `onShow`/加载后定位 → 用完即删 |
 | 分类页定位选中分类放 `onShow` 且找不到不删 Storage | tabBar 页缓存，`mounted` 只跑一次；首次进入 `onShow` 先于数据返回，找到再删避免选不中/残留 |
 
+| 登录弹窗做成全局组件（`components/` + `main.js` 注册） | 加购入口以后不止分类页（详情页、购物车页都会用）；登录 UI 此前散在 `index.vue` / `my.vue` 两处且写法不同，抽成全局组件后复用一套 |
+| 登录弹窗「打开即静默登录」，不做「微信登录」按钮 | `POST /api/wxlogin` 在免登录白名单、`uni.login` 不弹授权框，登录全程可无感；加购只要 token，没有需要用户额外授权的信息 |
+| 登录后总是补一次 `getProfile()` | `ensureLogin()` 已有 token 时直接 return，而重开小程序 `store.userInfo` 是 `{}`；不补就永远没头像 |
+| 不收集昵称 | 用户明确要求；加购链路用不到昵称 |
+| 头像不追求「打开弹窗自动获取」 | 平台限制：`chooseAvatar` 只在真实点击时触发，`getUserProfile`/`getUserInfo` 已废弃（返回灰色匿名头像）。能自动的只有「拉后端已存的头像」，要换必须用户点一下 |
+| 加购的登录判断放 `ProductPopup` 组件内 | 请求本来就在组件里发，「未登录」是同一条链路里的分支；放页面会让页面同时管弹窗 + 请求 + 登录态三件事 |
+| 未登录点加购时商品弹窗不关 | 用户选的数量/增值保障留在原地，静默登录回来再点一次即可；关掉重开会触发 `watch.show` 的重置，选择白丢 |
+| 飞入动画用两层 `transform` 合成，不用 JS 逐帧算 | 抛物线拆成「外层匀速横向 + 内层负 y1 贝塞尔纵向 + 缩放」，交给合成层跑，不掉帧也不用定时器改坐标 |
+| 飞入层放 `uni-popup` 外层，`z-index: 1200` | 弹窗收起自带 `transform`，飞入层在弹窗内会被带着一起动；另需盖过弹窗遮罩（1000）与 tabBar（999） |
+| 首帧与位移分两次 `setTimeout`，不用 `$nextTick` | 小程序里 `$nextTick` 不保证首次样式已渲染到视图层，两次样式落在同一次渲染就没有补间、动画直接闪到终点 |
+
 ## 遇到的问题
 
 | 问题 | 解决方案 |
@@ -366,6 +435,9 @@
 
 | 分类页商品卡片高度不一致、对不齐 | 商品名 1/2 行导致卡片总高不同；卡片固定高度 + 名称区固定两行高度、价格行贴底 |
 
+| 加购飞入动画不播，商品图直接闪到购物车 | 初版用 `$nextTick` 改位移，小程序里首帧样式未必已渲染到视图层，两次样式落在同一次渲染就没有补间；改成 `setTimeout(..., 30)` 确保首帧立住 |
+| 编辑 `index.vue` 样式块时误把尾部规则一起替换掉，出现两条重复的 `.scroll-inner` | 替换串选得过宽，把尾部规则一起吞了；读文件复查发现后用后续 Edit 修掉（Edit 不报错不代表改对了，改动后要回读） |
+
 ## 资源
 
 ### 项目根目录
@@ -387,8 +459,13 @@
   网关路由：`gateway/src/main/resources/application.yml`
 
 前端（`D:\study\my-workspace\wechat-workspace\e-commerce-uniapp`）：
-- `utils/server-api.js`、`utils/token.js`
-- `pages/index/index.vue`
+- 请求底座：`utils/server-api.js`（`request` / `BASE_URL`）、`utils/token.js`、`utils/auth.js`（`ensureLogin`）
+- 接口层（按资源拆）：`api/login.js`、`api/product.js`、`api/categories.js`、`api/cart.js`
+- 全局组件（`main.js` 注册）：`components/LoginPopup.vue`、`components/CustomSwiper.vue`、
+  `components/Guess.vue`、`pages/index/component/TopBar.vue`、`pages/index/component/TabBar.vue`
+- 页面：`pages/index/index.vue`、`pages/category/category.vue`（含 `component/ProductPopup.vue`）、
+  `pages/cart/cart.vue`（占位）、`pages/my/my.vue`
+- 状态：`store/user.js`（Pinia）
 - 前端侧记录：`avatar-upload.md`
 
 ### 本地服务地址
@@ -401,8 +478,13 @@
 
 `pages/index/index.vue` 检查出的 8 条，按「跑不通」优先级排序后仅第 3 条之外均为可选：
 
+> ⚠️（2026-10-10）`index.vue` 的登录相关死代码已整段清理，下面第 1/2/7/8 条的出处代码**已不存在**，
+> 第 3~6 条仍对应现存文件（`store/user.js`、`utils/server-api.js`、`components/LoginPopup.vue`、`pages/my/my.vue`），
+> 只是行号已过期。保留本表只为记录当时的排查结论，不再逐条维护行号。
+
 1. ~~昵称永远不会显示（功能未完成，需前后端都动）~~ **已解决**（后端 0928 补接口，前端本轮接完）
-2. 已登录用户无换头像入口（`chooseAvatar` 按钮只在未登录分支）—— 昵称已无此问题，头像仍缺
+2. ~~已登录用户无换头像入口（`chooseAvatar` 按钮只在未登录分支）~~ **实际已有**：`pages/my/my.vue`
+   的已登录分支就带 `chooseAvatar` 换头像，原条目指的是已被清理掉的 `index.vue` 旧代码。
 3. `uni.setStorageSync('userInfo', ...)` 是死代码，从无读取
 4. `uploadAvatar` 的 `JSON.parse` 未兜底，非 JSON 响应会静默失败（`server-api.js:61`）
 5. `uploadAvatar` 未判断 token 是否存在（`server-api.js:57`）
@@ -410,4 +492,13 @@
 7. ~~`fetchProfile` 失败无条件 `clearToken()`，网络抖动会误清有效 token（`index.vue:101`）~~
    **已解决**（本轮）：`request()` 补状态码后，`index.vue` 的 catch 改为只在 `statusCode`
    为 401/403 时 `logout()`，网络抖动/网关 502 保留登录态。
-8. `doLogin` 遗留调试日志 `console.log`（`index.vue:74`）
+8. `doLogin` 遗留调试日志 `console.log`（`index.vue:74`）—— **代码已随登录死代码清理一并删除**
+
+### 本轮新增（需后端配合，2026-10-10）
+
+9. **增值保障选了不落库**：`AddCartDTO` 只有 `productId` / `quantity`，`CartServiceImpl.addItem`
+   固定写 `insuranceDetail("[]")` / `insuranceFee(0)`。前端 `ProductPopup` 的
+   `insuranceDetail` / `insuranceFee` computed 已保留，后端补字段后直接加进请求体即可。
+10. `utils/auth.js:12` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 无 `name` 字段，只有
+    `token` / `id` / `avatar`）。消费方都已兜住（`my.vue` 用 `|| '微信用户'`，`LoginPopup` 不展示昵称），
+    按「不做健壮性改进」不动。

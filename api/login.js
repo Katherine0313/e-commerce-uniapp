@@ -17,6 +17,14 @@ export function getProfile(){
 	return request('/api/user/profile',{method:'GET'})
 }
 
+// 绑定手机号：用 getPhoneNumber 授权拿到的 code 换手机号，对应 POST /api/user/phone
+export function bindPhone(code){
+	return request('/api/user/phone', {
+		method: 'POST',
+		data: { code }
+	})
+}
+
 // 设置昵称：对应 POST /api/user/name，返回去除首尾空格后的昵称
 export function updateName(name){
 	return request('/api/user/name', {
