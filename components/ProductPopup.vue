@@ -4,8 +4,12 @@
 	<view class="product-popup-wrap">
 		<uni-popup ref="popup" class="product-popup" type="center" :is-mask-click="true" @change="handleChange">
 			<view class="popup-card">
+				<!-- 右上角关闭叉叉 -->
+				<view class="close-btn" @click="handleClose">
+					<text class="close-icon">×</text>
+				</view>
 				<image v-if="cover" class="cover" :src="cover" mode="aspectFill"></image>
-				<text class="name">{{ product.name }}</text>
+				<text class="sub-title">{{ product.subTitle }}</text>
 				<text class="price">¥{{ product.price }}</text>
 				<!-- 服务保障：和后台 Mall.vue 的 assurance-row 一致，小程序没有 ant 图标，用 uni-ui 的 uni-icons 对应 -->
 				<view class="assurance-row">
@@ -28,11 +32,7 @@
 				</view>
 				<view class="quantity">
 					<text class="qty-label">数量</text>
-					<view class="qty-stepper">
-						<view class="qty-btn" @click="handleMinus">-</view>
-						<text class="qty-num">{{ quantity }}</text>
-						<view class="qty-btn" @click="handlePlus">+</view>
-					</view>
+					<QuantityStepper :value="quantity" :max="product.stock" @change="setQuantity" />
 				</view>
 				<!-- 增值保障：和后台 Mall.vue 的 insurance-section 一致，点卡片切换选中（橙边框 + 浅橙底） -->
 				<view class="insurance-section">
@@ -55,7 +55,14 @@
 						</view>
 					</view>
 				</view>
-				<view class="add-btn" :class="{ loading: adding }" @click="handleAdd">{{ adding ? '加入中…' : '加入购物车' }}</view>
+				<view class="btn-row">
+					<!-- 加入购物车：图标按钮 -->
+					<view class="cart-btn" :class="{ loading: adding }" @click="handleAdd">
+						<text class="iconfont icon-gouwuche1"></text>
+					</view>
+					<!-- 立即购买：文字按钮 -->
+					<view class="buy-btn" @click="handleBuy">立即购买</view>
+				</view>
 			</view>
 		</uni-popup>
 
@@ -74,6 +81,9 @@
 	import {
 		useUserStore
 	} from '../store/user.js'
+	import {
+		useCartStore
+	} from '../store/cart.js'
 	export default {
 		name: 'ProductPopup',
 		props: {
@@ -166,15 +176,13 @@
 					this.$emit('close')
 				}
 			},
-			// 数量减：最少 1 个
-			handleMinus() {
-				if (this.quantity > 1) {
-					this.quantity--
-				}
+			// 点右上角叉叉：通知页面关掉弹窗
+			handleClose() {
+				this.$emit('close')
 			},
-			// 数量加
-			handlePlus() {
-				this.quantity++
+			// 数量变化（+/- 或输入框提交）：直接更新本地数量，加购时再提交给后端
+			setQuantity(n) {
+				this.quantity = n
 			},
 			// 点加入购物车：未登录先让页面弹登录弹窗（弹窗不关，登录回来再点一次即可）；
 			// 已登录就调后端落库，成功后飞入动画 + 提示，动画跑完再关弹窗
@@ -193,6 +201,8 @@
 				// 增值保障明细/费用随请求带上，后端快照到购物车（不选则空数组 / 0）
 				addToCart(this.product.id, this.quantity, this.insuranceDetail, Number(this.insuranceFee)).then(() => {
 					this.adding = false
+					// 同步底部购物车角标件数
+					useCartStore().addQuantity(this.quantity)
 					uni.showToast({
 						title: '已加入购物车',
 						icon: 'success'
@@ -204,6 +214,10 @@
 					this.adding = false
 				})
 			},
+			// 点立即购买：下单链路尚未接入，先占位提示
+			handleBuy() {
+				uni.showToast({ title: '立即购买开发中', icon: 'none' })
+			},
 			// 加购收尾：飞入动画跑完（FlyToCart 的 done 事件）后，通知页面关掉商品弹窗
 			finishAdd() {
 				this.$emit('close')
@@ -214,6 +228,7 @@
 
 <style scoped>
 	.popup-card {
+		position: relative;
 		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
@@ -224,13 +239,34 @@
 		border-radius: 20rpx;
 	}
 
+	/* 右上角关闭叉叉：半透明圆底 + 白 ×，盖在商品图上仍清晰 */
+	.close-btn {
+		position: absolute;
+		top: 24rpx;
+		right: 24rpx;
+		z-index: 2;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 56rpx;
+		height: 56rpx;
+		border-radius: 50%;
+		background: rgba(0, 0, 0, 0.4);
+	}
+
+	.close-icon {
+		font-size: 40rpx;
+		color: #ffffff;
+		line-height: 1;
+	}
+
 	.cover {
 		width: 100%;
 		height: 400rpx;
 		border-radius: 12rpx;
 	}
 
-	.name {
+	.sub-title {
 		align-self: flex-start;
 		margin-top: 24rpx;
 		font-size: 32rpx;
@@ -336,46 +372,45 @@
 		color: #333333;
 	}
 
-	.qty-stepper {
+	/* 底部双按钮：加入购物车（图标）+ 立即购买（文字） */
+	.btn-row {
 		display: flex;
-		align-items: center;
+		width: 100%;
+		margin-top: 30rpx;
 	}
 
-	.qty-btn {
+	.cart-btn {
+		flex: 1;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 56rpx;
-		height: 56rpx;
-		font-size: 32rpx;
-		color: #333333;
-		background: #f5f5f5;
-		border-radius: 8rpx;
-	}
-
-	.qty-num {
-		min-width: 64rpx;
-		margin: 0 16rpx;
-		font-size: 26rpx;
-		color: #333333;
-		text-align: center;
-	}
-
-	/* 加入购物车按钮：品牌橙圆角按钮，和 tabBar 选中色一致 */
-	.add-btn {
-		width: 100%;
-		margin-top: 30rpx;
-		padding: 16rpx 0;
-		font-size: 28rpx;
-		text-align: center;
-		color: #ffffff;
-		background: #FF6700;
+		height: 76rpx;
+		margin-right: 20rpx;
 		border-radius: 40rpx;
+		background: #FFF3E8;
 	}
 
-	/* 请求中置灰，提示正在加购 */
-	.add-btn.loading {
+	.cart-btn .iconfont {
+		font-size: 40rpx;
+		color: #FF6700;
+	}
+
+	/* 加购请求中置灰 */
+	.cart-btn.loading {
 		opacity: 0.6;
+	}
+
+	.buy-btn {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: 76rpx;
+		border-radius: 40rpx;
+		background: linear-gradient(135deg, #FF4E2A, #FF7A00);
+		color: #ffffff;
+		font-size: 28rpx;
+		font-weight: 600;
 	}
 </style>
 

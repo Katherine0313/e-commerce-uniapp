@@ -795,3 +795,29 @@ GET http://127.0.0.1:8080/api/user/profile 403
   上线时才需要处理，而 `UserController.fullUrl` 是按请求的 `Host` 头拼 URL 的，
   后端换 HTTPS 域名后返回的地址自动就是 https，**前后端都不用改代码**。
 
+---
+
+## 会话 3：2026-10-11（购物车全链路 + 增值保障 + 角标）
+
+### 后端（order-service）
+
+- 购物车 `subTotal` 只读派生：`CartVO` + `calcSubTotal = (price + insuranceFee) × quantity`
+- 增值保障接入：`AddCartDTO` 加 `insuranceDetail`/`insuranceFee`，`addItem` 快照
+- 库存校验：`Cart`/`CartVO` 加 `stock`，`CartMapper.listByUser` join products 带实时库存，`addItem`/`updateQuantity` 超库存抛 400
+- 商品副标题重写：`products.sub_title` 全部「商品名+卖点」≤35 字（`docs/sql/product-subtitle.sql`，已执行）
+
+### 前端
+
+- `api/cart.js` 补全 getCart/updateQuantity/removeItem/clearCart，`addToCart` 加保险参数
+- `pages/cart/cart.vue` 购物车页完整实现（列表/单选全选/数量/删除/批量删除/结算占位/空态/猜你喜欢/增值保障/小计/库存上限）
+- `ProductPopup` 抽成全局组件 `components/ProductPopup.vue`（首页+分类页共用），删两个旧局部版本
+- `QuantityStepper` 全局数量步进器（可输入 + 加减 + max 库存上限）
+- 购物车角标：`store/cart.js` + TabBar 角标 + App onLaunch 初始化 + 加购/增删改同步
+- 加购弹窗显示副标题 subTitle
+- 加购弹窗右上角加叉叉关闭按钮（`handleClose`）；底部改双按钮并排：加入购物车用图标（`icon-gouwuche1`）、新增「立即购买」文字按钮（`handleBuy` 占位，下单链路后续接）
+
+### 踩坑
+
+- 删/移文件（ProductPopup 全局化）后 HBuilderX 增量编译残留旧产物，报 `ENOENT: .../ProductPopup.wxml`，需删 `unpackage/dist` 全量重编译
+- 小程序原生 `input` 层级高于普通 view，步进器按钮热区用「负 margin + padding」扩展会被 input 挡住点不到；最终回退紧凑 52rpx 按钮 + 增大符号反馈
+

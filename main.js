@@ -13,6 +13,8 @@ import LoginPopup from './components/LoginPopup.vue'
 import FlyToCart from './components/FlyToCart.vue'
 // 商品加购弹窗（数量/增值保障/加购按钮），首页和分类页共用
 import ProductPopup from './components/ProductPopup.vue'
+// 数量步进器（- / 可输入数字 / +），购物车页与加购弹窗共用
+import QuantityStepper from './components/QuantityStepper.vue'
 // #ifndef VUE3
 import Vue from 'vue'
 import './uni.promisify.adaptor'
@@ -24,6 +26,7 @@ Vue.component('Guess',Guess)
 Vue.component('LoginPopup', LoginPopup)
 Vue.component('FlyToCart', FlyToCart)
 Vue.component('ProductPopup', ProductPopup)
+Vue.component('QuantityStepper', QuantityStepper)
 App.mpType = 'app'
 const app = new Vue({
 	...App
@@ -54,6 +57,8 @@ export function createApp() {
 	app.component('FlyToCart', FlyToCart)
 	// 全局注册商品加购弹窗组件
 	app.component('ProductPopup', ProductPopup)
+	// 全局注册数量步进器组件
+	app.component('QuantityStepper', QuantityStepper)
 	// 创建 Pinia 实例并注册，统一管理全局状态
 	const pinia = createPinia()
 	app.use(pinia)

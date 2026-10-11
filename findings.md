@@ -496,9 +496,9 @@
 
 ### 本轮新增（需后端配合，2026-10-10）
 
-9. **增值保障选了不落库**：`AddCartDTO` 只有 `productId` / `quantity`，`CartServiceImpl.addItem`
-   固定写 `insuranceDetail("[]")` / `insuranceFee(0)`。前端 `ProductPopup` 的
-   `insuranceDetail` / `insuranceFee` computed 已保留，后端补字段后直接加进请求体即可。
+9. ~~**增值保障选了不落库**~~ **已解决（2026-10-11）**：`AddCartDTO` 已加 `insuranceDetail` / `insuranceFee`，
+   `CartServiceImpl.addItem` 快照落库（不选则空数组 / 0）；前端 `ProductPopup` 勾选随 `addToCart` 请求带上。
+   购物车 `subTotal` 与合计均含保障费（`subTotal = (price + insuranceFee) × quantity`）。
 10. `utils/auth.js:12` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 无 `name` 字段，只有
     `token` / `id` / `avatar`）。消费方都已兜住（`my.vue` 用 `|| '微信用户'`，`LoginPopup` 不展示昵称），
     按「不做健壮性改进」不动。

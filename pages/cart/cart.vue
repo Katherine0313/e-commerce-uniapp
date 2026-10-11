@@ -35,12 +35,8 @@
 						<!-- 增值保障：每件费用，有值才显示 -->
 						<text v-if="num(item.insuranceFee) > 0" class="item-insurance">增值保障 ¥{{ fmt(item.insuranceFee) }}</text>
 						<view class="item-bottom">
-							<!-- 数量步进器：最小 1 -->
-							<view class="stepper">
-								<view class="step-btn" :class="{ disabled: item.quantity <= 1 }" @click="changeQuantity(item, -1)">−</view>
-								<view class="step-num">{{ item.quantity }}</view>
-								<view class="step-btn" @click="changeQuantity(item, 1)">+</view>
-							</view>
+							<!-- 数量步进器：可输入 + 可加减，最小 1 -->
+							<QuantityStepper :value="item.quantity" :max="item.stock" @change="changeQuantity(item, $event)" />
 							<!-- 单品小计（后端已算好，含增值保障） -->
 							<text class="item-sub">小计 ¥{{ fmt(item.subTotal) }}</text>
 						</view>
@@ -81,6 +77,7 @@
 	import { getCart, updateQuantity, removeItem, clearCart } from '../../api/cart.js'
 	import { ensureLogin } from '../../utils/auth.js'
 	import { BASE_URL } from '../../utils/server-api.js'
+	import { useCartStore } from '../../store/cart.js'
 
 	export default {
 		data() {
@@ -120,6 +117,8 @@
 					this.items = list || []
 					const ids = this.items.map(i => i.productId)
 					this.selectedIds = this.selectedIds.filter(id => ids.includes(id))
+					// 同步全局购物车件数，刷新底部角标
+					this.syncCount()
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
 				}).finally(() => {
@@ -142,15 +141,16 @@
 			toggleSelectAll() {
 				this.selectedIds = this.allSelected ? [] : this.items.map(i => i.productId)
 			},
-			// 数量 +1/-1：本地乐观更新，后端为权威；subTotal 按快照单价重算，避免多一次请求
-			changeQuantity(item, delta) {
-				const next = item.quantity + delta
+			// 数量变化（+/- 或输入框提交）：本地乐观更新，后端为权威；subTotal 按快照单价重算
+			changeQuantity(item, next) {
 				if (next < 1) {
 					return
 				}
 				updateQuantity(item.productId, next).then(() => {
 					item.quantity = next
 					item.subTotal = (this.num(item.price) + this.num(item.insuranceFee)) * next
+					// 数量变了，同步全局购物车件数
+					this.syncCount()
 				}).catch(() => {
 					// 失败不更新本地，提示已在 request 封装里统一处理
 				})
@@ -214,6 +214,10 @@
 			// 安全转数字：null/undefined 归 0
 			num(n) {
 				return Number(n) || 0
+			},
+			// 把当前购物车总件数同步到全局 store，供底部 tabBar 角标显示
+			syncCount() {
+				useCartStore().setCount(this.items.reduce((sum, i) => sum + this.num(i.quantity), 0))
 			}
 		}
 	}
@@ -347,40 +351,8 @@
 	.item-bottom {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		gap: 24rpx;
 		margin-top: 12rpx;
-	}
-
-	/* 数量步进器 */
-	.stepper {
-		display: inline-flex;
-		align-items: center;
-		border: 1rpx solid #e0e0e0;
-		border-radius: 8rpx;
-		overflow: hidden;
-	}
-
-	.step-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 48rpx;
-		height: 52rpx;
-		font-size: 28rpx;
-		color: #333333;
-		background: #ffffff;
-	}
-
-	.step-btn.disabled {
-		color: #cccccc;
-	}
-
-	.step-num {
-		width: 60rpx;
-		text-align: center;
-		font-size: 26rpx;
-		font-weight: 600;
-		color: #111111;
 	}
 
 	/* 单品小计：品牌橙 */
@@ -388,6 +360,10 @@
 		font-size: 28rpx;
 		font-weight: bold;
 		color: #FF6700;
+		/* 不换行、不被 flex 压缩：金额再长也保持一行 */
+		white-space: nowrap;
+		flex-shrink: 0;
+		margin-left:30rpx;
 	}
 
 	/* 删除单项 */
