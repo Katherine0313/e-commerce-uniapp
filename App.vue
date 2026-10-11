@@ -26,9 +26,10 @@
 	}
 </script>
 
-<style>
+<style lang="scss">
 	/* @import 必须在样式表最前面，否则会被忽略 */
 	@import url("./static/icon/iconfont.css");
+	@import 'uview-plus/index.scss';
 
 
 	/*每个页面公共css */

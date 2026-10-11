@@ -68,6 +68,9 @@
 			</view>
 		</view>
 
+		<!-- 收货地址弹窗：结算时选地址（下单链路尚未接入，选完先占位） -->
+		<AddressPopup :show="showAddress" @select="onAddressSelect" @close="closeAddress" @saved="onAddressSaved" />
+
 		<!-- 自定义底部导航栏 -->
 		<CustomTabBar />
 	</view>
@@ -84,7 +87,8 @@
 			return {
 				loading: false, // 首次拉列表的加载态，避免空态一闪而过
 				items: [], // 购物车条目，对齐后端 CartVO（productId/name/image/price/quantity/subTotal）
-				selectedIds: [] // 选中的 productId 列表
+				selectedIds: [], // 选中的 productId 列表
+				showAddress: false // 收货地址弹窗显隐
 			}
 		},
 		computed: {
@@ -188,13 +192,23 @@
 					}
 				})
 			},
-			// 去结算：下单页尚未接入，先占位提示
+			// 去结算：先弹收货地址选择（下单链路尚未接入）
 			handleSettle() {
 				if (!this.selectedCount) {
 					return
 				}
-				uni.showToast({ title: '结算功能开发中', icon: 'none' })
+				this.showAddress = true
 			},
+			// 选中收货地址：下单链路尚未接入，先占位提示
+			onAddressSelect(address) {
+				uni.showToast({ title: '下单功能开发中', icon: 'none' })
+			},
+			// 关闭地址弹窗
+			closeAddress() {
+				this.showAddress = false
+			},
+			// 地址增删改成功后回调（暂无需处理）
+			onAddressSaved() {},
 			// 猜你喜欢商品点击：详情/下单链路尚未接入，先占位
 			handleGuessSelect(id) {
 				uni.showToast({ title: '商品详情开发中', icon: 'none' })

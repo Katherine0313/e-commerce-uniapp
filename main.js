@@ -15,6 +15,8 @@ import FlyToCart from './components/FlyToCart.vue'
 import ProductPopup from './components/ProductPopup.vue'
 // 数量步进器（- / 可输入数字 / +），购物车页与加购弹窗共用
 import QuantityStepper from './components/QuantityStepper.vue'
+// 收货地址弹窗（列表 + 新增/编辑），下单/我的等页面共用
+import AddressPopup from './components/AddressPopup.vue'
 // #ifndef VUE3
 import Vue from 'vue'
 import './uni.promisify.adaptor'
@@ -27,6 +29,7 @@ Vue.component('LoginPopup', LoginPopup)
 Vue.component('FlyToCart', FlyToCart)
 Vue.component('ProductPopup', ProductPopup)
 Vue.component('QuantityStepper', QuantityStepper)
+Vue.component('AddressPopup', AddressPopup)
 App.mpType = 'app'
 const app = new Vue({
 	...App
@@ -41,6 +44,7 @@ import {
 import {
 	createPinia
 } from 'pinia'
+import uviewPlus from 'uview-plus'
 export function createApp() {
 	const app = createSSRApp(App)
 	// 全局注册自定义导航栏组件
@@ -59,6 +63,10 @@ export function createApp() {
 	app.component('ProductPopup', ProductPopup)
 	// 全局注册数量步进器组件
 	app.component('QuantityStepper', QuantityStepper)
+	// 全局注册收货地址弹窗组件
+	app.component('AddressPopup', AddressPopup)
+	// 注册 uview-plus 组件库（u-switch 等）
+	app.use(uviewPlus)
 	// 创建 Pinia 实例并注册，统一管理全局状态
 	const pinia = createPinia()
 	app.use(pinia)
