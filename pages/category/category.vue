@@ -59,13 +59,8 @@
 	import { getCategories } from '../../api/categories.js'
 	import { getProductsByCategory } from '../../api/product.js'
 	import { BASE_URL } from '../../utils/server-api.js'
-	// 商品加购弹窗
-	import ProductPopup from './component/ProductPopup.vue'
 
 	export default {
-		components: {
-			ProductPopup
-		},
 		data() {
 			return {
 				activeIndex: 0, // 当前选中一级分类下标，右侧商品跟着它联动
