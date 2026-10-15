@@ -9,102 +9,104 @@
 登录后能拉取、展示并修改含头像和昵称的用户资料。
 
 **主线延伸（阶段 7 起）**：登录闭环已完成后，工作重心转到前台购物链路 ——
-浏览（分类 / 热门 / 猜你喜欢）→ 看详情 → 加购（登录 + `POST /api/cart`）→ 购物车 → 下单。
-其中「浏览 → 加购」已贯通（阶段 17），购物车与下单待做。
+浏览（分类 / 热门 / 猜你喜欢）→ 看详情 → 加购（登录 + `POST /api/cart`）→ 购物车 → 下单 → 支付。
+「浏览 → 加购 → 购物车 → 下单支付」已贯通（阶段 17~19）。
 
 ## 下一步
 
-小程序 C 端已免登录（启动静默登录，无登录/退出按钮）。接下来：购物车页从占位改为真实列表
-（后端 `GET /api/cart` 已就绪），以及等后端提供「轮播图 Banner 接口」「热门推荐接口」后接进首页下拉刷新。
+小程序 C 端已免登录。下单支付链路已通，订单列表页 + 待付款页 + 模拟支付弹窗已做（阶段 22），
+「我的」页订单入口已接通跳转。
+
+接下来：**售后** + 订单详情页（点订单列表里的订单跳详情，还没做）；首页「轮播图 Banner / 热门推荐」接口等后端提供后再接进下拉刷新。
 
 ## 当前阶段
 
-阶段 18：小程序 C 端免登录（完成）
+阶段 22：订单列表页 + 待付款页 + 模拟支付弹窗（完成）
 
 ## 各阶段
 
 ### 阶段 1：现状排查
-- [x] 定位前端登录/头像相关文件
-- [x] 确认 `utils/server-api.js`、`utils/token.js` 的完整实现
-- [x] 确认 `pages/index/index.vue` 的调用链
-- [x] 确认后端包结构与实际接口
+- [✓] 定位前端登录/头像相关文件
+- [✓] 确认 `utils/server-api.js`、`utils/token.js` 的完整实现
+- [✓] 确认 `pages/index/index.vue` 的调用链
+- [✓] 确认后端包结构与实际接口
 - **状态：** complete
 
 ### 阶段 2：接口对齐
-- [x] 读后端接口文档 `e-commerce-boot/docs/openapi.yaml`
-- [x] 对照后端源码 `UserController` / `WxLoginController` 验证文档
-- [x] 发现前端路径与后端不符（`/api/member/*` vs `/api/user/*`）
+- [✓] 读后端接口文档 `e-commerce-boot/docs/openapi.yaml`
+- [✓] 对照后端源码 `UserController` / `WxLoginController` 验证文档
+- [✓] 发现前端路径与后端不符（`/api/member/*` vs `/api/user/*`）
 - **状态：** complete
 
 ### 阶段 3：前端修正
-- [x] `getProfile` 路径改为 `/api/user/profile`
-- [x] `uploadAvatar` 路径改为 `/api/user/avatar`
-- [x] 全项目复查，确认无残留 `/api/member`
+- [✓] `getProfile` 路径改为 `/api/user/profile`
+- [✓] `uploadAvatar` 路径改为 `/api/user/avatar`
+- [✓] 全项目复查，确认无残留 `/api/member`
 - **状态：** complete
 
 ### 阶段 4：文档更正
-- [x] 重写 `avatar-upload.md`，按实际接口/类名/包名更正
-- [x] 补充文档更正记录，说明早先按 `/api/member/**` 记错的原因
+- [✓] 重写 `avatar-upload.md`，按实际接口/类名/包名更正
+- [✓] 补充文档更正记录，说明早先按 `/api/member/**` 记错的原因
 - **状态：** complete
 
 ### 阶段 5：代码检查
-- [x] 检查 `pages/index/index.vue` 完整逻辑
-- [x] 比对后端返回结构与前端取值
-- [x] 列出 8 条问题（功能缺口 2 条 + 代码问题 6 条）
-- [x] 用户决定「能跑通就行了」，全部不修
+- [✓] 检查 `pages/index/index.vue` 完整逻辑
+- [✓] 比对后端返回结构与前端取值
+- [✓] 列出 8 条问题（功能缺口 2 条 + 代码问题 6 条）
+- [✓] 用户决定「能跑通就行了」，全部不修
 - **状态：** complete
 
 ### 阶段 6：收尾
-- [x] 生成 `task_plan.md` / `findings.md` / `progress.md`
-- [x] 将 `utils/` 纳入 git 跟踪（已确认：`git ls-files utils/` 已含两个文件）
+- [✓] 生成 `task_plan.md` / `findings.md` / `progress.md`
+- [✓] 将 `utils/` 纳入 git 跟踪（已确认：`git ls-files utils/` 已含两个文件）
 - **状态：** complete
 
 ### 阶段 7：昵称前端接入
-- [x] 探查后端本次改动，确认新接口 `POST /api/user/name`
-- [x] `utils/server-api.js` 新增 `updateName(name)`
-- [x] `pages/index/index.vue` 加 `type="nickname"` 输入框（未登录/已登录两个分支）
-- [x] 回写展示 + 退出登录时清理
-- [x] 更新三个规划文件
+- [✓] 探查后端本次改动，确认新接口 `POST /api/user/name`
+- [✓] `utils/server-api.js` 新增 `updateName(name)`
+- [✓] `pages/index/index.vue` 加 `type="nickname"` 输入框（未登录/已登录两个分支）
+- [✓] 回写展示 + 退出登录时清理
+- [✓] 更新三个规划文件
 - **状态：** complete
 
 ### 阶段 8：前端对接微服务
-- [x] 探索后端微服务拆分：8 服务（gateway 8080 + 7 业务 9001~9007），仅 user-service 承载业务
-- [x] 确认前端对接方式：统一走网关 8080，路径 `/api/**` 不变，不直连各服务端口
-- [x] 确认 `utils/server-api.js` 的 `BASE_URL` 已指向网关，四个接口路径与 user-service 一致
-- [x] 在 `BASE_URL` 上方补注释，固化「统一走网关」约定与端口规划表
-- [x] 验证 gateway 路由前缀 `spring.cloud.gateway.server.webflux.routes` 合法（gateway 5.0.3 配置元数据确认）
-- [x] 更新三个规划文件
+- [✓] 探索后端微服务拆分：8 服务（gateway 8080 + 7 业务 9001~9007），仅 user-service 承载业务
+- [✓] 确认前端对接方式：统一走网关 8080，路径 `/api/**` 不变，不直连各服务端口
+- [✓] 确认 `utils/server-api.js` 的 `BASE_URL` 已指向网关，四个接口路径与 user-service 一致
+- [✓] 在 `BASE_URL` 上方补注释，固化「统一走网关」约定与端口规划表
+- [✓] 验证 gateway 路由前缀 `spring.cloud.gateway.server.webflux.routes` 合法（gateway 5.0.3 配置元数据确认）
+- [✓] 更新三个规划文件
 - **状态：** complete
 
 ### 阶段 9：顶部导航栏机型适配
-- [x] 澄清 `safeAreaInsets` 与本组件关系（顶部=statusBarHeight、底部=env()，无需引入）
-- [x] 修复搜索框贴边：`rightSafeArea = windowWidth - menuRect.left + 8`
-- [x] 修复搜索框上下裁切：`navContentHeight = Math.max(44, ...)`
-- [x] 更新三个规划文件
+- [✓] 澄清 `safeAreaInsets` 与本组件关系（顶部=statusBarHeight、底部=env()，无需引入）
+- [✓] 修复搜索框贴边：`rightSafeArea = windowWidth - menuRect.left + 8`
+- [✓] 修复搜索框上下裁切：`navContentHeight = Math.max(44, ...)`
+- [✓] 更新三个规划文件
 - **状态：** complete
 
 ### 阶段 10：轮播图组件改名编译报错
-- [x] 定位 `ENOENT: components/Swiper.wxml` —— 组件 `Swiper.vue` 改名 `CustomSwiper.vue` 后编译缓存残留（`.sourcemap` 里还留 `Swiper.js.map`）
-- [x] 定位 `app._component is not a function` —— `main.js` Vue3 分支误写 `_component`（正确 API 为 `app.component`）
-- [x] 修复 `main.js`：`app._component('CustomSwiper', ...)` → `app.component(...)`（已改）
-- [x] 清缓存重编译验证
+- [✓] 定位 `ENOENT: components/Swiper.wxml` —— 组件 `Swiper.vue` 改名 `CustomSwiper.vue` 后编译缓存残留（`.sourcemap` 里还留 `Swiper.js.map`）
+- [✓] 定位 `app._component is not a function` —— `main.js` Vue3 分支误写 `_component`（正确 API 为 `app.component`）
+- [✓] 修复 `main.js`：`app._component('CustomSwiper', ...)` → `app.component(...)`（已改）
+- [✓] 清缓存重编译验证
 - **状态：** complete
 
 ### 阶段 11：前台分类组件
-- [x] 新建 `components/CategoryPanel.vue`（6 分类宫格，3 列 × 2 行）
-- [x] 图标方案从 iconfont 字体改为 png（`static/image/category/*.png` 6 张）
-- [x] `pages/index/index.vue` 局部注册 + 插入轮播图下方，点击 `switchTab` 到分类页
-- [x] 图标加 `border-radius` 圆角裁剪
-- [x] 金刚区数据后端化：`CategoryPanel` 改为 `mounted` 调 `getCategories()`，只取 `parentId == null` 的一级分类，名称/图片用后端 `name`/`image`（补 `BASE_URL`），删除写死的 6 项
-- [x] 分类页 + 首页跳转联动（带选中分类，Storage 传 `selectedCategoryId`）
+- [✓] 新建 `components/CategoryPanel.vue`（6 分类宫格，3 列 × 2 行）
+- [✓] 图标方案从 iconfont 字体改为 png（`static/image/category/*.png` 6 张）
+- [✓] `pages/index/index.vue` 局部注册 + 插入轮播图下方，点击 `switchTab` 到分类页
+- [✓] 图标加 `border-radius` 圆角裁剪
+- [✓] 金刚区数据后端化：`CategoryPanel` 改为 `mounted` 调 `getCategories()`，只取 `parentId == null` 的一级分类，名称/图片用后端 `name`/`image`（补 `BASE_URL`），删除写死的 6 项
+- [✓] 分类页 + 首页跳转联动（带选中分类，Storage 传 `selectedCategoryId`）
 - **状态：** complete
 
 ### 阶段 12：商品预览弹窗（热门推荐 + uni-popup）
-- [x] 新建 `pages/index/component/HotPanel.vue`：热门推荐面板，4 色块 × 左右各一个商品位，点图 `$emit('select', id)`
-- [x] 新建 `pages/index/component/ProductPopup.vue`：商品预览弹窗（图 + 名 + 价 + 描述 + 关闭），props `show`/`product` 进、`$emit('close')` 出
-- [x] `pages/index/index.vue`：接 HotPanel 的 select → `getProductDetail` 拉详情 → `showProductPopup = true`，弹窗状态与商品数据留在页面 data
-- [x] 修复弹窗图片不显示：后端 image 字段是 `/image/upload/N.webp` 相对路径，小程序把开头的 `/` 当包内路径，前端补 `BASE_URL` 前缀
-- [x] 弹窗外壳改用 `uni-popup`（uni-ui，easycom 免注册）：`watch: show` ↔ `ref.open()/close()` 桥接；z-index 99 → 1000 压过自定义 TabBar
+- [✓] 新建 `pages/index/component/HotPanel.vue`：热门推荐面板，4 色块 × 左右各一个商品位，点图 `$emit('select', id)`
+- [✓] 新建 `pages/index/component/ProductPopup.vue`：商品预览弹窗（图 + 名 + 价 + 描述 + 关闭），props `show`/`product` 进、`$emit('close')` 出
+- [✓] `pages/index/index.vue`：接 HotPanel 的 select → `getProductDetail` 拉详情 → `showProductPopup = true`，弹窗状态与商品数据留在页面 data
+- [✓] 修复弹窗图片不显示：后端 image 字段是 `/image/upload/N.webp` 相对路径，小程序把开头的 `/` 当包内路径，前端补 `BASE_URL` 前缀
+- [✓] 弹窗外壳改用 `uni-popup`（uni-ui，easycom 免注册）：`watch: show` ↔ `ref.open()/close()` 桥接；z-index 99 → 1000 压过自定义 TabBar
 - **状态：** complete
 
 ### 阶段 13：悬浮式 AI 导购 Agent（前端）
@@ -116,41 +118,84 @@
 - **状态：** pending（后端 Agent 骨架已跑通，前端未动；本轮仅更新三个 md）
 
 ### 阶段 14：首页「猜你喜欢」模块（Python 推荐服务对接）
-- [x] 接口封装：`api/product.js` 新增 `getRecommend(limit)`，对应 `GET /api/products/recommend`（免登录，未登录走热门兜底）
-- [x] 新建首页「猜你喜欢」区块组件 `components/Guess.vue`：两列商品卡片（图/名/价），`mounted` 调 `getRecommend` 拉后端商品，点图 `$emit('select', id)`
-- [x] `pages/index/index.vue` 在热门推荐（`HotPanel`）之后插入 `<Guess @select="handleProductSelect" />`（全局注册，复用弹预览逻辑）
-- [x] 已登录带 token 走个性化（后端按 `UserContext.getUserId()` 调 Python），未登录自动热门兜底（前端统一带 token 请求，无需自己判断登录态）
+- [✓] 接口封装：`api/product.js` 新增 `getRecommend(limit)`，对应 `GET /api/products/recommend`（免登录，未登录走热门兜底）
+- [✓] 新建首页「猜你喜欢」区块组件 `components/Guess.vue`：两列商品卡片（图/名/价），`mounted` 调 `getRecommend` 拉后端商品，点图 `$emit('select', id)`
+- [✓] `pages/index/index.vue` 在热门推荐（`HotPanel`）之后插入 `<Guess @select="handleProductSelect" />`（全局注册，复用弹预览逻辑）
+- [✓] 已登录带 token 走个性化（后端按 `UserContext.getUserId()` 调 Python），未登录自动热门兜底（前端统一带 token 请求，无需自己判断登录态）
 - **状态：** complete（前端已接 `getRecommend`，商品名称/价格/图片全部来自后端）
 
 ### 阶段 15：首页下拉刷新
-- [x] 定位「看不到动画」根因：本地接口秒回，`refreshing` 瞬间 true→false，转圈没渲染就复位
-- [x] 修复：`onRefresh` 的 `Promise.all` 内联 `setTimeout` 延时，保证动画至少展示一段时间
-- [x] 整合代码：去掉 `minDelay` 中间变量，延时 Promise 直接内联
-- [x] 确认用 `scroll-view` 的 `refresher-enabled` 而非原生 `onPullDownRefresh`（自定义 fixed 导航栏会盖住原生转圈）
+- [✓] 定位「看不到动画」根因：本地接口秒回，`refreshing` 瞬间 true→false，转圈没渲染就复位
+- [✓] 修复：`onRefresh` 的 `Promise.all` 内联 `setTimeout` 延时，保证动画至少展示一段时间
+- [✓] 整合代码：去掉 `minDelay` 中间变量，延时 Promise 直接内联
+- [✓] 确认用 `scroll-view` 的 `refresher-enabled` 而非原生 `onPullDownRefresh`（自定义 fixed 导航栏会盖住原生转圈）
 - [ ] 接「轮播图 Banner 接口」进刷新（等后端 `GET /api/banners`）
 - [ ] 接「热门推荐接口」进刷新（等后端 `GET /api/products/hot`）
 - **状态：** in_progress（动画已修，接后端数据待 Python 推荐服务 + 后端接口）
 
 ### 阶段 16：分类页右侧商品网格
-- [x] 分类页 `category.vue` 左侧分类后端化：`mounted` 调 `getCategories()`，按 `parentId` 拆一/二级，一级分类记下 `subIds`（二级分类 id）
-- [x] 右侧「二级分类宫格」改为「商品网格」：`mounted` 调 `getProducts()` 拉全量商品，按「一级分类 id + 其二级分类 id 集合」前端过滤
-- [x] 商品卡片：每行两个，图片 + 名称 + 价格 + 购物车图标（iconfont `icon-gouwuche1`）
-- [x] 卡片固定高度 + 名称固定两行，解决不同名称长度下卡片等高对齐
-- [x] 清理冗余：删未使用的 `subs` 字段、`currentCategory` 计算属性、`main-title` 标题
+- [✓] 分类页 `category.vue` 左侧分类后端化：`mounted` 调 `getCategories()`，按 `parentId` 拆一/二级，一级分类记下 `subIds`（二级分类 id）
+- [✓] 右侧「二级分类宫格」改为「商品网格」：`mounted` 调 `getProducts()` 拉全量商品，按「一级分类 id + 其二级分类 id 集合」前端过滤
+- [✓] 商品卡片：每行两个，图片 + 名称 + 价格 + 购物车图标（iconfont `icon-gouwuche1`）
+- [✓] 卡片固定高度 + 名称固定两行，解决不同名称长度下卡片等高对齐
+- [✓] 清理冗余：删未使用的 `subs` 字段、`currentCategory` 计算属性、`main-title` 标题
 - **状态：** complete
 
 ### 阶段 17：商品加购链路
-- [x] 对齐后台 `Mall.vue`，`ProductPopup` 补「服务保障」四项（uni-icons 替代 ant 图标）
-- [x] 同上补「增值保障」三张卡片（一年意外保 2% / 全面保修 1% / 电池无忧 ¥20，选中橙边框）
-- [x] 新建全局登录弹窗 `components/LoginPopup.vue` + `main.js` 两分支注册
-- [x] 弹窗打开即静默登录（`ensureLogin`），并总是补一次 `getProfile()` 自动带出头像
-- [x] 新建 `api/cart.js` 封装 `POST /api/cart`
-- [x] 加购逻辑收进 `ProductPopup`（未登录 `$emit('needLogin')`，已登录直接落库 + `adding` 防连点）
-- [x] 加购成功播「飞入购物车」动画（两层 transform 合成抛物线）
-- [x] `category.vue` 改 `@needLogin`，删已下沉到组件的加购方法
-- [x] `index.vue` 清理登录死代码 + 删多余的用户信息展示
-- [x] 更新三个规划文件
+- [✓] 对齐后台 `Mall.vue`，`ProductPopup` 补「服务保障」四项（uni-icons 替代 ant 图标）
+- [✓] 同上补「增值保障」三张卡片（一年意外保 2% / 全面保修 1% / 电池无忧 ¥20，选中橙边框）
+- [✓] 新建全局登录弹窗 `components/LoginPopup.vue` + `main.js` 两分支注册
+- [✓] 弹窗打开即静默登录（`ensureLogin`），并总是补一次 `getProfile()` 自动带出头像
+- [✓] 新建 `api/cart.js` 封装 `POST /api/cart`
+- [✓] 加购逻辑收进 `ProductPopup`（未登录 `$emit('needLogin')`，已登录直接落库 + `adding` 防连点）
+- [✓] 加购成功播「飞入购物车」动画（两层 transform 合成抛物线）
+- [✓] `category.vue` 改 `@needLogin`，删已下沉到组件的加购方法
+- [✓] `index.vue` 清理登录死代码 + 删多余的用户信息展示
+- [✓] 更新三个规划文件
 - **状态：** complete（增值保障暂未落库，见下方「关键问题」）
+
+### 阶段 18：C 端免登录
+- [✓] App.vue onLaunch 静默登录；my.vue 去登录/退出按钮，onShow 补拉资料
+- **状态：** complete
+
+### 阶段 19：下单支付链路
+- [✓] `api/order.js`：createOrder / listOrders / getOrder / payOrder / cancelOrder + genIdempotencyKey（幂等键）
+- [✓] `pages/order/confirm.vue`：下单确认页（地址卡 + 商品 + 配送/留言 + 金额汇总 + 底部按钮；按钮文案阶段 21 已由「我已支付」改为「提交订单」）
+- [✓] `pages.json` 注册 `pages/order/confirm`
+- [✓] `store/cart.js` 加 `checkoutItems` + `setCheckoutItems`（待结算商品快照）
+- [✓] `cart.vue`：「去结算」存选中商品 → 跳确认页；「猜你喜欢」点商品拉详情弹 ProductPopup
+- [✓] `ProductPopup.vue`：「立即购买」组装单商品 → 跳确认页；「电池无忧」按类别过滤（耳机/音箱不显示）
+- **状态：** complete（下单 + 立即支付一步完成，暂未接微信支付；订单列表页未做）
+- **后续修正（阶段 21）：** 底部按钮文案改为「提交订单」；支付方式抽出 `payList` 数据驱动
+
+### 阶段 20：「我的」页 UI 重做（纯 UI，暂不接后端）
+- [✓] 保留已有登录/头像逻辑（`onShow` 的 `ensureLogin` + `getProfile`、`chooseAvatar` 上传），只在其上叠加 UI 区块
+- [✓] 用户卡片：改品牌橙渐变（`#FF6700` → `#FF8A33`），顶边与 `CustomNavbar` 同色接成一片，底边圆角收口
+- [✓] 我的订单卡：标题 + 「全部订单」入口 + 5 个状态入口（待付款/待发货/待收货/待评价/退款售后），图标走 `uni-icons`
+- [✓] 功能入口卡：5 行列表（物流查询/收藏与浏览/收货地址/意见反馈/关于我们），图标 + 文字 + 右箭头
+- [✓] 好物推荐：直接复用全局 `Guess` 组件，不另写一套商品卡
+- [✓] 跳转统一走 `handleNav(url)`：`url` 为空给「功能开发中」提示，路由补进数据即可接通
+- [✓] 根节点 `.page` 去掉原来的 `align-items/justify-content: center`（居中布局会把卡片压成内容宽），改回与 `cart.vue` 一致的 `flex-direction: column`
+- [✓] 「妙选VIP会员」「优惠券/积分」「专属客服」三块补回，**只做 UI 占位**（VIP 金色横条卡 / 优惠券·积分两栏数字 / 专属客服进功能列表），数字写死 0、跳转留空走「功能开发中」
+- **状态：** complete（UI 完成；跳转目标页、真实数据待后续）
+
+### 阶段 21：确认订单页支付方式选择
+- [✓] 加「支付方式」卡（金额汇总卡之后）：`v-for` 遍历 `payList`，左侧图标 + 名称，右侧单选圈（选中填橙 + 白勾）
+- [✓] `data` 加 `payList`（当前一项 `{ code: 'wechat', name: '微信支付', icon: 'weixin', color: '#07C160' }`）+ `activePay`（选中下标）
+- [✓] `handlePay` 里写死的 `payOrder(order.id, 'wechat')` → `payOrder(order.id, this.payList[this.activePay].code)`
+- [✓] 底部按钮文案「我已支付」→「提交订单」（只改文案，逻辑未动）
+- **状态：** complete（用户给的示例是 `<script setup>` + 写死红色单选圈，未照抄，按本项目 Options API + 复用 `.card` 重写）
+
+### 阶段 22：订单列表页 + 待付款页 + 模拟支付弹窗（2026-10-16）
+- [✓] 订单列表页 `pages/order/list.vue`：全部/待发货/待收货按 `orderStatus` 过滤；已取消订单（status=6）灰胶囊标签 + 「删除订单/再来一单」
+- [✓] 待付款页 `pages/order/pending-pay.vue`：倒计时（分秒补零）+ 取消/付款；`my.vue` 待付款入口跳此页
+- [✓] 模拟微信支付弹窗（`confirm.vue`）：6 位密码框 + 底部数字键盘，输满 6 位自动 `payOrder`；未接真实微信支付
+- [✓] 提交订单拆成「下单 → 弹支付弹窗 → 不支付进待付款」（修正关键问题 5：文案与行为一致了）
+- [✓] 删除订单（软删 `DELETE /api/orders/{id}`）+ 再来一单（复用 `addToCart` 重新加购 + 跳购物车）
+- [✓] 详情页底部购物车 icon 加数量角标（读 `useCartStore().count`）
+- [✓] vue 文件统一短横线命名（9 个组件文件重命名，同步 main.js/index.vue import）
+- [✓] 「我的」页用户卡片改白底（阶段 20 的橙渐变改白底，与功能卡片统一）
+- **状态：** complete（待付款倒计时需后端 createdAt 时区修复配合，已修；订单详情页未做）
 
 ## 关键问题
 
@@ -160,10 +205,11 @@
    **实际已有入口**：`pages/my/my.vue` 的已登录分支就带 `chooseAvatar` 换头像；原结论指的是
    已被清理掉的 `index.vue` 旧代码。登录弹窗里的 `chooseAvatar` 只服务未登录场景。
 3. ~~**`utils/` 未纳入 git**，是否提交？~~ **已解决**：`git ls-files utils/` 确认两个文件已跟踪。
-4. **增值保障选了不落库。** 弹窗里的三张保障卡片能选、能算价，但 `AddCartDTO` 只收
-   `productId` / `quantity`，`CartServiceImpl.addItem` 固定写 `insuranceDetail("[]")` /
-   `insuranceFee(0)`，选中的保障到后端就丢了。前端 `insuranceDetail` / `insuranceFee` 两个
-   computed 已保留，**等后端补 DTO 字段 + service 取值**后直接加进请求体即可。
+4. ~~**增值保障选了不落库。**~~ **已解决（2026-10-11）**：后端 `AddCartDTO` 已加 `insuranceDetail` /
+   `insuranceFee`，`CartServiceImpl.addItem` 快照落库；前端 `addToCart` 随请求带上，购物车/下单均含保障费。
+5. ~~**底部按钮叫「提交订单」，但行为仍是「下单 + 立即支付」。**~~ **已解决（2026-10-16）**
+   阶段 22 已拆成「下单 → 弹模拟微信支付弹窗（6 位密码框 + 数字键盘）→ 输满 6 位才 `payOrder`；
+   关闭弹窗则订单留在待付款」。文案与行为一致了。真实 `uni.requestPayment` 仍待后端统一下单参数（prepay_id），届时把模拟弹窗换成真实收银台即可。
 
 ## 已做决策
 
@@ -208,6 +254,23 @@
 | 购物车角标用 Pinia `store/cart.js` 全局维护件数 | 加购、购物车增删改、启动初始化多处会改总数，TabBar 全局组件读 store 自动同步，避免各页面各自算 |
 | 加购弹窗 `ProductPopup` 抽全局组件（`components/`），首页+分类页共用 | 首页原本是纯预览弹窗、分类页是加购弹窗，两份重复；统一成加购版后首页也能直接加购 |
 | 加购弹窗底部「加入购物车」用图标、「立即购买」用文字按钮并排 | 图标省空间、主次分明：立即购买是主行动（文字醒目），加购是次行动（图标够用）。立即购买当前占位，下单链路后续接 |
+| 收货地址弹窗 `AddressPopup` 抽全局组件（列表 + 新增/编辑两个视图） | 下单/我的等多页面都要选地址；组件内含列表和编辑，emit select/saved/close 供页面接 |
+| 收货地址用微信原生 picker mode="region"，region 存「省 市 区」字符串 | 数据微信内置、零包体积、自动级联；地址只是展示+发货，字符串够用，不拆字段不建省市区表 |
+| UI 库用 uview-plus（Vue3 版），不用官方 uview-ui | 官方 uview-ui 2.x 仍是 Vue2 写法（Vue.filter），Vue3 报错；uview-plus 是社区维护的 Vue3 版 |
+| uview-plus 组件用 easycom 按需加载 + prop 定制颜色，不用 CSS 覆盖 | app.use 全量注册占包体积；组件颜色是内联 style（active-color/inactive-color 等 prop），CSS 覆盖无效 |
+
+| 「我的」页先做纯 UI，暂不接后端 | 用户要先看视觉定稿，页面结构确认后再对接，避免 UI 返工白写请求代码 |
+| 「我的」页跳转用数据里留空的 `url` + `handleNav(url)` | 目标页（订单列表/地址/反馈等）都还没建，写死路由一点就跳失败；留空给「功能开发中」提示，页面建好只需补数据 |
+| 「妙选VIP会员」「优惠券/积分」「专属客服」先做 UI 占位，功能后补 | **修正**：原定「整块不做」（理由是本项目当时没有 VIP / 优惠券 / 积分表与接口）。用户明确表示这三块**是他将来要做的**，要求先把位置占住，遂补回为纯 UI 占位。与「不做假功能」不冲突——位置和样式是将来要复用的，只是数字与跳转暂缺 |
+| 三块占位的形态：VIP 独立金卡 + 优惠券/积分/专属客服合成三栏卡 | VIP 权益要突出，给一张金色横条卡；优惠券、积分、专属客服都是「一格入口」，合进同一张白卡三栏等分最省版面。**修正**：专属客服最初并进 `funcList`，用户要求与优惠券/积分排同一行，遂改为该卡第三栏。它没有数字，用图标顶在数字位上，数字位/图标位用固定高度的 `.stat-body` 包住，否则三栏标签会错行 |
+| 图标尺寸一律用 `rpx` 写，列表图标外加定宽盒；**名义字号相同 ≠ 视觉大小相同** | 踩过三次坑：① `uni-icons` 的根节点是无宽度的 `<text>`，宽度=字形 advance，两套字体字形宽窄不同 → 列表各行文字起点错开，故包一层定宽定高的 `.func-icon-box`；② `uni-icons` 的 `size` 默认单位是 px，与 iconfont 的 `rpx` 混用要换算（`size="20"` = 40rpx），易错。查组件源码确认 `size` 走 `getVal()`，**带单位的字符串原样透传**，可直接写 `size="46rpx"`；③ 用 fontTools 量过字形墨迹：用户那套 iconfont 的 `wuliuchaxun` 占 em 92.8%×95.5%，`uni-icons` 只有 ≈74.8%×74.6%，**同一 font-size 下 iconfont 画出来大 27%**。两套混排时"都写同一个 rpx"并不等于看着一样大，要视觉齐平，iconfont 那侧字号得再乘约 0.78 |
+| 「我的」页图标改用第二套 iconfont（`static/myvue-icon`），`uni-icons` 退为兜底 | **修正**：原写「全用 `uni-icons`」，因用户随后提供了自绘图标而作废。项目自建 iconfont（`static/icon/`）只有 5 个图标不够用，但用户新给了一套（`static/myvue-icon/`，4 个：待发货/待收货/售后/物流查询），改用它；`uni-icons` 只兜底补未给齐的 6 项 |
+| 第二套 iconfont 的独立字体名写在 `App.vue`，不改 iconfont.cn 的下载文件 | **修正**：最初直接改 `static/myvue-icon/iconfont.css` 的字体名，但那是下载产物，用户一重新下载就被覆盖（本轮真炸了一次：`.myvue-icon` 基类消失 + `@font-face` 又同名顶掉第一套，两套图标一起乱）。改为在 `App.vue` 里于两行 `@import` 之后重新注册 `@font-face`——`iconfont` 指回第一套、`myvue-icon` 指向第二套，再补 `.myvue-icon` 基类。下载文件保持原样，以后重下载不再破坏任何东西 |
+| 「我的」页好物推荐复用全局 `Guess` 组件，不照抄一份商品卡 | `Guess` 已是首页/购物车在用的「猜你喜欢」，样式与数据来源都现成；再写一套等于制造重复 |
+| 订单状态入口的 `type` 先按 0~4 占位，与后端订单状态对齐待核 | 纯 UI 阶段不读接口，`type` 只是渲染用的 key；对接时按后端 `OrderVO.status` 实测值校正 |
+| 支付方式做成 `payList` 数组 + `activePay` 下标，不写死微信支付 | 用户给的示例是写死一项 + 固定选中；改成数组后「加渠道只追加一项、模板不动」，`handlePay` 也从写死的 `'wechat'` 变成从选中项取 `code`。目前只有一项，点它等于选它自己，行为与改造前一致 |
+| 支付方式卡复用页面已有的 `.card`，不照抄示例的 `.pay-wrap` | 本页所有卡片共用 `.card` 的间距/圆角/白底；另起一套样式只会与其它卡片漂移 |
+| 底部按钮文案「我已支付」→「提交订单」，但**逻辑不动** | 用户只要求改文案。当前点击仍是「下单 + 立即支付」一步走、成功提示仍是「支付成功」，**文案与行为暂不一致**；等接 `uni.requestPayment`（需后端先给统一下单参数）时再一并改成「先下单 → 唤起收银台」 |
 
 ## 遇到的错误
 
@@ -222,6 +285,7 @@
 | `@import url("../../static/category/iconfont.css")` 编译报找不到 | 1 | 组件在 `components/` 下，到根 `static` 只上一级 `../`，多写一级跑到 `my-workspace/` 去了 |
 | 微信开发者工具报 `Component is not found` | 1 | 「过滤无依赖文件」误删 uni-app 懒加载组件（`() => "路径"`），关闭该功能即可 |
 | iconfont 字体图标"没有原有颜色 / 难看" | 1 | 字体图标本质是单色字符，颜色全靠 CSS `color`，无内建颜色；改用 png |
+| 用户重下载 `myvue-icon` 后「前端 icon 渲染乱了」 | 1 | 我上轮改的是 iconfont.cn 的下载文件，被新下载整体覆盖：字体名回 `iconfont`（与第一套同名 → 两套互顶），基类回 `.iconfont`（`my.vue` 要的 `.myvue-icon` 不存在了）。改为覆盖逻辑写进 `App.vue`，下载文件一字不动 |
 
 | 商品预览弹窗看不到图片 | 1 | 后端 `products.image` 存 `/image/upload/N.webp`，前端直接当 `image` 的 src，小程序把开头的 `/` 解析成包内路径 → 空白。补 `BASE_URL` 前缀（`http://127.0.0.1:8080/image/upload/N.webp`）解决 |
 

@@ -13,12 +13,15 @@
 			<view v-if="mode === 'list'" class="list-view">
 				<view class="address-item" v-for="item in addresses" :key="item.id" @click="handleSelect(item)">
 					<view class="item-main">
-						<view class="item-top">
+						<view class="consignee-info">
 							<text class="consignee">{{ item.consignee }}</text>
 							<text class="phone">{{ item.phone }}</text>
 						</view>
-						<text class="region">{{ item.region }}</text>
-						<text class="detail">{{ item.detailAddress }}</text>
+						<view class="consignee-info">
+							<text class="region">{{ formatRegion(item.region) }}</text>
+							<text class="detail">{{ item.detailAddress }}</text>
+						</view>
+
 					</view>
 					<view class="item-side">
 						<text v-if="item.isDefault === 1" class="default-tag">默认</text>
@@ -28,6 +31,7 @@
 
 				<!-- 空列表：整行可点击进入新增 -->
 				<view v-if="!addresses.length" class="empty" @click="handleAdd">还没有收货地址，点击新增</view>
+
 			</view>
 
 			<!-- 编辑视图 -->
@@ -44,7 +48,7 @@
 					<text class="label">所在地区</text>
 					<!-- 微信原生省市区级联选择器，数据微信内置 -->
 					<picker mode="region" :value="regionArray" @change="onRegionChange">
-						<view class="input picker" :class="{ placeholder: !form.region }">{{ form.region || '请选择省市区' }}
+						<view class="input picker" :class="{ placeholder: !form.region }">{{ form.region ? formatRegion(form.region) : '请选择省市区' }}
 						</view>
 					</picker>
 				</view>
@@ -64,6 +68,9 @@
 				</view>
 				<view v-if="editingId" class="delete-btn" @click="handleDelete">删除地址</view>
 			</view>
+
+			<!-- 新增入口：固定在弹窗底部，已有地址时展示 -->
+			<view v-if="mode === 'list' && addresses.length" class="add-btn" @click="handleAdd">新增收货地址</view>
 		</view>
 	</uni-popup>
 </template>
@@ -164,6 +171,10 @@
 				}
 				this.regionArray = item.region ? item.region.split(' ') : []
 				this.mode = 'edit'
+			},
+			// region 存「省 市 区」空格分隔（后端约定 + 编辑回显依赖），展示时去掉空格更紧凑
+			formatRegion(region) {
+				return (region || '').replace(/\s+/g, '')
 			},
 			// 省市区 picker 选中
 			onRegionChange(e) {
@@ -278,12 +289,15 @@
 		background: #ffffff;
 		border-radius: 24rpx 24rpx 0 0;
 		padding: 30rpx;
-		/* 底部预留 iPhone 安全区距离，避免内容和 home indicator 重叠 */
-		padding-bottom: calc(150rpx + env(safe-area-inset-bottom));
-		overflow-y: auto;
+		/* 底部安全区兜底：避免按钮被屏幕底部 / home indicator 遮挡 */
+		padding-bottom: calc(220rpx + env(safe-area-inset-bottom));
+		/* 纵向 flex：header 顶部、内容区滚动、底部按钮固定 */
+		display: flex;
+		flex-direction: column;
 	}
 
 	.header {
+		flex-shrink: 0;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -305,6 +319,14 @@
 		line-height: 1;
 	}
 
+	/* 列表 / 编辑视图：占满剩余高度，内容超出时在内部滚动（配合 popup-body 的 flex 布局） */
+	.list-view,
+	.edit-view {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+	}
+
 	/* ===== 列表视图 ===== */
 	.address-item {
 		display: flex;
@@ -318,9 +340,10 @@
 		min-width: 0;
 	}
 
-	.item-top {
+	.consignee-info {
 		display: flex;
 		align-items: baseline;
+		margin-top:4rpx;
 	}
 
 	.consignee {
@@ -330,22 +353,20 @@
 	}
 
 	.phone {
-		margin-left: 20rpx;
 		font-size: 26rpx;
 		color: #666666;
+		margin-left:10rpx;
 	}
 
 	.region {
 		display: block;
-		margin-top: 8rpx;
 		font-size: 26rpx;
 		color: #333333;
 	}
 
 	.detail {
 		display: block;
-		margin-top: 4rpx;
-		font-size: 24rpx;
+		font-size: 26rpx;
 		color: #999999;
 	}
 
@@ -370,18 +391,21 @@
 	}
 
 	.empty {
-		padding: 80rpx 0;
+		padding: 60rpx 0;
 		text-align: center;
-		font-size: 26rpx;
+		font-size: 28rpx;
 		color: #999999;
 	}
 
 	.add-btn {
-		margin-top: 24rpx;
+		/* 底部固定按钮：不参与内容滚动，始终贴在弹窗底部 */
+		flex-shrink: 0;
+		margin-top: 50rpx;
 		padding: 20rpx 0;
 		font-size: 28rpx;
 		text-align: center;
 		color: #FF6700;
+		background: #ffffff;
 		border: 1rpx dashed #FF6700;
 		border-radius: 12rpx;
 	}

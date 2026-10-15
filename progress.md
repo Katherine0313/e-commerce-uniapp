@@ -1,5 +1,214 @@
 # 进度日志
 
+## 会话 21：2026-10-16（订单列表页 + 待付款页 + 模拟支付弹窗）
+
+### 当前状态
+订单列表页、待付款页、模拟支付弹窗、删除订单/再来一单、购物车角标、vue 文件短横线重命名、我的页白底均完成。
+
+### 已执行操作
+- 订单列表页 `pages/order/list.vue`：全部/待发货/待收货按 `orderStatus` 过滤，已取消订单「删除订单/再来一单」
+- 待付款页 `pages/order/pending-pay.vue`：倒计时（分秒补零）+ 取消/付款
+- 模拟微信支付弹窗：`confirm.vue` 加 6 位密码框 + 底部数字键盘，输满 6 位自动 `payOrder`
+- 提交订单拆成「下单 → 弹支付弹窗 → 不支付进待付款」（修正「提交订单」文案与行为不一致）
+- 删除订单（软删 `DELETE /api/orders/{id}`）+ 再来一单（`addToCart` 重新加购 + 跳购物车）
+- 详情页底部购物车 icon 加数量角标
+- vue 文件统一短横线命名（9 个组件文件重命名）
+- 「我的」页用户卡片改白底
+
+### 改动的文件
+- 新增 `pages/order/list.vue`、`pages/order/pending-pay.vue`、`pages/goods/detail.vue`
+- 修改 `pages/order/confirm.vue`、`pages/my/my.vue`、`api/order.js`、`pages.json`、`main.js`、`pages/cart/cart.vue`、`pages/category/category.vue`、`pages/index/index.vue`
+- 重命名 9 个组件文件为短横线（`components/` 5 个 + `pages/index/component/` 4 个）
+
+### 遗留事项
+- 订单详情页未做（点订单列表里的订单暂不跳）
+- 真实微信支付未接（模拟弹窗占位，待后端统一下单参数 prepay_id）
+- 「再来一单」未恢复增值保障（`OrderItemVO` 未返回 insuranceDetail/insuranceFee）
+
+## 会话 20：2026-10-15（确认订单页加支付方式选择）
+
+### 当前状态
+
+已完成。`pages/order/confirm.vue` 金额汇总卡之后多了一张「支付方式」卡，目前只有微信支付一项、默认选中。
+
+### 背景
+
+用户给了别人的示例代码（`<script setup>` + 写死的红色单选圈），要求「加个支付方式的选择，用微信支付」，
+并强调**不要照抄**。示例只保留微信支付、固定选中不可切换。
+
+### 已执行操作
+
+1. **先核实了三件事**，没有直接套示例：
+   - `confirm.vue` 是 **Options API + `<style scoped>`**（示例是 `script setup`），已有通用 `.card` 卡片样式可复用。
+   - `handlePay` 里微信支付**本来就是写死的**：`payOrder(order.id, 'wechat')` —— 要做的就是把它抽出来。
+   - 查 `api/order.js` 的 `payOrder(id, payType)` 签名：`data: { payType: payType || 'wechat' }`，**支持传值**，
+     默认值正好也是 `wechat`，所以改造不影响既有行为。
+   - 查 `uniicons.css` 确认 `weixin`（`#07C160` 微信绿）和 `checkmarkempty` 两个 font_class 都存在，不用猜图标名。
+2. **按本页风格重写**，与示例的差异：Options API 而非 `script setup`；复用页面已有的 `.card`（示例另写了 `.pay-wrap`）；
+   选中色用项目品牌橙 `#FF6700`（示例用 `#e64340`）；`<style scoped>` 与本页一致。
+3. 模板（金额汇总卡之后）加支付方式卡：`v-for` 遍历 `payList`，左侧微信图标 + 名称，右侧单选圈，选中时填橙 + 白色对勾。
+4. `data` 加两项：`payList`（一项 `{ code: 'wechat', name: '微信支付', icon: 'weixin', color: '#07C160' }`）
+   和 `activePay: 0`（当前选中下标）。
+5. `handlePay` 里 `payOrder(order.id, 'wechat')` → `payOrder(order.id, this.payList[this.activePay].code)`，
+   写死的支付方式变成数据驱动。**将来加支付宝等渠道，只需往 `payList` 追加一项，模板不用动。**
+6. CSS 加 `.pay-item` / `.pay-name` / `.pay-radio`（含 `.checked` 态）。
+7. 底部按钮文案「我已支付」→「**提交订单**」（`handlePay` 上方注释同步改）。
+   **只改了文案，逻辑没动** —— 点击仍是「下单 + 立即支付 + 清购物车」一步走，成功提示也还是「支付成功」。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `pages/order/confirm.vue` | 新增支付方式卡（模板 + `payList`/`activePay` + 3 条样式）；`handlePay` 的支付方式改为从 `payList` 取，不再写死；底部按钮文案改「提交订单」 |
+| `task_plan.md` | 新增「阶段 21」，更新「当前阶段」「下一步」；阶段 19 补「后续修正」标注；「已做决策」补 3 条（payList 数据驱动 / 复用 `.card` / 改文案不改逻辑） |
+| `findings.md` | 新增「确认订单页支付方式（2026-10-15）」小节（含与示例的差异表、`payType` 落库链路）；更新「下单支付链路」里的按钮描述；「技术决策」「遇到的问题」各补 3 条和 2 条 |
+| `progress.md` | 本会话记录；回改会话 19 里过时的「我已支付」与「`payType` 传占位」描述 |
+
+### 遗留事项
+
+- **还没接 `uni.requestPayment`**，点「提交订单」不会调起微信收银台，只是把 `payType` 透传给后端记账，语义与改造前一致。
+  按钮虽已叫「提交订单」，但**仍在同一次点击里把订单置为已支付**、提示也仍是「支付成功」——要真做成
+  「先下单、再唤起收银台」，得等后端给统一下单参数后一起改。
+- `payType` 后端**确实会落库**（已核实）：`OrderController.payOrder` 收下后交给 `OrderServiceImpl.payOrder`，
+  再经 `OrderMapper.updateStatus` 写进 `orders.pay_type`（`OrderMapper.xml` 里是
+  `<if test="payType != null">, pay_type = #{payType}</if>`），`OrderVO.payType` 也会返给前端。
+  注意下单接口 `CreateOrderDTO` **没有** `payType` 字段，所以 `pay_type` 是支付那一步才写上，不是下单时。
+- 渠道多了以后要做成真正的单选（现在只有一项，点了也是选它自己）。
+
+---
+
+## 会话 19：2026-10-15（「我的」页 UI 重做，纯 UI）
+
+### 当前状态
+- **阶段：** 20 - 「我的」页 UI 重做（完成）
+- **开始时间：** 2026-10-15
+
+### 背景
+
+「我的」页此前只有一个头像 + 昵称，内容单薄。用户给了另一项目的参考代码（用户卡 / VIP 卡 / 优惠券积分 /
+订单入口 / 功能列表 / 好物推荐），要求**结合本项目改造**，并明确本轮**只看纯 UI、暂不接后端**，
+页面定稿后再对接。
+
+### 已执行操作
+
+1. **保留既有登录逻辑不动**：`onShow` 的 `ensureLogin()` + `getProfile()`、`chooseAvatar` 换头像上传
+   全部原样保留，只在其上叠加 UI 区块。
+2. **用户卡片**：白色文字改到品牌橙渐变底上（`#FF6700` → `#FF8A33`），顶边与 `CustomNavbar`
+   同色接成一片、底边 32rpx 圆角收口；头像加半透明白描边。
+3. **我的订单卡**：卡头「我的订单」+「全部订单」入口，下面 5 个等分状态入口
+   （待付款/待发货/待收货/待评价/退款售后）。
+4. **功能入口卡**：5 行列表（物流查询/收藏与浏览/收货地址/意见反馈/关于我们），图标 + 文字 + 右箭头，
+   末行去下边框。
+5. **好物推荐**：直接挂全局 `Guess` 组件，未另写商品卡。
+6. **跳转占位**：统一 `handleNav(url)`，`url` 为空弹「功能开发中」；路由将来填进 `orderTabs` /
+   `funcList` 的数据即可接通，页面代码不用改。
+7. **根节点样式修正**：`.page` 原为 `align-items/justify-content: center` 的居中布局，会把新卡片压成
+   内容宽，改为与 `cart.vue` 一致的 `flex-direction: column`；底部留白加 `env(safe-area-inset-bottom)`。
+8. **图标接入第二套 iconfont**：用户提供 `static/myvue-icon/`（待发货 `icon-31daifahuo`、待收货
+   `icon-daishouhuo`、售后 `icon-shouhou`、物流查询 `icon-wuliuchaxun`）。
+   - `my.vue` 图标写法改为模板里直写 `<text class="myvue-icon icon-xxx"></text>`；数据里加 `fontIcon`
+     字段，有值走 iconfont，为空则 `uni-icons` 兜底 —— 后续把类名填进 `fontIcon` 即自动切换。
+   - `App.vue` 全局 `@import` 引入（与第一套并列）。
+   - 两套 css 的 `@font-face` 都叫 `"iconfont"`，同名会互相覆盖（详见下节「图标方案」）。
+9. **修复图标渲染错乱（用户换图标引发的回归）**：用户重新从 iconfont.cn 下载 `static/myvue-icon/`
+   覆盖了目录，导致：
+   - 上一轮我直接改用户 css 的字体名（`iconfont` → `myvue-icon`）**被覆盖回去**，`my.vue` 里
+     `.myvue-icon` 基类不存在了 → 4 个图标无字体可用；
+   - 该 css 的 `@font-face` 又变回 `"iconfont"`，与 `static/icon/iconfont.css` 再次同名 →
+     底部导航等第一套图标也被顶掉。
+   **改法改为不动用户的下载文件**：`static/myvue-icon/iconfont.css` 保持原样（`@font-face` 仍是
+   `iconfont`，`icon-shouhou` 的字形已由用户改为 `\e70b`），改在 `App.vue` 的 `<style>` 里，于两行
+   `@import` 之后重新用名字注册一次：
+   - `@font-face { font-family: "iconfont"; src: ./static/icon/** }` —— 把被顶掉的第一套抢回来；
+   - `@font-face { font-family: "myvue-icon"; src: ./static/myvue-icon/** }` —— 第二套独立注册；
+   - `.myvue-icon { font-family: "myvue-icon" !important; ... }` —— 补基类（用户 css 里只有 `.iconfont`）。
+   这样以后重新下载 `myvue-icon` 不会再破坏任何东西，`my.vue` 一个字都不用改。
+   注意：两套 `.iconfont` 基类同值同性，都指向 `"iconfont"`（= 第一套），无副作用。
+10. **补回 VIP / 优惠券·积分 / 专属客服三块占位**：用户表示这三块是**他将来要做的**，要求先占住位置
+    （推翻了此前「整块不做」的决定）。只做 UI、不接数据：
+    - **VIP 会员卡**：用户卡下方一张金色横条卡（`linear-gradient(90deg,#F7E3B5,#E9C87A)`），
+      左 `uni-icons` 的 `vip-filled`、中间「杰米电商VIP会员」+ 副标题、右「立即开通」半透明胶囊按钮。
+    - **优惠券 / 积分 / 专属客服**：订单卡下方一张白卡**三栏等分**，非首栏加左边框作分隔。
+      优惠券、积分显示数字 + 标签，数字先写死 0；专属客服没有数字，用 `uni-icons` 的 `headphones`
+      顶在数字位上。三栏的数字位/图标位包在固定高度（50rpx）的 `.stat-body` 里，
+      否则图标与文字高度不同会让三栏下方的标签错行。数据在 `statList`，对接时换成接口值。
+      （专属客服最初放在 `funcList` 里，用户要求与优惠券/积分排同一行后改到这里。）
+    - 三块的点击一律走 `handleNav('')`，弹「功能开发中」。
+11. **修图标大小不一致 / 专属客服图标偏小**：用户反馈「物流查询~关于我们的 icon 大小不一致」
+    「专属客服的 icon 太小」。查 `node_modules/@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue` 后确认两点：
+    - `uni-icons` 根节点是 `<text>`，**没有宽度**（组件样式里只有 `font-family` / `text-decoration` /
+      `text-align`），宽度就是字形 advance → 两套图标占位不同宽，**列表各行文字起点会错开**。
+    - 它把 `font-size` 写在**行内 style** 上（`styleObj` 计算属性），CSS 无法直接覆盖。
+    - 另：`size` 走 `getVal()`，纯数字才补 `px`，**带单位的字符串原样透传** → 可以直接写 `size="44rpx"`，
+      不必在 px/rpx 之间换算。
+    对策：
+    - 功能列表图标包一层定宽定高的 `.func-icon-box`（flex 居中）→ 各行文字起点对齐。
+    - 两套图标的名义尺寸统一成同一个 rpx 值（具体数值第 12 项又被用户改过）。
+12. **图标字号按用户指定改回 30rpx；并实测两套字体的字形尺寸**：第 11 项「两边统一成同一个 rpx 值」
+    改完，用户仍反馈「没有变动」。用 `fontTools` 直接量了两套字体的字形墨迹范围（占 `unitsPerEm` 的比例）：
+    `static/myvue-icon` 的 `wuliuchaxun` 是 **92.8% × 95.5%**，`uni-icons` 的 star / chat / info 等只有
+    **≈ 74.8% × 74.6%**。也就是说**同样 font-size 下，iconfont 的墨迹比 uni-icons 大 27% 左右**——
+    根因不是 font-size 没生效（核对过 `my.js` / `my.wxss`，改动确实进了编译产物），而是**两套字体的字形
+    留白不同**，「两边都写 44rpx」自然看着还是不一致。
+    随后在 30 / 40 / 46rpx 之间目测调了三轮，**最终态**：
+    - 物流查询（iconfont，`.func-icon`）：`font-size: 40rpx` —— 用户明确要求这一项**保持不变**，
+      只把 uni-icons 那侧调大去追它，问题才收敛。
+    - 功能列表 uni-icons（收藏与浏览 ~ 关于我们）：`size="46rpx"`；`.func-icon-box` 48rpx。
+    - 专属客服：uni-icons `size="46rpx"`；`.stat-body` 高度 60rpx → 48rpx。
+    - 订单宫格（`size="52rpx"` / `.order-icon` 52rpx）用户未提，保持不动。
+    这正印证了上面的比例差：iconfont 40rpx 的墨迹 ≈ 38rpx，uni-icons 要 46rpx 才追得上看齐，
+    所以「两边写同一个 rpx 值」从来不是答案 —— 关键是各自乘上自己的字形覆盖率。
+
+### 图标方案
+
+「我的」页 10 个图标分两套：
+
+- **第一套（`static/icon/iconfont.css`）**：只有 5 个图标（首页/分类/购物车/购物车实心/我的），
+  不足以覆盖本页，未用。
+- **第二套（`static/myvue-icon/iconfont.css`）**：用户本轮提供，4 个图标已接入 4 个位置
+  （待发货/待收货/售后/物流查询）。
+- **`uni-icons` 兜底**：剩余 6 项（待付款/待评价/收藏与浏览/收货地址/意见反馈/关于我们）暂用
+  `uni-ui` 的 `uni-icons`（`uni-ui` 已装、easycom 已配、`ProductPopup` 已在用），图标名从
+  `uniicons_file_vue.js` 的 `font_class` 清单逐条核对过，确保存在。
+
+**两套 iconfont 的同名冲突与解法**（本项目第二次踩，阶段 16 第一次）：两个 css 各自
+`@font-face { font-family: "iconfont" }`，同名时后定义的胜出，另一套字形全变方框。前期试过直接改
+`myvue-icon/iconfont.css` 里的字体名，但那是 iconfont.cn 的下载产物，用户一重新下载就前功尽弃
+（本轮就是这样炸的）。最终解法是**把覆盖写在自己的文件里**：`App.vue` 的 `<style>` 在两行
+`@import` 之后重新声明两个 `@font-face`，用 `myvue-icon` 给第二套单独命名，再补一个同名基类。
+`@import` 保持在样式表最前（CSS 规范要求），`@font-face` 在其后，顺序合法。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `pages/my/my.vue` | 用户卡改橙色渐变 + 新增订单卡/功能入口卡/好物推荐；**补 VIP 卡、优惠券·积分卡、专属客服行（三块占位）**；`handleNav` 占位跳转；`.page` 布局修正；图标改 `myvue-icon` + `uni-icons` 兜底 |
+| `static/myvue-icon/iconfont.css` | **未改动**（用户重新下载的版本，保持原样；字体名 `iconfont`、基类 `.iconfont` 都不动） |
+| `App.vue` | 全局 `@import` 两套 iconfont；并在其后重新注册 `@font-face`（`iconfont` 指回第一套、`myvue-icon` 指向第二套）+ 补 `.myvue-icon` 基类，从根上避开同名覆盖 |
+| `task_plan.md` | 新增阶段 20，更新「当前阶段」「下一步」，补「已做决策」（含修正已作废的图标方案） |
+
+### 遗留事项
+
+- `orderTabs` / `funcList` 的 `url` 全为空，点击只弹提示；等订单列表页、地址页等建好后填路由。
+- **三块占位都还没接数据**，用户明确说将来要做：
+  - VIP 卡：文案「妙选VIP会员」和副标题写死在模板里；权益、开通流程、会员等级全未做。项目当前
+    无 VIP 相关表 / 接口。
+  - 优惠券 / 积分：`statList` 的 `value` 写死 0，后端无 coupons / points 表，等做的时候换成接口值。
+  - 专属客服：和优惠券、积分同排在订单卡下方那三栏里，点进去是「功能开发中」；
+    实际客服接入方式（客服会话 / 电话 / 第三方）未定。
+- 订单入口的 `type`（0~4）按常见约定占位，未核对后端 `OrderVO.status` 实际取值，对接时需校正。
+- 「收货地址」入口尚未接已建好的全局 `AddressPopup` 组件（本轮纯 UI，不做交互）。
+- 好物推荐区块依赖 `GET /api/products/recommend`，后端未启动时该区块只有标题、网格为空。
+- **图标还缺 6 个**：待付款 / 待评价 / 收藏与浏览 / 收货地址 / 意见反馈 / 关于我们 仍在用
+  `uni-icons` 兜底，视觉风格与 `myvue-icon` 那 4 个不一致；用户补上类名后填进 `fontIcon` 即可统一。
+- 从 iconfont.cn 重新下载 `myvue-icon` 已**不会再出问题**（改名逻辑在 `App.vue`，不在下载文件里）；
+  但要满足两个前提：字体文件名仍是 `iconfont.woff2/woff/ttf`，且图标类名没变。类名变了就得同步改
+  `my.vue` 里的 `fontIcon` 值。
+- 换图标后若界面没变，是字体文件名没变、开发者工具用了旧缓存，清一次缓存重新编译即可。
+- progress.md 缺阶段 19（下单支付链路）的会话记录，待补。
+
+---
+
 ## 会话 18：2026-10-10（小程序 C 端免登录）
 
 ### 当前状态
@@ -815,9 +1024,53 @@ GET http://127.0.0.1:8080/api/user/profile 403
 - 购物车角标：`store/cart.js` + TabBar 角标 + App onLaunch 初始化 + 加购/增删改同步
 - 加购弹窗显示副标题 subTitle
 - 加购弹窗右上角加叉叉关闭按钮（`handleClose`）；底部改双按钮并排：加入购物车用图标（`icon-gouwuche1`）、新增「立即购买」文字按钮（`handleBuy` 占位，下单链路后续接）
+- 收货地址模块：`api/address.js`（listAddress/addAddress/updateAddress/deleteAddress）+ 全局组件 `components/AddressPopup.vue`（底部弹窗，列表 + 新增/编辑，省市区用微信原生 picker mode="region"，设默认用 uview-plus 的 u-switch）；购物车「去结算」触发地址弹窗
+- 引入 uview-plus（Vue3 UI 库）：main.js app.use + App.vue/uni.scss 引样式 + pages.json easycom 配 `^u-(.*)`；踩坑：官方 uview-ui 2.0.38 是 Vue2 写法（Vue.filter），Vue3 报错，换 uview-plus
 
 ### 踩坑
 
 - 删/移文件（ProductPopup 全局化）后 HBuilderX 增量编译残留旧产物，报 `ENOENT: .../ProductPopup.wxml`，需删 `unpackage/dist` 全量重编译
 - 小程序原生 `input` 层级高于普通 view，步进器按钮热区用「负 margin + padding」扩展会被 input 挡住点不到；最终回退紧凑 52rpx 按钮 + 增大符号反馈
+
+---
+
+## 会话 19：2026-10-14（下单支付链路）
+
+### 当前状态
+- **阶段：** 19 - 下单支付链路（完成）
+- **开始时间：** 2026-10-14
+
+### 背景
+
+后端 order-service 的下单/支付接口已就绪，小程序侧「去结算 → 下单 → 支付」此前只有占位
+（购物车「去结算」只弹地址、商品弹窗「立即购买」/「猜你喜欢」都是 toast 占位）。本轮贯通下单链路。
+
+### 已执行操作
+
+1. 新建 `api/order.js`：下单/列表/详情/支付/取消 + `genIdempotencyKey`（幂等键，对齐后端下单幂等）。
+2. 新建 `pages/order/confirm.vue` 下单确认页：地址卡（默认地址 + 弹 AddressPopup 切换）、商品列表、
+   配送/买家留言、金额汇总、底部按钮（当时文案是「我已支付」，会话 20 已改为「提交订单」）。
+3. `pages.json` 注册 `pages/order/confirm`。
+4. `store/cart.js` 加 `checkoutItems` + `setCheckoutItems`：购物车「去结算」/商品「立即购买」写入待结算商品。
+5. `cart.vue`：「去结算」改为存选中商品 → 跳确认页；「猜你喜欢」点商品改为拉详情弹 ProductPopup（复用加购/下单）。
+6. `ProductPopup.vue`：「立即购买」从占位改为组装单商品 → 跳确认页；「电池无忧」按类别过滤（耳机/音箱不显示）。
+7. 底部按钮逻辑：`createOrder` → `payOrder('wechat')` → `clearCart` → 跳回，一步完成；清购物车失败不影响支付成功提示。
+   （此处 `payOrder` 第一版是写死 `'wechat'`；会话 20 已改为从 `payList[activePay].code` 取，并新增支付方式卡片。）
+
+### 改动的文件
+
+| 文件 | 改动 |
+|---|---|
+| `api/order.js` | 新建：下单/支付等接口 + 幂等键生成 |
+| `pages/order/confirm.vue` | 新建：下单确认页 |
+| `pages.json` | 注册 confirm 页 |
+| `store/cart.js` | 加 checkoutItems + setCheckoutItems |
+| `pages/cart/cart.vue` | 去结算跳确认页 + 猜你喜欢弹 ProductPopup |
+| `components/ProductPopup.vue` | 立即购买接下单 + 电池无忧按类别过滤 |
+
+### 遗留事项
+
+- 订单列表页未做（支付成功先跳回购物车）。
+- 暂未接微信支付（`uni.requestPayment` 未接）；`payType` 最初写死 `'wechat'`，**会话 20 已改为从页面选中的支付方式取**，仍是 `wechat` 一项。
+- 「电池无忧」过滤按 categoryId 写死 [401,402,403]，新增耳机/音箱子类需同步。
 

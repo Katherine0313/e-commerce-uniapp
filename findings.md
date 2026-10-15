@@ -44,8 +44,8 @@
 | `/api/user/profile` | GET | 无（id 从 token 取） | `Result<UserProfileVO>`：`id` / `name` / `avatar` / `phone` / `sex` / `idNumber` / `createTime` |
 | `/api/user/avatar` | POST | `multipart/form-data` 字段 `file` | `Result<String>`：完整头像 URL |
 | `/api/user/name` | POST | `application/json`：`{ name }` | `Result<String>`：去除首尾空格后的昵称 |
-| `/api/cart` | POST | `application/json`：`{ productId, quantity }` | `Result<Void>`：无 data（**需登录**，已在购物车则累加数量） |
-| `/api/cart` | GET | 无 | `Result<List<CartVO>>`：含 `insuranceDetail` / `insuranceFee` 字段 |
+| `/api/cart` | POST | `application/json`：`{ productId, quantity, insuranceDetail, insuranceFee }` | `Result<Void>`：无 data（**需登录**，已在购物车则累加数量） |
+| `/api/cart` | GET | 无 | `Result<List<CartVO>>`：含 `insuranceDetail` / `insuranceFee` / `stock` / `subTotal` 字段 |
 
 - 统一响应体 `Result<T> { success, data, message, code }`。
 - **失败时返回真实 HTTP 状态码**（400/401/403/413/500），不是恒 200，响应体仍是 `Result`。
@@ -352,7 +352,8 @@
 
 **增值保障（对齐后台 `Mall.vue`）**：`ProductPopup` 补了「服务保障」四项与「增值保障」三张卡片。
 价格为售价的 1% / 2% / 电池无忧 ¥20（与后台计费口径一致），选中态为橙边框 + 浅橙底。
-`insuranceDetail` / `insuranceFee` 两个 computed 已保留，等后端 `AddCartDTO` 补字段后直接带上。
+后端 `AddCartDTO` 已补 `insuranceDetail` / `insuranceFee` 字段（2026-10-11），前端 `addToCart` 已随请求带上。
+「电池无忧」按类别过滤：耳机（401/402）、音箱（403）不显示（2026-10-14）。
 
 ### C 端免登录（2026-10-10）
 
@@ -362,6 +363,92 @@
 - 后端：C 端商品浏览本就在 `EXCLUDE_AUTH_PATHS` 免登录；加购/下单靠静默登录自动带的 token 定位 userId，接口无需改。
 - 手机号登录（`getPhoneNumber` → `POST /api/user/phone`）后端已实现、前端未接入，保留备用。
 - 头像历史问题：`upload/avatar/` 空 + `user.avatar` 恒 NULL + 账号 id 12→13 重建，即头像从未成功落库，非前端 bug。
+
+### 下单支付链路（2026-10-14）
+
+后端 order-service 的下单/支付接口已就绪（`POST /api/orders`、`PUT /api/orders/{id}/pay`），
+小程序侧把「去结算 → 下单 → 支付」贯通。
+
+**下单确认页 `pages/order/confirm.vue`**：
+
+- 从 `store/cart.js` 的 `checkoutItems` 读待结算商品（购物车「去结算」或商品弹窗「立即购买」写入）。
+- 收货地址：`listAddress` 取默认地址展示，点地址卡弹 `AddressPopup` 切换/新增。
+- 底部按钮「提交订单」（2026-10-15 前叫「我已支付」）：下单 + 立即支付一步完成 ——
+  `createOrder` → `payOrder(orderId, payType)` → `clearCart` → 跳回。
+  **仍未接微信支付**；`payType` 现在由页面选中的支付方式给出（见下节），后端会把它写进 `orders.pay_type`。
+- 清购物车失败不影响支付成功提示（静默忽略，购物车页 `onShow` 会重新拉列表）。
+
+**幂等键（对齐后端下单幂等）**：
+
+- `api/order.js` 的 `genIdempotencyKey()`：小程序基础库新则 `crypto.randomUUID()`，否则手写 v4 兜底。
+- 确认页 `onLoad` 生成一次、本页内失败重试复用同一个 key（后端对相同 key 只真正下单一次，防弱网重试重复下单）。
+
+**三条下单入口（共用 `checkoutItems` + 确认页）**：
+
+| 入口 | 来源 | 商品 |
+|---|---|---|
+| 首页/分类页商品弹窗「立即购买」 | `ProductPopup.vue` handleBuy | 单商品（含数量/增值保障） |
+| 购物车「去结算」 | `cart.vue` handleSettle | 选中的多个商品 |
+| 购物车「猜你喜欢」点商品 | `cart.vue` handleGuessSelect → ProductPopup | 单商品 |
+
+- 「立即购买」/「猜你喜欢」都先 `getProductDetail(id)` 拉详情 → 打开 `ProductPopup`，再走弹窗里的加购/立即购买。
+
+**增值保障按类别过滤（2026-10-14）**：
+
+- `ProductPopup.vue` 新增 `showBattery` computed：`![401, 402, 403].includes(Number(product.categoryId))`。
+- 「电池无忧」卡片 `v-if="showBattery"`，`insuranceDetail`/`insuranceFee` 也加 `showBattery &&` 兜底。
+- 即耳机（401 头戴式、402 无线）与音箱（403）不显示「电池无忧」，其余类别（手机/笔记本/平板/手表/相机）保留。
+- 依赖 `ProductVO.categoryId`（叶子分类 id）；后续新增耳机/音箱子类需同步加进列表。
+
+### 确认订单页支付方式（2026-10-15）
+
+用户给了别人的示例代码（`<script setup>` + `ref` + 写死红色的单选圈），要求「加个支付方式的选择，
+用微信支付」，并强调**不要照抄**。按本项目风格重写后落地如下。
+
+**落地形态（`pages/order/confirm.vue`）**：
+
+- 金额汇总卡之后新增一张 `.card`：`v-for` 遍历 `payList`，左侧 `uni-icons`（`weixin` + `#07C160`）+ 名称，
+  右侧单选圈 `.pay-radio`，选中时填品牌橙 `#FF6700` + 白勾（`checkmarkempty`）。
+- `data` 加 `payList`（当前 `[{ code: 'wechat', name: '微信支付', icon: 'weixin', color: '#07C160' }]`）
+  与 `activePay`（选中下标）。
+- `handlePay` 里原来写死的 `payOrder(order.id, 'wechat')` → `payOrder(order.id, this.payList[this.activePay].code)`。
+  **将来加支付宝等渠道，只往 `payList` 追加一项，模板和下单逻辑都不用动。**
+- 底部按钮文案「我已支付」→「提交订单」。**只改文案，逻辑与提示未动**（点击仍是下单 + 立即支付一步走）。
+
+**与示例代码的四处差异**（都为了「结合本项目」）：
+
+| 示例 | 本项目 | 原因 |
+|---|---|---|
+| `<script setup>` + `ref` | Options API 的 `data` | 全项目都是 Options API |
+| 另写 `.pay-wrap` 等自有样式 | 复用页面已有的 `.card` | 本页卡片的间距/圆角/白底已统一 |
+| 选中色 `#e64340` | `#FF6700` | 项目品牌色（本页 `.addr-default` 也在用） |
+| `size="36"` | `size="40rpx"` | `uni-icons` 的 `size` 默认单位是 px，36 会变成 72rpx |
+
+- 图标名没猜：`weixin` / `checkmarkempty` 都在 `uniicons.css` 里 grep 确认存在
+  （顺带确认 `checkmarkempty-filled` **不存在**，别照示例里的名字瞎写）。
+
+**`payType` 后端确实会落库（已核实，非推测）**：
+
+- `OrderController.payOrder` 收下 → `OrderServiceImpl.payOrder` → `OrderMapper.updateStatus`，
+  `OrderMapper.xml` 里是 `<if test="payType != null">, pay_type = #{payType}</if>`，写入 `orders.pay_type`；
+  `OrderVO.payType` 也会返给前端。
+- 下单接口 `CreateOrderDTO` **没有** `payType` 字段，所以 `pay_type` 是**支付那一步**才写上，不是下单时。
+  换句话说前端这个「支付方式」不是摆设，后台能查到。
+- 前端 `api/order.js` 的 `payOrder(id, payType)` 本来就有默认值 `payType || 'wechat'`，
+  所以「抽成变量」这个改动不会改变既有行为。
+
+**遗留**：还没接 `uni.requestPayment`，点「提交订单」不会调起微信收银台。要真做成
+「先下单 → 唤起收银台 → 支付成功」，得等后端给统一下单参数（prepay_id 那一套）才能接。
+
+### 订单列表页 + 待付款页 + 模拟支付弹窗（2026-10-16）
+
+- 订单列表页 `pages/order/list.vue`：全部/待发货/待收货按 `orderStatus` 过滤；已取消（status=6）灰胶囊标签 + 「删除订单/再来一单」
+- 待付款页 `pages/order/pending-pay.vue`：倒计时（`createdAt + 30min`，分秒补零）+ 取消/付款
+- 模拟微信支付弹窗（`confirm.vue`）：6 位密码框 + 底部数字键盘，输满 6 位自动 `payOrder`；关闭弹窗订单留待付款
+- 删除订单走软删 `DELETE /api/orders/{id}`；再来一单复用 `addToCart` 重新加购 + 跳购物车
+- 详情页底部购物车 icon 加数量角标（读 `useCartStore().count`）
+- vue 文件统一短横线命名（9 个组件文件重命名，同步 `main.js`/`index.vue` import；注册名/name 不变，运行时行为不变）
+- 待付款倒计时依赖后端 `createdAt` 时区修复（MySQL 容器 UTC vs JVM UTC+8 差 8h，倒计时会误判「超时关闭」，见后端 findings「订单软删 + 订单时间时区」）
 
 ## 技术决策
 
@@ -407,6 +494,13 @@
 | 飞入动画用两层 `transform` 合成，不用 JS 逐帧算 | 抛物线拆成「外层匀速横向 + 内层负 y1 贝塞尔纵向 + 缩放」，交给合成层跑，不掉帧也不用定时器改坐标 |
 | 飞入层放 `uni-popup` 外层，`z-index: 1200` | 弹窗收起自带 `transform`，飞入层在弹窗内会被带着一起动；另需盖过弹窗遮罩（1000）与 tabBar（999） |
 | 首帧与位移分两次 `setTimeout`，不用 `$nextTick` | 小程序里 `$nextTick` 不保证首次样式已渲染到视图层，两次样式落在同一次渲染就没有补间、动画直接闪到终点 |
+| 收货地址弹窗 `AddressPopup` 抽全局组件（列表 + 新增/编辑两个视图） | 下单/我的等多页面都要选地址；组件内含列表和编辑，emit select/saved/close 供页面接 |
+| 收货地址用微信原生 picker mode="region"，region 存「省 市 区」字符串 | 数据微信内置、零包体积、自动级联；地址只是展示+发货，不拆字段不建省市区表 |
+| UI 库用 uview-plus（Vue3 版），不用官方 uview-ui | 官方 uview-ui 2.x 仍是 Vue2 写法（Vue.filter），Vue3 报错；uview-plus 是社区维护的 Vue3 版 |
+| uview-plus 组件用 easycom 按需加载 + prop 定制颜色，不用 CSS 覆盖 | app.use 全量注册占包体积；组件颜色是内联 style（active-color/inactive-color 等 prop），CSS 覆盖无效 |
+| 支付方式做成 `payList` 数组 + `activePay` 下标，不写死微信 | 示例是写死一项 + 固定选中；改成数组后「加渠道只追加一项、模板不动」，`handlePay` 也从写死 `'wechat'` 变成从选中项取 `code`；只有一项时点它等于选它自己，行为与改造前一致 |
+| 支付方式卡复用 `.card`，选中色用 `#FF6700`，`size` 写 `40rpx` | 示例另起了 `.pay-wrap` 和 `#e64340`、`size="36"`；前者与其它卡片样式漂移，后者是别家品牌色 + 单位踩坑（`size` 默认 px，36 = 72rpx） |
+| 底部按钮改文案不改逻辑 | 用户只要求改「我已支付」→「提交订单」；真正拆成「先下单 → 唤起收银台」要等后端统一下单参数，现在改了逻辑也跑不通 |
 
 ## 遇到的问题
 
@@ -437,6 +531,9 @@
 
 | 加购飞入动画不播，商品图直接闪到购物车 | 初版用 `$nextTick` 改位移，小程序里首帧样式未必已渲染到视图层，两次样式落在同一次渲染就没有补间；改成 `setTimeout(..., 30)` 确保首帧立住 |
 | 编辑 `index.vue` 样式块时误把尾部规则一起替换掉，出现两条重复的 `.scroll-inner` | 替换串选得过宽，把尾部规则一起吞了；读文件复查发现后用后续 Edit 修掉（Edit 不报错不代表改对了，改动后要回读） |
+
+| 照抄示例的 `uni-icons size="36"` 会画成 72rpx | `size` 默认单位是 px（纯数字走 `getVal()` 补 `px`），与 iconfont 的 `rpx` 不是一个量纲；本项目一律写成带单位的字符串 `size="40rpx"`（带单位原样透传） |
+| 改「我的」页图标尺寸时一度以为「改动没生效」 | 实测是两套字体的字形墨迹不同：`uni-icons` 约 74.8%×74.6% em，自建 iconfont 的 `wuliuchaxun` 达 92.8%×95.5%，**同一 font-size 下 iconfont 画出来大 27%**；「两边写同一个 rpx」不等于视觉同大。结论：两套混排要各自设值（本轮最终 iconfont 40rpx / uni-icons 46rpx） |
 
 ## 资源
 

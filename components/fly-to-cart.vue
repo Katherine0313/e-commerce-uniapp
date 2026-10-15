@@ -37,7 +37,7 @@
 			start(from) {
 				const sysInfo = uni.getSystemInfoSync()
 				const px = sysInfo.windowWidth / 750 // rpx → px
-				const itemH = 100 * px // tabBar 的 .tab-item 高度（见 TabBar.vue，100rpx）
+				const itemH = 100 * px // tabBar 的 .tab-item 高度（见 tab-bar.vue，100rpx）
 				// 底部安全区高度：iPhone 这类有底部黑条的机型要往上挪
 				const bottomInset = sysInfo.safeArea
 					? Math.max(0, sysInfo.screenHeight - sysInfo.safeArea.bottom)

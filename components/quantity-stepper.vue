@@ -74,11 +74,10 @@
 
 <style scoped>
 	.qty-stepper {
-		display: inline-flex;
+		display: flex;
 		align-items: center;
 		border: 1rpx solid #e0e0e0;
 		border-radius: 8rpx;
-		overflow: hidden;
 		background: #ffffff;
 	}
 
@@ -86,9 +85,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 52rpx;
-		height: 52rpx;
-		font-size: 32rpx;
+		width: 42rpx;
+		font-size: 36rpx;
 		color: #333333;
 	}
 
@@ -102,9 +100,8 @@
 	}
 
 	.qty-input {
-		width: 50rpx;
-		height: 52rpx;
-		min-height: 52rpx;
+		width: 42rpx;
+		height: 32rpx;
 		text-align: center;
 		font-size: 24rpx;
 		font-weight: 600;

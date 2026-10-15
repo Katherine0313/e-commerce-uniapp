@@ -1,22 +1,20 @@
 import App from './App'
 // 自定义顶部导航栏，全局注册后各页面直接用 <CustomNavbar />
-import CustomNavbar from './pages/index/component/TopBar.vue'
+import CustomNavbar from './pages/index/component/top-bar.vue'
 // 自定义底部导航栏，全局注册后各 tabBar 页直接用 <CustomTabBar />
-import CustomTabBar from './pages/index/component/TabBar.vue'
+import CustomTabBar from './pages/index/component/tab-bar.vue'
 // 自定义轮播图，全局注册后各页面直接用 <CustomSwiper />
-import CustomSwiper from './components/CustomSwiper.vue'
+import CustomSwiper from './components/custom-swiper.vue'
 // 猜你喜欢，用于首页和购物车
 import Guess from './components/Guess.vue'
 // 登录弹窗，未登录点加购时弹出，静默登录后继续加购
-import LoginPopup from './components/LoginPopup.vue'
+import LoginPopup from './components/login-popup.vue'
 // 飞入购物车动画，加购成功后各页面调 play() 触发
-import FlyToCart from './components/FlyToCart.vue'
-// 商品加购弹窗（数量/增值保障/加购按钮），首页和分类页共用
-import ProductPopup from './components/ProductPopup.vue'
+import FlyToCart from './components/fly-to-cart.vue'
 // 数量步进器（- / 可输入数字 / +），购物车页与加购弹窗共用
-import QuantityStepper from './components/QuantityStepper.vue'
+import QuantityStepper from './components/quantity-stepper.vue'
 // 收货地址弹窗（列表 + 新增/编辑），下单/我的等页面共用
-import AddressPopup from './components/AddressPopup.vue'
+import AddressPopup from './components/address-popup.vue'
 // #ifndef VUE3
 import Vue from 'vue'
 import './uni.promisify.adaptor'
@@ -27,7 +25,6 @@ Vue.component('CustomSwiper',CustomSwiper)
 Vue.component('Guess',Guess)
 Vue.component('LoginPopup', LoginPopup)
 Vue.component('FlyToCart', FlyToCart)
-Vue.component('ProductPopup', ProductPopup)
 Vue.component('QuantityStepper', QuantityStepper)
 Vue.component('AddressPopup', AddressPopup)
 App.mpType = 'app'
@@ -59,8 +56,6 @@ export function createApp() {
 	app.component('LoginPopup', LoginPopup)
 	// 全局注册飞入购物车动画组件
 	app.component('FlyToCart', FlyToCart)
-	// 全局注册商品加购弹窗组件
-	app.component('ProductPopup', ProductPopup)
 	// 全局注册数量步进器组件
 	app.component('QuantityStepper', QuantityStepper)
 	// 全局注册收货地址弹窗组件

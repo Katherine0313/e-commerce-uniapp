@@ -41,14 +41,6 @@
 			</scroll-view>
 		</view>
 
-		<!-- 商品加购弹窗：整页遮罩，放滚动区外，避免受 scroll-view 层叠影响。加购请求在弹窗内部发 -->
-		<!-- 加 ref 是为了登录成功后回调它的 handleAdd，把被打断的那次加购接着做完 -->
-		<ProductPopup ref="productPopup" :show="showProductPopup" :product="currentProduct"
-			@close="handleProductClose" @needLogin="handleNeedLogin" />
-
-		<!-- 登录弹窗：未登录点加购时弹出来提示（打开即静默登录），叠在商品弹窗上面（全局组件，免注册）。
-		     登录一成功就自动收起来并继续加购，不用用户手动关 -->
-		<LoginPopup :show="showLoginPopup" @close="handleLoginClose" @success="handleLoginSuccess" />
 
 		<!-- 自定义底部导航栏 -->
 		<CustomTabBar />
@@ -69,12 +61,6 @@
 				categories: [],
 				// 当前父类名下商品：按选中的一级分类懒加载（GET /api/products?categoryId=x）
 				currentProducts: [],
-				// 商品加购弹窗显隐
-				showProductPopup: false,
-				// 当前点击的商品
-				currentProduct: {},
-				// 登录弹窗显隐
-				showLoginPopup: false
 			}
 		},
 		computed: {
@@ -150,31 +136,11 @@
 				this.activeIndex = index
 				this.loadProducts()
 			},
-			// 点击商品：记录商品并弹出加购弹窗
+			// 点击商品：跳商品详情页（独立 page，不再弹加购弹窗）
 			handleProductClick(item) {
-				this.currentProduct = item
-				this.showProductPopup = true
-			},
-			// 关闭加购弹窗
-			handleProductClose() {
-				this.showProductPopup = false
-			},
-			// 未登录点加购：弹登录弹窗（打开即静默登录）。商品弹窗不关，数量/增值保障的选择留在原地
-			handleNeedLogin() {
-				this.showLoginPopup = true
-			},
-			// 登录成功：收掉登录弹窗，并让商品弹窗把刚才那次加购接着做完（数量和保障选择都还在）。
-			// 若弹窗已被用户手动关掉（等于放弃这次加购），就不再补做
-			handleLoginSuccess() {
-				if (!this.showLoginPopup) {
-					return
-				}
-				this.showLoginPopup = false
-				this.$refs.productPopup.handleAdd()
-			},
-			// 关闭登录弹窗（用户手动关或点遮罩）
-			handleLoginClose() {
-				this.showLoginPopup = false
+				uni.navigateTo({
+					url: '/pages/goods/detail?id=' + item.id
+				})
 			}
 		}
 	}

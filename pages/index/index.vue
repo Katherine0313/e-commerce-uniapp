@@ -15,21 +15,14 @@
 
 				<!-- 前台分类面板：手机 / 笔记本 / 平板 / 相机 / 手表 / 耳机 -->
 				<CategoryPanel ref="categoryPanel" @select="handleCategorySelect" />
-				<!-- 热门推荐：点商品图弹预览弹窗 -->
+				<!-- 热门推荐：点商品图跳商品详情页 -->
 				<HotPanel @select="handleProductSelect" />
 
-				<!-- 猜你喜欢：全局注册，点商品图复用 handleProductSelect 弹预览 -->
+				<!-- 猜你喜欢：全局注册，点商品图复用 handleProductSelect 跳详情 -->
 				<Guess ref="guess" @select="handleProductSelect" />
 			</view>
 		</scroll-view>
 
-		<!-- 商品加购弹窗：整页遮罩，放滚动区外，避免受 scroll-view 层叠影响。加购请求在弹窗内部发 -->
-		<!-- 加 ref 是为了登录成功后回调它的 handleAdd，把被打断的那次加购接着做完 -->
-		<ProductPopup ref="productPopup" :show="showProductPopup" :product="currentProduct"
-			@close="handleProductClose" @needLogin="handleNeedLogin" />
-		<!-- 登录弹窗：未登录点加购时弹出来提示（打开即静默登录），叠在商品弹窗上面（全局组件）。
-		     登录一成功就自动收起来并继续加购 -->
-		<LoginPopup :show="showLoginPopup" @close="handleLoginClose" @success="handleLoginSuccess" />
 		<!-- 自定义底部导航栏 -->
 		<CustomTabBar />
 	</view>
@@ -37,13 +30,9 @@
 
 <script>
 	// 前台分类面板：首页金刚区
-	import CategoryPanel from './component/CategoryPanel.vue'
+	import CategoryPanel from './component/category-panel.vue'
 	// 热门推荐
-	import HotPanel from './component/HotPanel.vue'
-	// 商品详情接口（免登录，游客也能看）
-	import {
-		getProductDetail
-	} from '../../api/product.js'
+	import HotPanel from './component/hot-panel.vue'
 	export default {
 		components: {
 			CategoryPanel,
@@ -51,9 +40,6 @@
 		},
 		data() {
 			return {
-				showProductPopup: false, // 商品加购弹窗显隐
-				currentProduct: {}, // 当前点击的商品
-				showLoginPopup: false, // 登录弹窗显隐
 				refreshing: false, // 滚动区下拉刷新状态，由 scroll-view 的 refresher-triggered 绑定
 				navHeight: 0, // 导航栏总高度（px），由 CustomNavbar 算好后抛上来
 			}
@@ -88,34 +74,11 @@
 					url: '/pages/category/category'
 				})
 			},
-			// 点击商品图：拉详情后弹加购弹窗
+			// 点击商品图：跳商品详情页（独立 page，不再弹加购弹窗）
 			handleProductSelect(id) {
-				getProductDetail(id).then((res) => {
-					this.currentProduct = res
-					this.showProductPopup = true
-				}).catch(() => {
-					// 错误提示已在 request 封装里统一处理
+				uni.navigateTo({
+					url: '/pages/goods/detail?id=' + id
 				})
-			},
-			// 关闭商品加购弹窗
-			handleProductClose() {
-				this.showProductPopup = false
-			},
-			// 未登录点加购：弹登录弹窗（打开即静默登录）。商品弹窗不关，数量/增值保障的选择留在原地
-			handleNeedLogin() {
-				this.showLoginPopup = true
-			},
-			// 登录成功：收掉登录弹窗，并让商品弹窗把刚才那次加购接着做完（数量和保障选择都还在）
-			handleLoginSuccess() {
-				if (!this.showLoginPopup) {
-					return
-				}
-				this.showLoginPopup = false
-				this.$refs.productPopup.handleAdd()
-			},
-			// 关闭登录弹窗（用户手动关或点遮罩）
-			handleLoginClose() {
-				this.showLoginPopup = false
 			}
 		}
 	}

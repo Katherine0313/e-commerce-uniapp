@@ -31,7 +31,7 @@
 	export default {
 		name: 'LoginPopup',
 		props: {
-			// 是否展示弹窗，由页面控制，和 ProductPopup 一致
+			// 是否展示弹窗，由页面控制
 			show: {
 				type: Boolean,
 				default: false
