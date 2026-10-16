@@ -1,43 +1,84 @@
 <template>
 	<view class="page">
-		<!-- 自定义导航栏：二级页，带返回按钮，标题随状态变化 -->
-		<CustomNavbar :title="pageTitle" :show-back="true" />
+		<!-- 自定义导航栏：标题固定「我的订单」 -->
+		<CustomNavbar title="我的订单" :show-back="true" />
 
-		<!-- 订单列表 -->
-		<view v-if="orders.length" class="order-list">
-			<view class="order-card" v-for="order in orders" :key="order.id">
-				<!-- 卡片头：订单号 + 状态 -->
-				<view class="order-head">
-					<text class="order-no">订单号 {{ order.orderNo }}</text>
-					<text v-if="isClosed(order)" class="order-status-pill">{{ order.orderStatusDesc }}</text>
-					<text v-else class="order-status">{{ order.orderStatusDesc }}</text>
-				</view>
+		<!-- 搜索框：订单号/商品名/收货人，回车或点搜索触发 -->
+		<view class="search-box">
+			<input
+				class="search-input"
+				v-model="keyword"
+				placeholder="订单号/商品名/收货人"
+				confirm-type="search"
+				@confirm="search"
+			/>
+			<view class="search-btn" @click="search">搜索</view>
+		</view>
 
-				<!-- 商品明细 -->
-				<view class="goods-item" v-for="item in order.items" :key="item.productId">
-					<image class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
-					<view class="goods-info">
-						<text class="goods-name">{{ item.productName }}</text>
-						<text class="goods-price">¥{{ fmt(item.salesPrice) }}</text>
-					</view>
-					<text class="goods-qty">×{{ item.quantity }}</text>
-				</view>
-
-				<!-- 卡片底：已取消给「删除订单/再来一单」，其它给下单时间 + 合计 -->
-				<view class="order-foot">
-					<template v-if="isClosed(order)">
-						<view class="btn-delete" @click="deleteOrder(order)">删除订单</view>
-						<view class="btn-buy-again" @click="buyAgain(order)">再来一单</view>
-					</template>
-					<template v-else>
-						<text class="order-time">{{ formatTime(order.createdAt) }}</text>
-						<view class="order-total">
-							<text class="total-label">共{{ totalCount(order) }}件 合计</text>
-							<text class="total-price">¥{{ fmt(order.payAmount) }}</text>
-						</view>
-					</template>
+		<!-- 状态 Tab：横向滚动，切换筛订单 -->
+		<scroll-view scroll-x class="tabs-scroll">
+			<view class="tabs">
+				<view
+					class="tab-item"
+					:class="{ active: activeIndex === index }"
+					v-for="(tab, index) in tabs"
+					:key="index"
+					@click="changeTab(index)"
+				>
+					{{ tab.title }}
 				</view>
 			</view>
+		</scroll-view>
+
+		<!-- 售后 Tab：售后单列表还没做，先占位 -->
+		<view v-if="isAfterSaleTab" class="empty">
+			<text class="empty-text">售后功能开发中</text>
+		</view>
+
+		<!-- 订单列表：复用 OrderCard，底部按状态填不同按钮 -->
+		<view v-else-if="orders.length" class="order-list">
+			<OrderCard
+				v-for="order in orders"
+				:key="order.id"
+				:order="order"
+				:closed="isExpired(order)"
+				:status-text="isExpired(order) ? '已关闭' : ''"
+				@click="goDetail"
+			>
+				<template #foot>
+					<view class="order-foot">
+						<!-- 待付款：倒计时 + 取消 + 付款；超时只留提示 -->
+						<template v-if="isPendingPay(order)">
+							<template v-if="!isExpired(order)">
+								<text class="time-tip">剩余 {{ countdownText(order) }}</text>
+								<view class="btn-cancel" @click.stop="handleCancel(order)">取消订单</view>
+								<view class="btn-pay" @click.stop="handlePay(order)">付款</view>
+							</template>
+							<template v-else>
+								<text class="time-tip closed-tip">订单已超时关闭</text>
+							</template>
+						</template>
+						<!-- 已取消：删除 / 再来一单 -->
+						<template v-else-if="isClosed(order)">
+							<view class="btn-delete" @click.stop="deleteOrder(order)">删除订单</view>
+							<view class="btn-buy-again" @click.stop="buyAgain(order)">再来一单</view>
+						</template>
+						<!-- 已发货（待收货）：确认收货 -->
+						<template v-else-if="isShipped(order)">
+							<text class="order-time">{{ formatOrderTime(order.createdAt) }}</text>
+							<view class="btn-confirm" @click.stop="confirmReceive(order)">确认收货</view>
+						</template>
+						<!-- 其它（待发货/已完成）：下单时间 + 合计 -->
+						<template v-else>
+							<text class="order-time">{{ formatOrderTime(order.createdAt) }}</text>
+							<view class="order-total">
+								<text class="total-label">共{{ totalCount(order) }}件 合计</text>
+								<text class="total-price">¥{{ fmtMoney(order.payAmount) }}</text>
+							</view>
+						</template>
+					</view>
+				</template>
+			</OrderCard>
 		</view>
 
 		<!-- 空态：加载完成且没有订单 -->
@@ -50,7 +91,10 @@
 <script>
 	import {
 		listOrders,
-		deleteOrder as deleteOrderApi
+		deleteOrder as deleteOrderApi,
+		finishOrder,
+		payOrder as payOrderApi,
+		cancelOrder as cancelOrderApi
 	} from '../../api/order.js'
 	import {
 		addToCart
@@ -62,49 +106,97 @@
 		ensureLogin
 	} from '../../utils/auth.js'
 	import {
-		BASE_URL
-	} from '../../utils/server-api.js'
+		fmtMoney,
+		formatOrderTime,
+		parseOrderTime
+	} from '../../utils/format.js'
+	import OrderCard from './component/order-card.vue'
+
+	// 待付款超时时长：与后端 OrderServiceImpl.PENDING_PAY_TIMEOUT_SECONDS（1800 秒 = 30 分钟）一致
+	const PAY_TIMEOUT_MS = 30 * 60 * 1000
 
 	export default {
+		components: {
+			OrderCard
+		},
 		data() {
 			return {
-				status: '', // onLoad 传入的状态码字符串：'' 表示全部订单
-				orders: [], // 订单列表（已在 onShow 里按状态过滤）
-				loaded: false // 是否完成首次加载，用于区分「加载中」和「空态」
+				// 6 个 Tab：statuses 为 null 表示不过滤（全部）；售后是独立数据，占位
+				tabs: [
+					{ title: '全部', statuses: null },
+					{ title: '待付款', statuses: [1] },
+					{ title: '待发货', statuses: [2, 3] },
+					{ title: '待收货', statuses: [4] },
+					{ title: '评论', statuses: [5] },
+					{ title: '售后', afterSale: true }
+				],
+				activeIndex: 0, // 当前选中 Tab
+				keyword: '', // 搜索关键词（订单号/商品名/收货人）
+				allOrders: [], // 一次拉取的全部订单
+				orders: [], // 当前 Tab 过滤后的订单
+				loaded: false, // 是否完成首次加载
+				now: Date.now() // 当前时间戳，每秒刷新驱动倒计时
 			}
 		},
 		computed: {
-			// 页面标题：按状态码映射，未知状态兜底「全部订单」
-			pageTitle() {
-				const map = {
-					'1': '待付款',
-					'3': '待发货',
-					'4': '待收货'
-				}
-				return map[this.status] || '全部订单'
-			},
-			// 过滤用的状态码数字；空串转 null 表示不过滤
-			statusNum() {
-				return this.status ? Number(this.status) : null
+			// 当前是否「售后」Tab（占位，售后单列表未做）
+			isAfterSaleTab() {
+				return !!this.tabs[this.activeIndex].afterSale
 			}
 		},
 		onLoad(options) {
-			this.status = options.status || ''
+			// 从「我的」页跳转带 status 参数，定位到对应 Tab（如 status=3 → 处理中、status=4 → 待收货）
+			const status = Number(options.status)
+			if (!status) {
+				return
+			}
+			const index = this.tabs.findIndex(tab => tab.statuses && tab.statuses.includes(status))
+			if (index !== -1) {
+				this.activeIndex = index
+			}
 		},
 		onShow() {
-			// 每次进入都重拉，保证支付/取消后返回列表能刷新
 			this.loadOrders()
+			this.startTimer()
+		},
+		onHide() {
+			this.stopTimer()
+		},
+		onUnload() {
+			this.stopTimer()
 		},
 		methods: {
-			// 拉订单列表，按状态过滤。接口只返回全部订单，状态筛选在前端做
+			fmtMoney,
+			formatOrderTime,
+			// 切换 Tab：重新按状态过滤
+			changeTab(index) {
+				this.activeIndex = index
+				this.filterOrders()
+			},
+			// 搜索：带关键词重拉订单（后端按订单号/收货人/商品名模糊匹配）
+			search() {
+				this.loadOrders()
+			},
+			// 点订单卡片：按状态跳对应详情页（待发货 → pending-ship；其他状态详情页未建，暂不跳）
+			goDetail(order) {
+				const status = Number(order.orderStatus)
+				if (status === 2 || status === 3) {
+					uni.navigateTo({ url: '/pages/order/pending-ship?id=' + order.id })
+				}
+			},
+			// 拉全部订单，预计算待付款订单的超时时间戳，再按当前 Tab 过滤
 			loadOrders() {
 				ensureLogin()
-					.then(() => listOrders())
+					.then(() => listOrders(this.keyword))
 					.then((list) => {
 						list = list || []
-						this.orders = this.statusNum == null
-							? list
-							: list.filter(o => o.orderStatus === this.statusNum)
+						this.allOrders = list.map(o => {
+							if (Number(o.orderStatus) === 1) {
+								o._expireTime = parseOrderTime(o.createdAt) + PAY_TIMEOUT_MS
+							}
+							return o
+						})
+						this.filterOrders()
 					})
 					.catch(() => {
 						// 错误提示已在 request 封装里统一处理
@@ -113,33 +205,88 @@
 						this.loaded = true
 					})
 			},
-			// 商品图：后端 image 是 /image/upload/N.webp 相对路径，需补 BASE_URL；没有则回退本地占位图
-			imgUrl(item) {
-				const img = item.image
-				if (img) {
-					return img.indexOf('http') === 0 ? img : BASE_URL + img
-				}
-				return '/static/image/upload/' + item.productId + '.webp'
+			// 按当前 Tab 的状态码过滤
+			filterOrders() {
+				const statuses = this.tabs[this.activeIndex].statuses
+				this.orders = statuses == null ?
+					this.allOrders :
+					this.allOrders.filter(o => statuses.includes(Number(o.orderStatus)))
 			},
-			// 是否已取消（status=6，含超时关闭）
+			// 倒计时：每秒把 now 更新成当前时间
+			startTimer() {
+				this.stopTimer()
+				this.now = Date.now()
+				this._timer = setInterval(() => {
+					this.now = Date.now()
+				}, 1000)
+			},
+			stopTimer() {
+				if (this._timer) {
+					clearInterval(this._timer)
+					this._timer = null
+				}
+			},
+			// 是否待付款（status=1）
+			isPendingPay(order) {
+				return Number(order.orderStatus) === 1
+			},
+			// 是否已取消（status=6）
 			isClosed(order) {
 				return Number(order.orderStatus) === 6
 			},
-			// 删除订单：直接软删（is_deleted=1），成功后刷新列表
+			// 是否已发货（status=4，用户视角待收货）
+			isShipped(order) {
+				return Number(order.orderStatus) === 4
+			},
+			// 是否超时（前端临时标记，后端定时任务每分钟扫一次才真正改状态）
+			isExpired(order) {
+				return order._expireTime != null && order._expireTime <= this.now
+			},
+			// 剩余时间文案：MM : SS
+			countdownText(order) {
+				const remain = order._expireTime - this.now
+				if (remain <= 0) {
+					return '0分0秒'
+				}
+				const m = Math.floor(remain / 60000)
+				const s = Math.floor((remain % 60000) / 1000)
+				return String(m).padStart(2, '0') + ' : ' + String(s).padStart(2, '0')
+			},
+			// 付款：待付款 → 待确认，成功后刷新
+			handlePay(order) {
+				payOrderApi(order.id).then(() => {
+					uni.showToast({ title: '支付成功', icon: 'success' })
+					this.loadOrders()
+				}).catch(() => {})
+			},
+			// 取消订单：成功后刷新
+			handleCancel(order) {
+				cancelOrderApi(order.id).then(() => {
+					uni.showToast({ title: '订单已取消', icon: 'success' })
+					this.loadOrders()
+				}).catch(() => {})
+			},
+			// 确认收货：已发货 → 已完成，成功后刷新
+			confirmReceive(order) {
+				finishOrder(order.id).then(() => {
+					uni.showToast({ title: '已确认收货', icon: 'success' })
+					this.loadOrders()
+				}).catch(() => {})
+			},
+			// 删除订单：软删，成功后刷新
 			deleteOrder(order) {
 				deleteOrderApi(order.id).then(() => {
 					uni.showToast({ title: '已删除', icon: 'success' })
 					this.loadOrders()
 				}).catch(() => {})
 			},
-			// 再来一单：把订单商品重新加入购物车，成功后跳购物车页
+			// 再来一单：把订单商品重新加入购物车
 			buyAgain(order) {
 				const items = order.items || []
 				if (!items.length) {
 					return
 				}
 				uni.showLoading({ title: '加入购物车中...' })
-				// 逐个重新加购；OrderItemVO 没返回增值保障字段，先传空数组 / 0
 				Promise.all(items.map(item => addToCart(item.productId, item.quantity, [], 0)))
 					.then(() => {
 						uni.hideLoading()
@@ -151,27 +298,11 @@
 					})
 					.catch(() => {
 						uni.hideLoading()
-						// 错误提示已在 request 封装里统一处理
 					})
 			},
 			// 订单商品总件数
 			totalCount(order) {
 				return (order.items || []).reduce((s, i) => s + (i.quantity || 0), 0)
-			},
-			// 下单时间：后端 LocalDateTime 序列化成 ISO 串，去掉毫秒、T 换成空格，截到分钟
-			formatTime(t) {
-				if (!t) {
-					return ''
-				}
-				return String(t).replace('T', ' ').slice(0, 16)
-			},
-			// 金额统一两位小数展示
-			fmt(n) {
-				return this.num(n).toFixed(2)
-			},
-			// 安全转数字：null/undefined 归 0
-			num(n) {
-				return Number(n) || 0
 			}
 		}
 	}
@@ -186,91 +317,85 @@
 		padding-bottom: env(safe-area-inset-bottom);
 	}
 
-	/* ═══ 订单卡片 ═══ */
-	.order-card {
-		margin: 20rpx 20rpx 0;
-		padding: 0 24rpx;
-		background: #ffffff;
-		border-radius: 16rpx;
-	}
-
-	.order-head {
+	/* ═══ 搜索框 ═══ */
+	.search-box {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		height: 80rpx;
+		background: #ffffff;
+		padding: 16rpx 20rpx;
 		border-bottom: 1rpx solid #f0f0f0;
 	}
 
-	.order-no {
-		font-size: 24rpx;
-		color: #999999;
-	}
-
-	/* 状态文案用品牌橙，作为订单状态提醒 */
-	.order-status {
-		font-size: 26rpx;
-		font-weight: bold;
-		color: #FF6700;
-	}
-
-	/* ═══ 商品明细 ═══ */
-	.goods-item {
-		display: flex;
-		align-items: center;
-		padding: 24rpx 0;
-	}
-
-	.goods-item+.goods-item {
-		border-top: 1rpx solid #f5f5f5;
-	}
-
-	.goods-img {
-		width: 120rpx;
-		height: 120rpx;
-		border-radius: 12rpx;
-		flex-shrink: 0;
-	}
-
-	.goods-info {
+	.search-input {
 		flex: 1;
-		min-width: 0;
-		margin-left: 20rpx;
+		height: 60rpx;
+		background: #f5f5f5;
+		border-radius: 8rpx;
+		padding: 0 20rpx;
+		font-size: 26rpx;
 	}
 
-	.goods-name {
-		display: block;
-		font-size: 28rpx;
-		color: #333333;
-		overflow: hidden;
-		text-overflow: ellipsis;
+	.search-btn {
+		margin-left: 16rpx;
+		padding: 0 32rpx;
+		height: 60rpx;
+		line-height: 60rpx;
+		background: #FF6700;
+		color: #ffffff;
+		border-radius: 8rpx;
+		font-size: 26rpx;
+	}
+
+	/* ═══ Tab 栏 ═══ */
+	.tabs-scroll {
 		white-space: nowrap;
+		background: #ffffff;
+		margin-bottom: 20rpx;
 	}
 
-	.goods-price {
-		display: block;
-		margin-top: 10rpx;
-		font-size: 26rpx;
-		color: #999999;
+	.tabs {
+		display: flex;
 	}
 
-	.goods-qty {
-		flex-shrink: 0;
-		margin-left: 20rpx;
-		font-size: 26rpx;
-		color: #999999;
+	.tab-item {
+		padding: 24rpx 30rpx;
+		font-size: 30rpx;
+		color: #666666;
+		position: relative;
+	}
+
+	.tab-item.active {
+		color: #FF6700;
+		font-weight: bold;
+	}
+
+	.tab-item.active::after {
+		content: "";
+		position: absolute;
+		bottom: 0;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 40rpx;
+		height: 4rpx;
+		background: #FF6700;
+		border-radius: 2rpx;
+	}
+
+	.order-list {
+		padding: 0 20rpx;
 	}
 
 	/* ═══ 卡片底 ═══ */
 	.order-foot {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		padding: 20rpx 0 24rpx;
+		justify-content: flex-end;
+		padding: 18rpx 0 20rpx;
 		border-top: 1rpx solid #f0f0f0;
 	}
 
 	.order-time {
+		margin-right: auto;
 		font-size: 22rpx;
 		color: #999999;
 	}
@@ -292,21 +417,24 @@
 		color: #FF4E2A;
 	}
 
-		/* 已取消状态：灰色胶囊标签 */
-	.order-status-pill {
-		padding: 6rpx 24rpx;
-		background: #f2f2f2;
-		color: #888888;
-		border-radius: 32rpx;
-		font-size: 24rpx;
+	/* 待付款倒计时 */
+	.time-tip {
+		margin-right: auto;
+		font-size: 26rpx;
+		color: #f56c6c;
 	}
 
-	/* 删除订单 / 再来一单 */
+	.time-tip.closed-tip {
+		color: #999999;
+	}
+
+	/* 各按钮 */
 	.btn-delete {
 		padding: 10rpx 32rpx;
 		font-size: 22rpx;
 		color: #333333;
 	}
+
 	.btn-buy-again {
 		padding: 4rpx 28rpx;
 		border: 1rpx solid #cccccc;
@@ -315,7 +443,30 @@
 		color: #333333;
 	}
 
-/* ═══ 空态 ═══ */
+	.btn-cancel {
+		padding: 14rpx 22rpx;
+		margin-right: 20rpx;
+		color: #333333;
+		font-size: 22rpx;
+	}
+
+	.btn-pay {
+		padding: 10rpx 52rpx;
+		background: #FF6700;
+		color: #ffffff;
+		border-radius: 40rpx;
+		font-size: 28rpx;
+	}
+
+	.btn-confirm {
+		padding: 10rpx 36rpx;
+		background: #FF6700;
+		color: #ffffff;
+		border-radius: 32rpx;
+		font-size: 26rpx;
+	}
+
+	/* ═══ 空态 ═══ */
 	.empty {
 		display: flex;
 		align-items: center;

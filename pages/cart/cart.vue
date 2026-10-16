@@ -1,7 +1,7 @@
 <template>
 	<view class="page">
 		<!-- 自定义顶部导航栏：tabBar 页没有上一级，只留标题 -->
-		<CustomNavbar title="购物车" />
+		<CustomNavbar />
 
 		<!-- 内容区：为固定定位的结算栏 + 底部导航栏留出空间 -->
 		<view class="content">

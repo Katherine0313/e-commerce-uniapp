@@ -1,7 +1,7 @@
 <template>
 	<view class="content">
 		<!-- 自定义顶部导航栏：橙色底 + 搜索框。留在滚动区外，固定不动 -->
-		<CustomNavbar :showSearch="true" @heightChange="handleNavHeightChange" />
+		<CustomNavbar :showSearch="true" @heightChange="handleNavHeightChange" @search="goSearch" />
 
 		<!-- 滚动区：从导航栏下方开始，下拉刷新动画才不会被固定导航栏盖住；
 		     高度必须是个确定值，用 flex 撑会塌陷、refresher 不工作 -->
@@ -54,6 +54,10 @@
 			// 接导航栏抛上来的高度，用于算滚动区高度
 			handleNavHeightChange(height) {
 				this.navHeight = height
+			},
+			// 点顶部搜索框：跳商品搜索页
+			goSearch() {
+				uni.navigateTo({ url: '/pages/search/search' })
 			},
 			// 下拉刷新：重拉分类和猜你喜欢，并至少转圈 600ms 再收起，避免动画一闪而过
 			onRefresh() {

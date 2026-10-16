@@ -54,6 +54,30 @@
 			}
 		},
 		{
+			"path":"pages/order/pending-ship",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/search/search",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/address",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/address-edit",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path":"pages/goods/detail",
 			"style": {
 				"navigationBarTitleText": "商品详情",

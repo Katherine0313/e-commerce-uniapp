@@ -155,7 +155,6 @@
 	/* 纯标题：左边补上和右侧胶囊等宽的空位，视觉才是真居中 */
 	.title {
 		flex: 1;
-		text-align: center;
 		font-size: 34rpx;
 		font-weight: bold;
 		color: #ffffff;

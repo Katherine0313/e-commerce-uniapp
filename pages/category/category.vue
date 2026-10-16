@@ -1,7 +1,7 @@
 <template>
 	<view class="page">
 		<!-- 自定义顶部导航栏：搜索框 -->
-		<CustomNavbar :showSearch="true" @heightChange="handleNavHeightChange" />
+		<CustomNavbar :showSearch="true" @heightChange="handleNavHeightChange" @search="goSearch" />
 
 		<!-- 分类主体：左侧一级分类 + 右侧商品，高度由导航栏算出来（scroll-view 需确定高度） -->
 		<view class="category-body" :style="{ height: bodyHeight }">
@@ -130,6 +130,10 @@
 			// 接导航栏抛上来的高度
 			handleNavHeightChange(height) {
 				this.navHeight = height
+			},
+			// 点顶部搜索框：跳商品搜索页
+			goSearch() {
+				uni.navigateTo({ url: '/pages/search/search' })
 			},
 			// 点左侧一级分类：切换选中，懒加载该父类名下商品
 			handleSelect(index) {

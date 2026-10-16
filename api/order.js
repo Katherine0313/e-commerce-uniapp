@@ -28,8 +28,10 @@ export function createOrder(data) {
 }
 
 // 订单列表，对应 GET /api/orders；返回 OrderVO 数组
-export function listOrders() {
-	return request('/api/orders', { method: 'GET' })
+// keyword 非空时后端按订单号/收货人/商品名模糊搜索
+export function listOrders(keyword) {
+	const url = '/api/orders' + (keyword ? '?keyword=' + encodeURIComponent(keyword) : '')
+	return request(url, { method: 'GET' })
 }
 
 // 订单详情，对应 GET /api/orders/{id}
@@ -38,11 +40,11 @@ export function getOrder(id) {
 }
 
 // 支付，对应 PUT /api/orders/{id}/pay；订单从待付款 → 待确认。
-// 暂未接入微信支付，payType 仅被后端记录，传占位值即可（不传默认 wechat）。
+// 暂未接入微信支付，payType 仅被后端记录，传占位值即可（不传默认 WeChat，对齐 PayTypeEnum 的 code）。
 export function payOrder(id, payType) {
 	return request('/api/orders/' + id + '/pay', {
 		method: 'PUT',
-		data: { payType: payType || 'wechat' }
+		data: { payType: payType || 'WeChat' }
 	})
 }
 
@@ -54,4 +56,9 @@ export function cancelOrder(id) {
 // 删除订单（软删），对应 DELETE /api/orders/{id}
 export function deleteOrder(id) {
 	return request('/api/orders/' + id, { method: 'DELETE' })
+}
+
+// 确认收货，对应 PUT /api/orders/{id}/finish；已发货 → 已完成
+export function finishOrder(id) {
+	return request('/api/orders/' + id + '/finish', { method: 'PUT' })
 }

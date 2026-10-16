@@ -1,7 +1,7 @@
 <template>
 	<view class="page">
 		<!-- 自定义顶部导航栏：tabBar 页没有上一级，只留标题 -->
-		<CustomNavbar title="我的" />
+		<CustomNavbar />
 
 		<!-- 用户卡片：白底圆角卡片，浮在浅灰页面背景上，与下方功能卡片统一；头像可点击更换 -->
 		<view class="user-card">
@@ -39,7 +39,7 @@
 				<view class="order-item" v-for="item in orderTabs" :key="item.type" @click="handleNav(item.url)">
 					<!-- fontIcon 有值就用 myvue-icon 那套 iconfont，没有的先用 uni-icons 顶着 -->
 					<text v-if="item.fontIcon" class="myvue-icon order-icon" :class="item.fontIcon"></text>
-					<uni-icons v-else :type="item.icon" size="52rpx" color="#FF6700"></uni-icons>
+					<uni-icons v-else :type="item.icon" size="52rpx" ></uni-icons>
 					<text class="order-text">{{ item.text }}</text>
 				</view>
 			</view>
@@ -51,7 +51,7 @@
 				<!-- 有数字的显示数字；专属客服没有数字，用图标顶上同一位置 -->
 				<view class="stat-body">
 					<text v-if="item.value !== undefined" class="stat-num">{{ item.value }}</text>
-					<uni-icons v-else :type="item.icon" size="46rpx" color="#FF6700"></uni-icons>
+					<uni-icons v-else :type="item.icon" size="46rpx" ></uni-icons>
 				</view>
 				<text class="stat-text">{{ item.text }}</text>
 			</view>
@@ -64,7 +64,7 @@
 				     尺寸：uni-icons 写 size（可直接写 rpx），iconfont 写在 .func-icon 里，两个值调成一样 -->
 				<view class="func-icon-box">
 					<text v-if="item.fontIcon" class="myvue-icon func-icon" :class="item.fontIcon"></text>
-					<uni-icons v-else :type="item.icon" size="46rpx" color="#FF6700"></uni-icons>
+					<uni-icons v-else :type="item.icon" size="46rpx"></uni-icons>
 				</view>
 				<text class="func-text">{{ item.text }}</text>
 				<uni-icons type="right" size="14" color="#c0c0c0"></uni-icons>
@@ -172,7 +172,7 @@
 						text: '收货地址',
 						fontIcon: '',
 						icon: 'location',
-						url: ''
+						url: '/pages/my/address'
 					},
 					{
 						text: '意见反馈',
@@ -419,7 +419,6 @@
 	   同一行的 uni-icons 也写成 size="52rpx"，两套名义尺寸保持一致 */
 	.order-icon {
 		font-size: 52rpx;
-		color: #FF6700;
 	}
 
 	/* 优惠券 / 积分 / 专属客服（占位）：三栏等分，非首栏加左边框当分隔线。
@@ -453,7 +452,6 @@
 	.stat-num {
 		font-size: 36rpx;
 		font-weight: bold;
-		color: #FF6700;
 	}
 
 	.stat-text {
@@ -496,6 +494,5 @@
 	/* iconfont 那套（物流查询） */
 	.func-icon {
 		font-size: 40rpx;
-		color: #FF6700;
 	}
 </style>

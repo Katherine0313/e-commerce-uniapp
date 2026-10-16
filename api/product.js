@@ -23,3 +23,8 @@ export function getProductDetail(id){
 export function getRecommend(limit){
 	return request('/api/products/recommend?limit=' + (limit || 10), { method: 'GET' })
 }
+
+// 按关键词搜索商品，对应 GET /api/products?keyword=x（免登录）
+export function searchProducts(keyword){
+	return request('/api/products?keyword=' + encodeURIComponent(keyword), { method: 'GET' })
+}
