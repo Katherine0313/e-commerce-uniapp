@@ -5,7 +5,10 @@ import { getToken, clearToken } from "./token.js"
 // 后端微服务端口规划（仅维护参考，前端只需记住网关 8080）：
 //   gateway 8080 / auth 9001 / shop 9002 / product 9003 / order 9004
 //   aftersale 9005 / user 9006 / file 9007
-export const BASE_URL = 'http://127.0.0.1:8080'
+// 环境判断：开发环境连本机网关，生产环境连线上 API
+export const BASE_URL = process.env.NODE_ENV === 'development'
+  ? 'http://127.0.0.1:8080'   // 本地开发：本机 SpringBoot 网关
+  : 'https://api.jiemids.com'  // 打包上线：线上 API 域名
 
 // 通用请求封装：自动带 token，成功返回 data，失败统一弹提示
 export function request(url, options = {}){

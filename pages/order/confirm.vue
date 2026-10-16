@@ -691,7 +691,10 @@
 	}
 
 	.empty-key {
-		background: #e5e5e5;
+		background: transparent;
+		height: 90rpx;
+		border: 1rpx solid #dddddd;
+		border-radius: 12rpx;
 	}
 
 	/* ═══ 底部结算栏 ═══ */

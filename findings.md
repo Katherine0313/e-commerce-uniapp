@@ -450,6 +450,31 @@
 - vue 文件统一短横线命名（9 个组件文件重命名，同步 `main.js`/`index.vue` import；注册名/name 不变，运行时行为不变）
 - 待付款倒计时依赖后端 `createdAt` 时区修复（MySQL 容器 UTC vs JVM UTC+8 差 8h，倒计时会误判「超时关闭」，见后端 findings「订单软删 + 订单时间时区」）
 
+### 订单模块重构 + 搜索 + 待发货详情 + 商品搜索 + 地址管理（2026-10-16）
+
+**订单列表页重做为 6 Tab + 搜索**：
+
+- `pages/order/list.vue` 改为页内 Tab（全部/待付款/待发货/待收货/评论/售后），一次 `listOrders` 拉全量，前端按 `orderStatus` 过滤（不再靠单状态页 `?status=` 进入）。
+- 搜索框（导航栏下、Tab 上）调 `listOrders(keyword)`，后端按订单号/收货人/商品名模糊匹配；搜索在「后端 keyword 过滤 + 前端 Tab 过滤」两层组合。
+- `onLoad` 按 `status` 参数 `findIndex` 定位 Tab（「我的」页「待发货/待收货」入口跳 `list?status=3/4`）。
+- 状态分组语义：待发货 Tab = status 2+3（「待确认」是商家后台视角，顾客付款后就是「等发货」）；订单卡片里的状态字走后端 `orderStatusDesc`（待确认→「待发货」、待发货→「处理中」），Tab 名是「待发货」这个分组，不拆「处理中」独立 Tab。
+
+**OrderCard 模块内组件**：
+
+- 订单卡片抽成 `pages/order/component/order-card.vue`（list + pending-pay 复用），**局部注册，不进全局 `components/`**——全局只放跨模块组件（Guess/AddressPopup/QuantityStepper 等）。和 `CategoryPanel` 局部注册同一个道理：复用范围决定放哪。
+- 卡片底部用 `#foot` 插槽，按钮由父页面按状态填；卡片本体 `@click` emit 跳详情，foot 按钮 `@click.stop` 阻止冒泡。
+
+**待发货详情 / 商品搜索 / 地址管理**：
+
+- 待发货详情 `pending-ship.vue`：按状态拆详情页，一个状态一个文件（待发货一个、已发货/售后/评论后续各自建），不堆一个通用几百行的 detail。
+- 商品搜索 `search.vue`：首页/分类页顶部 `top-bar` 的假搜索框之前「点了没反应」是三层缺口（没人接 `@search`、没搜索页、后端没 keyword），本次补齐三层。
+- 地址管理 `address.vue` + `address-edit.vue`：独立页面（不用难看的 AddressPopup 弹窗），复用 `api/address.js`；编辑页用 `listAddress` 按 id 回显（后端无单条地址接口）。
+
+**支付方式 / 状态文案（后端配合）**：
+
+- `payType` 存英文 code（wechat/WeChat 大小写不一致），后端 `PayTypeEnum.fromCode` 用 `equalsIgnoreCase` 兜底，`OrderVO.payTypeDesc` 直接给中文，前端不再硬编码映射。
+- 订单状态双文案（desc=顾客 / adminDesc=商家），前端只用 `orderStatusDesc`。
+
 ## 技术决策
 
 | 决策 | 理由 |

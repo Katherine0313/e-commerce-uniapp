@@ -1,5 +1,27 @@
 # 进度日志
 
+## 会话 22：2026-10-16（订单模块重构 + 搜索 + 待发货详情 + 商品搜索 + 地址管理）
+
+### 当前状态
+
+订单列表页重做为 6 Tab + 搜索、待发货详情页、商品搜索页、收货地址管理页均完成。
+
+### 已执行操作
+
+- 订单列表页 `pages/order/list.vue` 重做：6 Tab（全部/待付款/待发货/待收货/评论/售后）+ 搜索框 + `onLoad` 按 status 定位 Tab；订单卡片抽模块内组件 `pages/order/component/order-card.vue`（局部注册，非全局）
+- 待发货详情页 `pages/order/pending-ship.vue`（按状态拆详情页，一个状态一个文件）
+- 商品搜索页 `pages/search/search.vue` + 首页/分类页顶部假搜索框 `@search` 跳转（补齐三层缺口：@search、搜索页、后端 keyword）
+- 收货地址管理页 `pages/my/address.vue`（列表 + 设默认/删除）+ `pages/my/address-edit.vue`（新增/编辑），「我的」页入口接通
+- `utils/format.js` 抽公共函数；`api/order.js` 加 finishOrder、listOrders(keyword)、payOrder 默认 WeChat；`api/product.js` 加 searchProducts
+- 后端配套：订单/商品 keyword 搜索、PayTypeEnum + payTypeDesc、OrderStatusEnum 双文案（待确认→顾客「待发货」、待发货→顾客「处理中」）
+
+### 遗留事项
+
+- 售后 Tab 占位（「售后功能开发中」），售后前端页面未做
+- 「申请退款/申请售后」入口只显示文字，点击行为未接
+- 已发货/评论/售后详情页未建（按状态拆详情页，后续各自建文件）
+- 端到端未验证
+
 ## 会话 21：2026-10-16（订单列表页 + 待付款页 + 模拟支付弹窗）
 
 ### 当前状态
