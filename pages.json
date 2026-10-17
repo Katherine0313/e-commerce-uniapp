@@ -60,6 +60,12 @@
 			}
 		},
 		{
+			"path":"pages/order/logistics",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path":"pages/search/search",
 			"style": {
 				"navigationStyle": "custom"

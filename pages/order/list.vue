@@ -110,7 +110,7 @@
 		formatOrderTime,
 		parseOrderTime
 	} from '../../utils/format.js'
-	import OrderCard from './component/order-card.vue'
+	import OrderCard from './order-card.vue'
 
 	// 待付款超时时长：与后端 OrderServiceImpl.PENDING_PAY_TIMEOUT_SECONDS（1800 秒 = 30 分钟）一致
 	const PAY_TIMEOUT_MS = 30 * 60 * 1000
@@ -145,7 +145,7 @@
 			}
 		},
 		onLoad(options) {
-			// 从「我的」页跳转带 status 参数，定位到对应 Tab（如 status=3 → 处理中、status=4 → 待收货）
+			// 从「我的」页跳转带 status 参数，定位到对应 Tab（如 status=3 → 待发货、status=4 → 待收货）
 			const status = Number(options.status)
 			if (!status) {
 				return

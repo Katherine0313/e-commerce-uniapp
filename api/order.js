@@ -39,6 +39,11 @@ export function getOrder(id) {
 	return request('/api/orders/' + id, { method: 'GET' })
 }
 
+// 物流轨迹，对应 GET /api/orders/{id}/logistics；返回 { courier, trackingNumber, traces: [{time,status,desc}] }
+export function getLogistics(id) {
+	return request('/api/orders/' + id + '/logistics', { method: 'GET' })
+}
+
 // 支付，对应 PUT /api/orders/{id}/pay；订单从待付款 → 待确认。
 // 暂未接入微信支付，payType 仅被后端记录，传占位值即可（不传默认 WeChat，对齐 PayTypeEnum 的 code）。
 export function payOrder(id, payType) {

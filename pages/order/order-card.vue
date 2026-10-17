@@ -29,6 +29,13 @@
 			</view>
 		</view>
 
+		<!-- 物流信息：已发货/已完成显示最新一条轨迹，点击进物流详情 -->
+		<view class="logistics-row" v-if="order.logisticsStatus" @click.stop="goLogistics">
+			<view class="logi-icon">📦</view>
+			<view class="logi-text">{{ order.logisticsStatus }} {{ order.latestTrace }}</view>
+			<view class="logi-arrow">></view>
+		</view>
+
 		<!-- 底部操作区：父页面按状态填充 -->
 		<slot name="foot"></slot>
 	</view>
@@ -38,7 +45,7 @@
 	import {
 		fmtMoney,
 		goodsImgUrl
-	} from '../../../utils/format.js'
+	} from '../../utils/format.js'
 
 	export default {
 		name: 'OrderCard',
@@ -94,6 +101,12 @@
 						title: '已复制',
 						icon: 'none'
 					})
+				})
+			},
+			// 跳物流详情页
+			goLogistics() {
+				uni.navigateTo({
+					url: '/pages/order/logistics?id=' + this.order.id
 				})
 			}
 		}
@@ -203,5 +216,35 @@
 		border-radius: 40rpx;
 		border: 1rpx solid #ccc;
 		padding: 2rpx 10rpx;
+	}
+
+	/* ═══ 物流信息行 ═══ */
+	.logistics-row {
+		display: flex;
+		align-items: center;
+		padding: 20rpx 0;
+		border-top: 1rpx solid #f5f5f5;
+	}
+
+	.logi-icon {
+		font-size: 32rpx;
+		margin-right: 12rpx;
+	}
+
+	.logi-text {
+		flex: 1;
+		min-width: 0;
+		font-size: 24rpx;
+		color: #666666;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.logi-arrow {
+		flex-shrink: 0;
+		font-size: 24rpx;
+		color: #cccccc;
+		margin-left: 8rpx;
 	}
 </style>

@@ -6,6 +6,16 @@
 			<!-- 顶部状态 -->
 			<view class="top-status">{{ order.orderStatusDesc }}</view>
 
+			<!-- 物流信息卡：有物流单号（已发货/已完成）时显示，点击进物流详情 -->
+			<view class="logistics-card" v-if="order.trackingNumber" @click="goLogistics">
+				<view class="logi-icon">📮</view>
+				<view class="logi-info">
+					<text class="logi-title">{{ order.courier }} {{ order.trackingNumber }}</text>
+					<text class="logi-status" v-if="order.logisticsStatus">{{ order.logisticsStatus }} · {{ order.latestTrace }}</text>
+				</view>
+				<view class="logi-arrow">></view>
+			</view>
+
 			<!-- 收货地址 -->
 			<view class="address-card">
 				<view class="address-row">
@@ -103,7 +113,6 @@
 			loadDetail() {
 				getOrder(this.orderId).then((order) => {
 					this.order = order
-					console.log(order)
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
 				})
@@ -113,6 +122,12 @@
 				uni.setClipboardData({
 					data: this.order.orderNo,
 					success: () => uni.showToast({ title: '订单号已复制', icon: 'none' })
+				})
+			},
+			// 跳物流详情页
+			goLogistics() {
+				uni.navigateTo({
+					url: '/pages/order/logistics?id=' + this.order.id
 				})
 			}
 		}
@@ -133,6 +148,49 @@
 		font-size: 28rpx;
 		color: #666666;
 		padding: 30rpx 0;
+	}
+
+	/* ═══ 物流信息卡 ═══ */
+	.logistics-card {
+		display: flex;
+		align-items: center;
+		background: #ffffff;
+		margin: 0 20rpx 20rpx;
+		border-radius: 16rpx;
+		padding: 24rpx;
+	}
+
+	.logi-icon {
+		font-size: 40rpx;
+		margin-right: 16rpx;
+	}
+
+	.logi-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.logi-title {
+		display: block;
+		font-size: 28rpx;
+		color: #333333;
+	}
+
+	.logi-status {
+		display: block;
+		margin-top: 8rpx;
+		font-size: 24rpx;
+		color: #999999;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.logi-arrow {
+		flex-shrink: 0;
+		font-size: 28rpx;
+		color: #cccccc;
+		margin-left: 8rpx;
 	}
 
 	/* ═══ 地址卡片 ═══ */

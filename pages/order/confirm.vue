@@ -166,7 +166,7 @@
 				activePay: 0, // 当前选中的支付方式下标
 				// 支付方式列表：提交订单时预选，付款时按此方式（目前仅微信）结算
 				payList: [{
-					code: 'wechat',
+					code: 'WeChat',
 					name: '微信支付',
 					icon: 'weixin',
 					color: '#07C160'

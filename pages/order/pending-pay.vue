@@ -55,7 +55,7 @@
 		fmtMoney,
 		parseOrderTime
 	} from '../../utils/format.js'
-	import OrderCard from './component/order-card.vue'
+	import OrderCard from './order-card.vue'
 
 	// 待付款超时时长：与后端 OrderServiceImpl.PENDING_PAY_TIMEOUT_SECONDS（1800 秒 = 30 分钟）一致
 	const PAY_TIMEOUT_MS = 30 * 60 * 1000
