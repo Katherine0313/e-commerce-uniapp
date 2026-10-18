@@ -1,5 +1,32 @@
 # 进度日志
 
+## 会话 23：2026-10-17（订单物流轨迹 + 状态文案统一 + 支付方式大小写）
+
+### 当前状态
+
+订单物流轨迹（假数据）已接入：订单卡片物流行、待发货详情物流卡、物流详情页全部完成；订单状态文案统一（`PENDING_SHIP` 顾客视角「处理中」→「待发货」）；支付方式 code 统一大驼峰 `WeChat`。
+
+### 已执行操作
+
+- 后端：`CourierEnum`（快递公司 key→中文）、`LogisticsVO`/`LogisticsTraceVO`、`GET /api/orders/{id}/logistics`（假轨迹，用订单 id 做种子，参考旧 Node getLogistics）
+- 后端：`OrderVO` 加 `logisticsStatus`/`latestTrace`，`toVO` 里 courier 转中文；`OrderServiceImpl` 时间戳从 MySQL `NOW()` 改 Java 传参（修 created_at > pay_at 时区 bug）
+- 前端：`api/order.js` 加 `getLogistics`；订单卡片 `order-card.vue` 加物流信息行（点击跳物流详情）；待发货详情 `pending-ship.vue` 加物流卡（状态下方）；新建 `logistics.vue`（快递卡片 + 轨迹时间线）
+- 订单状态文案统一：`OrderStatusEnum.PENDING_SHIP` C 端「处理中」→「待发货」+ `list.vue` 注释同步
+- 支付方式大小写：`confirm.vue` payList code `'wechat'` → `'WeChat'`；后端下单默认 `PayTypeEnum.WECHAT.getCode()`
+- OrderCard 组件从 `pages/order/component/` 移到 `pages/order/`（模块根目录，删掉 component 子目录）
+
+### 改动的文件
+
+- 前端：`api/order.js`、`pages/order/order-card.vue`、`pages/order/pending-ship.vue`、`pages/order/logistics.vue`（新建）、`pages/order/list.vue`（注释）、`pages/order/confirm.vue`（payType 大写）
+- 后端：`enums/CourierEnum.java`、`vo/LogisticsVO.java`、`vo/LogisticsTraceVO.java`、`vo/OrderVO.java`、`service/OrderService.java`、`service/impl/OrderServiceImpl.java`、`controller/OrderController.java`
+
+### 遗留事项
+
+- 售后 Tab 占位、售后前端页面未做
+- 「申请退款/申请售后」入口只显示文字，点击行为未接
+- 已发货/评论/售后详情页未建
+- 物流轨迹是假数据，真实物流 API（微信物流助手）未接
+
 ## 会话 22：2026-10-16（订单模块重构 + 搜索 + 待发货详情 + 商品搜索 + 地址管理）
 
 ### 当前状态

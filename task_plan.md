@@ -15,13 +15,13 @@
 ## 下一步
 
 小程序 C 端已免登录。下单支付链路已通，订单列表页 6 Tab + 搜索 + 待发货详情 + 商品搜索 + 地址管理已做（阶段 23），
-「我的」页收货地址入口已接通。
+订单物流轨迹（假数据）已接入（阶段 24），「我的」页收货地址入口已接通。
 
 接下来：**售后**（前端售后 Tab / 申请退款·售后入口点击行为）；首页「轮播图 Banner / 热门推荐」接口等后端提供后再接进下拉刷新。
 
 ## 当前阶段
 
-阶段 23：订单模块重构 + 搜索 + 待发货详情 + 商品搜索 + 地址管理（完成）
+阶段 24：订单物流轨迹（假数据）+ 订单状态文案统一 + 支付方式大小写（完成）
 
 ## 各阶段
 
@@ -199,13 +199,24 @@
 
 ### 阶段 23：订单模块重构 + 搜索 + 待发货详情 + 商品搜索 + 地址管理（2026-10-16）
 - [✓] 订单列表页重做为 6 Tab（全部/待付款/待发货/待收货/评论/售后）+ 搜索框（订单号/收货人/商品名）+ `onLoad` 按 status 定位 Tab（「我的」页跳转）
-- [✓] 订单卡片抽成模块内组件 `pages/order/component/order-card.vue`（list + pending-pay 复用，局部注册，不进全局 `components/`）
+- [✓] 订单卡片抽成模块内组件 `pages/order/order-card.vue`（list + pending-pay 复用，局部注册，不进全局 `components/`）
 - [✓] 待发货订单详情页 `pages/order/pending-ship.vue`（状态/收货地址/商品/金额/订单信息/支付方式）
 - [✓] 商品搜索页 `pages/search/search.vue`（首页/分类页顶部假搜索框 `@search` 跳转；后端 `/api/products?keyword=` 匹配 name/sub_title/brand）
 - [✓] 收货地址管理页 `pages/my/address.vue`（列表 + 设默认/删除）+ `pages/my/address-edit.vue`（新增/编辑）；「我的」页入口接通
 - [✓] `utils/format.js` 抽公共函数（fmtMoney/formatOrderTime/parseOrderTime/goodsImgUrl），消除 list/pending-pay 重复
-- [✓] 后端配套：订单/商品 keyword 搜索、支付方式枚举 payTypeDesc、订单状态双文案（待确认→顾客「待发货」、待发货→顾客「处理中」）
+- [✓] 后端配套：订单/商品 keyword 搜索、支付方式枚举 payTypeDesc、订单状态双文案（待确认→顾客「待发货」、待发货→顾客「待发货」，阶段 24 统一）
 - **状态：** complete（前端页面已做；售后 Tab、「申请退款/申请售后」入口点击行为未接，端到端未验证）
+
+### 阶段 24：订单物流轨迹 + 状态文案统一 + 支付方式大小写（2026-10-17）
+- [✓] 后端：`CourierEnum`（快递公司 key→中文）、`LogisticsVO`/`LogisticsTraceVO`、`GET /api/orders/{id}/logistics`（假轨迹，参考旧 Node getLogistics）
+- [✓] 后端：`OrderVO` 加 `logisticsStatus`/`latestTrace`，courier 转中文返回；`OrderServiceImpl` 时间戳从 MySQL `NOW()` 改 Java 传参（修 created_at > pay_at 时区 bug）
+- [✓] 前端 `api/order.js` 加 `getLogistics(id)`
+- [✓] 订单卡片 `order-card.vue` 加物流信息行（有物流时显示最新轨迹，点击跳物流详情）
+- [✓] 待发货详情 `pending-ship.vue` 加物流信息卡（状态下方，点击跳物流详情）
+- [✓] 新建物流详情页 `pages/order/logistics.vue`（快递卡片 + 轨迹时间线，最新在前高亮）
+- [✓] 订单状态文案统一：`PENDING_SHIP` C 端「处理中」→「待发货」（`OrderStatusEnum` + `list.vue` 注释）
+- [✓] 支付方式大小写统一：`confirm.vue` payList code `'wechat'` → `'WeChat'`（对齐 `PayTypeEnum`）
+- **状态：** complete（物流轨迹为假数据，真实物流 API 未接）
 
 ## 关键问题
 

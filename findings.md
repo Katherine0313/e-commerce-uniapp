@@ -457,11 +457,11 @@
 - `pages/order/list.vue` 改为页内 Tab（全部/待付款/待发货/待收货/评论/售后），一次 `listOrders` 拉全量，前端按 `orderStatus` 过滤（不再靠单状态页 `?status=` 进入）。
 - 搜索框（导航栏下、Tab 上）调 `listOrders(keyword)`，后端按订单号/收货人/商品名模糊匹配；搜索在「后端 keyword 过滤 + 前端 Tab 过滤」两层组合。
 - `onLoad` 按 `status` 参数 `findIndex` 定位 Tab（「我的」页「待发货/待收货」入口跳 `list?status=3/4`）。
-- 状态分组语义：待发货 Tab = status 2+3（「待确认」是商家后台视角，顾客付款后就是「等发货」）；订单卡片里的状态字走后端 `orderStatusDesc`（待确认→「待发货」、待发货→「处理中」），Tab 名是「待发货」这个分组，不拆「处理中」独立 Tab。
+- 状态分组语义：待发货 Tab = status 2+3（「待确认」是商家后台视角，顾客付款后就是「等发货」）；订单卡片里的状态字走后端 `orderStatusDesc`（待确认→「待发货」、待发货→「待发货」，阶段 24 已把「处理中」统一为「待发货」），Tab 名是「待发货」这个分组，不拆「处理中」独立 Tab。
 
 **OrderCard 模块内组件**：
 
-- 订单卡片抽成 `pages/order/component/order-card.vue`（list + pending-pay 复用），**局部注册，不进全局 `components/`**——全局只放跨模块组件（Guess/AddressPopup/QuantityStepper 等）。和 `CategoryPanel` 局部注册同一个道理：复用范围决定放哪。
+- 订单卡片抽成 `pages/order/order-card.vue`（list + pending-pay 复用），**局部注册，不进全局 `components/`**——全局只放跨模块组件（Guess/AddressPopup/QuantityStepper 等）。和 `CategoryPanel` 局部注册同一个道理：复用范围决定放哪。
 - 卡片底部用 `#foot` 插槽，按钮由父页面按状态填；卡片本体 `@click` emit 跳详情，foot 按钮 `@click.stop` 阻止冒泡。
 
 **待发货详情 / 商品搜索 / 地址管理**：
@@ -472,8 +472,16 @@
 
 **支付方式 / 状态文案（后端配合）**：
 
-- `payType` 存英文 code（wechat/WeChat 大小写不一致），后端 `PayTypeEnum.fromCode` 用 `equalsIgnoreCase` 兜底，`OrderVO.payTypeDesc` 直接给中文，前端不再硬编码映射。
+- `payType` 存英文 code（前端 `confirm.vue` 已统一传大驼峰 `WeChat`，对齐 `PayTypeEnum`），后端 `fromCode` 仍用 `equalsIgnoreCase` 兜底历史小写数据，`OrderVO.payTypeDesc` 直接给中文，前端不再硬编码映射。
 - 订单状态双文案（desc=顾客 / adminDesc=商家），前端只用 `orderStatusDesc`。
+
+### 订单物流轨迹（假数据）（2026-10-17）
+
+- 后端新增 `CourierEnum`（快递公司 key→中文，照旧 Node COURIER_MAP）、`LogisticsVO`/`LogisticsTraceVO`、`GET /api/orders/{id}/logistics`（假轨迹，用订单 id 做种子生成城市/路线/快递员，`SHIPPED` 5 条 / `FINISHED` 7 条含「已签收」）。
+- `OrderVO` 加 `logisticsStatus`（已揽件/运输中/派送中/已签收）+ `latestTrace`（最新轨迹 desc），`toVO` 里 courier 从英文 key 转中文——列表卡片直接展示，不额外发请求。
+- 前端 `api/order.js` 加 `getLogistics`；订单卡片 `order-card.vue` 商品明细下加物流信息行（`v-if="order.logisticsStatus"`，点击跳 `logistics?id=`）；待发货详情 `pending-ship.vue` 状态下方加物流卡（`v-if="order.trackingNumber"`）。
+- 新建 `pages/order/logistics.vue`：快递卡片（📮 公司+单号+复制）+ 轨迹时间线（倒序、最新高亮）。
+- 物流轨迹是假数据（参考旧 Node 后端的 `getLogistics`），真实物流 API（微信物流助手）未接，后端 `task_plan` 挂着待办。
 
 ## 技术决策
 
