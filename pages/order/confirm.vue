@@ -90,48 +90,9 @@
 				{{ paying ? '提交中...' : '提交订单' }}
 			</view>
 		</view>
-		<!-- 模拟微信支付弹窗：6 位密码框 + 底部字键盘，输满 6 位自动支付；还没接 uni.requestPayment -->
-		<view v-if="showPayPopup" class="pay-popup-mask" @click="closePay">
-			<view class="pay-popup" @click.stop>
-				<view class="popup-header">
-					<text class="popup-title">杰米电商</text>
-					<text class="close-icon" @click="closePay">×</text>
-				</view>
-				<view class="pay-amount">¥{{ fmt(pendingOrder.payAmount) }}</view>
-				<view class="pwd-box">
-					<view class="pwd-item" v-for="(item, index) in 6" :key="index">
-						<text v-if="payPassword[index]">●</text>
-					</view>
-				</view>
-				<text class="tip-text">请输入支付密码</text>
-			</view>
-		</view>
-		<!-- 底部数字键盘：弹窗打开时显示 -->
-		<view v-if="showPayPopup" class="keyboard-wrap">
-			<view class="keyboard-row">
-				<view class="key-item" @click="inputNum('1')">1</view>
-				<view class="key-item" @click="inputNum('2')">2</view>
-				<view class="key-item" @click="inputNum('3')">3</view>
-			</view>
-			<view class="keyboard-row">
-				<view class="key-item" @click="inputNum('4')">4</view>
-				<view class="key-item" @click="inputNum('5')">5</view>
-				<view class="key-item" @click="inputNum('6')">6</view>
-			</view>
-			<view class="keyboard-row">
-				<view class="key-item" @click="inputNum('7')">7</view>
-				<view class="key-item" @click="inputNum('8')">8</view>
-				<view class="key-item" @click="inputNum('9')">9</view>
-			</view>
-			<view class="keyboard-row">
-				<view class="key-item empty-key"></view>
-				<view class="key-item" @click="inputNum('0')">0</view>
-				<!-- 退格删除：自定义 iconfont 图标（clear-icon） -->
-				<view class="key-item" @click="deleteNum">
-					<text class="clear-icon icon-shanchuqingchuqingkong" style="font-size:44rpx;color:#333333;"></text>
-				</view>
-			</view>
-		</view>
+		<!-- 模拟微信支付弹窗（组件封装）：6 位密码框 + 数字键盘，输满 6 位自动支付 -->
+		<PayPopup :visible="showPayPopup" :amount="pendingOrder ? pendingOrder.payAmount : 0"
+			@close="closePay" @confirm="confirmPay" />
 
 	</view>
 </template>
@@ -157,8 +118,12 @@
 	import {
 		useCartStore
 	} from '../../store/cart.js'
+	import PayPopup from './pay-popup.vue'
 
 	export default {
+		components: {
+			PayPopup
+		},
 		data() {
 			return {
 				items: [], // 待结算商品快照（购物车「去结算」时存入 store）
@@ -176,8 +141,7 @@
 					color: '#07C160'
 				}],
 				showPayPopup: false, // 模拟支付弹窗显隐
-				payPassword: '', // 模拟支付密码输入
-				pendingOrder: null // 下单成功后待支付的订单（弹窗里展示金额、点我已支付用它调 payOrder）
+				pendingOrder: null // 下单成功后待支付的订单（弹窗里展示金额，用它调 payOrder）
 			}
 		},
 		computed: {
@@ -257,9 +221,8 @@
 					.then((order) => {
 						// 下单成功即清购物车：商品已进订单，无论是否支付都不该留在购物车
 						clearCart(this.items.map(i => i.productId)).catch(() => {})
-						// 弹出模拟支付弹窗，等用户在弹窗里点「我已支付」再调 payOrder
+						// 弹出模拟支付弹窗，等用户在弹窗里输满 6 位密码再调 payOrder
 						this.pendingOrder = order
-						this.payPassword = ''
 						this.showPayPopup = true
 					})
 					.catch(() => {
@@ -268,22 +231,6 @@
 					.finally(() => {
 						this.paying = false
 					})
-			},
-			// 输入数字：追加到密码，满 6 位自动触发支付
-			inputNum(num) {
-				if (this.payPassword.length >= 6) {
-					return
-				}
-				this.payPassword += num
-				if (this.payPassword.length === 6) {
-					this.confirmPay()
-				}
-			},
-			// 删除一位密码
-			deleteNum() {
-				if (this.payPassword.length > 0) {
-					this.payPassword = this.payPassword.slice(0, -1)
-				}
 			},
 			// 满 6 位自动调用：调支付接口，成功后关闭弹窗返回
 			confirmPay() {
@@ -302,8 +249,7 @@
 						})
 					})
 					.catch(() => {
-						// 支付失败：清空密码可重输；订单留在待付款
-						this.payPassword = ''
+						// 支付失败：弹窗保持打开，组件已清空密码，用户可重输；订单留在待付款
 					})
 					.finally(() => {
 						this.paying = false
@@ -316,7 +262,6 @@
 					return
 				}
 				this.showPayPopup = false
-				this.payPassword = ''
 				uni.redirectTo({
 					url: '/pages/order/pending-pay'
 				})
@@ -576,127 +521,6 @@
 		background: #FF6700;
 	}
 
-	/* ═══ 模拟微信支付弹窗 ═══ */
-	.pay-popup-mask {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(0, 0, 0, 0.6);
-		z-index: 1100;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.pay-popup {
-		width: 620rpx;
-		background: #ffffff;
-		border-radius: 20rpx;
-		padding: 60rpx 40rpx 30rpx 40rpx;
-		box-sizing: border-box;
-	}
-
-	.popup-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 30rpx;
-		position: relative;
-	}
-
-	.popup-title {
-		position: absolute;
-		font-size: 32rpx;
-		color: #333333;
-		text-align: center;
-		left: 180rpx;
-	}
-
-	.close-icon {
-		font-size: 40rpx;
-		color: #999999;
-		line-height: 1;
-		position: absolute;
-		right: 2rpx;
-	}
-
-	.pay-amount {
-		text-align: center;
-		font-size: 52rpx;
-		font-weight: bold;
-		color: #333333;
-		margin-bottom: 40rpx;
-	}
-
-	.pwd-box {
-		display: flex;
-		gap: 16rpx;
-	}
-
-	.pwd-item {
-		flex: 1;
-		height: 80rpx;
-		border: 1rpx solid #dddddd;
-		border-radius: 8rpx;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 36rpx;
-		color: #333333;
-	}
-
-	.tip-text {
-		display: block;
-		text-align: center;
-		font-size: 26rpx;
-		color: #999999;
-		margin-top: 24rpx;
-	}
-
-	/* 底部数字键盘 */
-	.keyboard-wrap {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		width: 100%;
-		background: #e5e5e5;
-		z-index: 1101;
-		padding: 20rpx;
-		padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
-		box-sizing: border-box;
-	}
-
-	.keyboard-row {
-		display: flex;
-		gap: 16rpx;
-		margin-bottom: 16rpx;
-	}
-
-	.keyboard-row:last-child {
-		margin-bottom: 0;
-	}
-
-	.key-item {
-		flex: 1;
-		height: 90rpx;
-		background: #ffffff;
-		border-radius: 12rpx;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 32rpx;
-		color: #333333;
-	}
-
-	.empty-key {
-		background: transparent;
-		height: 90rpx;
-		border: 1rpx solid #dddddd;
-		border-radius: 12rpx;
-	}
-
 	/* ═══ 底部结算栏 ═══ */
 	.bottom-bar {
 		position: fixed;
@@ -746,11 +570,6 @@
 
 	.pay-btn.disabled {
 		opacity: 0.5;
-	}
-	.key-item uni-icons {
-		display: flex;
-		align-items: center;
-		justify-content: center;
 	}
 
 </style>
