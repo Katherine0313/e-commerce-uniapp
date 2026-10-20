@@ -8,7 +8,7 @@
 			<input
 				class="search-input"
 				v-model="keyword"
-				placeholder="订单号/商品名/收货人"
+				placeholder="订单号/商品名"
 				confirm-type="search"
 				@confirm="search"
 			/>
