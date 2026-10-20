@@ -121,6 +121,11 @@
 					title: '评价已提交',
 					icon: 'success'
 				})
+				setTimeout(() => {
+					uni.redirectTo({
+						url: '/pages/order/list'
+					})
+				}, 600)
 			}
 		}
 	}
