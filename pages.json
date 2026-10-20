@@ -42,6 +42,12 @@
 			}
 		},
 		{
+			"path":"pages/order/pay-success",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path":"pages/order/list",
 			"style": {
 				"navigationStyle": "custom"

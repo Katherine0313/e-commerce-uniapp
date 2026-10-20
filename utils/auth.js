@@ -1,5 +1,6 @@
 import { useUserStore } from '../store/user.js'
 import { wxLogin } from '../api/login.js'
+import { SHOP_ID } from '../utils/server-api.js'
 
 // 需要登录的操作（加购、下单）前调用：已登录直接放行，未登录则静默登录。
 // uni.login 只换 code，不弹授权框，用户全程无感；
@@ -12,7 +13,7 @@ export async function ensureLogin(){
 	}
 
 	const { code } = await uni.login({ provider: 'weixin' })
-	const res = await wxLogin(code)
+	const res = await wxLogin(code, SHOP_ID)
 	store.setToken(res.token)
 	store.setUserInfo({ id: res.id, name: res.name, avatar: res.avatar })
 	return true

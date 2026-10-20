@@ -64,5 +64,26 @@
 		-moz-osx-font-smoothing: grayscale;
 	}
 
+	/* 第三套 iconfont（删除/清空图标）：同样重命名 font-family，避免和前两套同名 "iconfont" 互相覆盖 */
+	@font-face {
+		font-family: "clear-icon";
+		src: url("./static/clear-icon/iconfont.woff2") format("woff2"),
+			url("./static/clear-icon/iconfont.woff") format("woff"),
+			url("./static/clear-icon/iconfont.ttf") format("truetype");
+	}
+
+	.clear-icon {
+		font-family: "clear-icon" !important;
+		font-size: 16px;
+		font-style: normal;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+
+	/* 删除图标（class 名来自 clear-icon/iconfont.css） */
+	.icon-shanchuqingchuqingkong:before {
+		content: "\e61f";
+	}
+
 	/*每个页面公共css */
 </style>

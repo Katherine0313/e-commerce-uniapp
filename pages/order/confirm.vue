@@ -126,9 +126,13 @@
 			<view class="keyboard-row">
 				<view class="key-item empty-key"></view>
 				<view class="key-item" @click="inputNum('0')">0</view>
-				<view class="key-item" @click="deleteNum">删除</view>
+				<!-- 退格删除：自定义 iconfont 图标（clear-icon） -->
+				<view class="key-item" @click="deleteNum">
+					<text class="clear-icon icon-shanchuqingchuqingkong" style="font-size:44rpx;color:#333333;"></text>
+				</view>
 			</view>
 		</view>
+
 	</view>
 </template>
 
@@ -289,14 +293,13 @@
 				this.paying = true
 				payOrder(this.pendingOrder.id, this.payList[this.activePay].code)
 					.then(() => {
-						uni.showToast({
-							title: '支付成功',
-							icon: 'success'
-						})
 						this.showPayPopup = false
-						setTimeout(() => {
-							uni.navigateBack()
-						}, 800)
+						// 支付成功跳支付成功页，带金额和订单号；redirectTo 替换当前页，避免返回又回到支付流程
+						const amount = this.num(this.pendingOrder.payAmount).toFixed(2)
+						const orderNo = this.pendingOrder.orderNo || ''
+						uni.redirectTo({
+							url: '/pages/order/pay-success?amount=' + amount + '&orderNo=' + orderNo
+						})
 					})
 					.catch(() => {
 						// 支付失败：清空密码可重输；订单留在待付款
@@ -306,20 +309,17 @@
 						this.paying = false
 					})
 			},
-			// 关闭支付弹窗（点遮罩或 ×）：不付款，订单留在待付款
+			// 关闭支付弹窗（点遮罩或 ×）：不付款，但订单已经创建（待付款）。
+			// 跳待付款订单页让用户看到刚创建的订单并继续支付，避免返回上一页又重新下单产生重复订单
 			closePay() {
 				if (this.paying) {
 					return
 				}
 				this.showPayPopup = false
 				this.payPassword = ''
-				uni.showToast({
-					title: '订单已保存，可稍后在待付款付款',
-					icon: 'none'
+				uni.redirectTo({
+					url: '/pages/order/pending-pay'
 				})
-				setTimeout(() => {
-					uni.navigateBack()
-				}, 800)
 			},
 			// region 存「省 市 区」空格分隔，展示时去掉空格更紧凑
 			formatRegion(region) {
@@ -747,4 +747,10 @@
 	.pay-btn.disabled {
 		opacity: 0.5;
 	}
+	.key-item uni-icons {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
 </style>

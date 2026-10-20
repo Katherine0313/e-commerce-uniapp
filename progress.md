@@ -1,5 +1,23 @@
 # 进度日志
 
+## 会话 24：2026-10-20（多租户沙箱 C 端 shopId）
+
+### 当前状态
+多租户沙箱 C 端 shopId 支持完成：登录时把店铺 shopId 签进 user 令牌，后端按店铺隔离下单/购物车/地址。
+
+### 已执行操作
+- `utils/server-api.js` 加 `SHOP_ID` 常量（默认 1 = 模板店，测沙箱店改成对应 shopId）
+- `api/login.js` 的 `wxLogin(code, shopId)` 加 shopId 参数
+- `utils/auth.js` 的 `ensureLogin` 登录传 `SHOP_ID`
+
+### 改动的文件
+- `utils/server-api.js`、`api/login.js`、`utils/auth.js`
+
+### 错误
+| 错误 | 解决方案 |
+|------|---------|
+| （暂无） | |
+
 ## 会话 23：2026-10-17（订单物流轨迹 + 状态文案统一 + 支付方式大小写）
 
 ### 当前状态

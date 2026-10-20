@@ -10,6 +10,9 @@ export const BASE_URL = process.env.NODE_ENV === 'development'
   ? 'http://127.0.0.1:8080'   // 本地开发：本机 SpringBoot 网关
   : 'https://api.jiemids.com'  // 打包上线：线上 API 域名
 
+// 当前店铺 ID（多租户沙箱）：模板店=1，测沙箱店时改成对应 shopId（登录时签进 token，后端按店铺隔离）
+export const SHOP_ID = 1
+
 // 通用请求封装：自动带 token，成功返回 data，失败统一弹提示
 export function request(url, options = {}){
 	const token = getToken()

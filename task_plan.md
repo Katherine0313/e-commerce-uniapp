@@ -21,7 +21,7 @@
 
 ## 当前阶段
 
-阶段 24：订单物流轨迹（假数据）+ 订单状态文案统一 + 支付方式大小写（完成）
+阶段 25：多租户沙箱 C 端 shopId 支持（完成）
 
 ## 各阶段
 
@@ -217,6 +217,12 @@
 - [✓] 订单状态文案统一：`PENDING_SHIP` C 端「处理中」→「待发货」（`OrderStatusEnum` + `list.vue` 注释）
 - [✓] 支付方式大小写统一：`confirm.vue` payList code `'wechat'` → `'WeChat'`（对齐 `PayTypeEnum`）
 - **状态：** complete（物流轨迹为假数据，真实物流 API 未接）
+
+### 阶段 25：多租户沙箱 C 端 shopId 支持（2026-10-20）
+- [✓] `utils/server-api.js` 加 `SHOP_ID` 常量（默认 1 = 模板店，测沙箱店改成对应 shopId）
+- [✓] `api/login.js` 的 `wxLogin(code, shopId)` 加 shopId 参数
+- [✓] `utils/auth.js` 的 `ensureLogin` 登录传 `SHOP_ID`（后端签进 user 令牌，按店铺隔离下单/购物车/地址）
+- **状态：** complete（扫码进店/分享链接带 shopId 暂不做，当前 SHOP_ID 写死常量）
 
 ## 关键问题
 

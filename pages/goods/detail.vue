@@ -311,7 +311,6 @@
 	.cover {
 		width: 100%;
 		height: 750rpx;
-		margin-top:20rpx;
 	}
 
 	/* ===== 商品信息卡 ===== */

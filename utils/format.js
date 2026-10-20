@@ -34,11 +34,12 @@ export function parseOrderTime(t) {
 		const time = new Date(y, mo - 1, d, h, mi, se).getTime()
 		return isNaN(time) ? 0 : time
 	}
-	// 字符串：先直接解析（兼容带时区 ISO），失败再转 / 分隔（iOS 对 - 分隔无时区串支持差）
-	const s = String(t)
+	// 字符串：空格分隔的 "yyyy-MM-dd HH:mm:ss" iOS 解析不了，先转 T 分隔（ISO）再解析
+	const s = String(t).replace(' ', 'T')
 	let time = new Date(s).getTime()
 	if (isNaN(time)) {
-		time = new Date(s.replace('T', ' ').replace(/-/g, '/')).getTime()
+		// 兜底：- 转 /（iOS 对 / 分隔的格式支持最好）
+		time = new Date(String(t).replace(/-/g, '/')).getTime()
 	}
 	return isNaN(time) ? 0 : time
 }
