@@ -72,6 +72,18 @@
 			}
 		},
 		{
+			"path":"pages/order/pending-receive",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/order/review",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path":"pages/search/search",
 			"style": {
 				"navigationStyle": "custom"

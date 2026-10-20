@@ -10,8 +10,6 @@
 				:key="order.id"
 				:order="order"
 				:show-copy="true"
-				:closed="isExpired(order)"
-				:status-text="isExpired(order) ? '已关闭' : ''"
 			>
 				<template #foot>
 					<!-- 实付金额 -->

@@ -35,50 +35,21 @@
 			<text class="empty-text">售后功能开发中</text>
 		</view>
 
-		<!-- 订单列表：复用 OrderCard，底部按状态填不同按钮 -->
+		<!-- 订单列表：复用 OrderCard，卡片内部按状态渲染头部与底部按钮 -->
 		<view v-else-if="orders.length" class="order-list">
 			<OrderCard
 				v-for="order in orders"
 				:key="order.id"
 				:order="order"
-				:closed="isExpired(order)"
-				:status-text="isExpired(order) ? '已关闭' : ''"
+				:now="now"
 				@click="goDetail"
-			>
-				<template #foot>
-					<view class="order-foot">
-						<!-- 待付款：倒计时 + 取消 + 付款；超时只留提示 -->
-						<template v-if="isPendingPay(order)">
-							<template v-if="!isExpired(order)">
-								<text class="time-tip">剩余 {{ countdownText(order) }}</text>
-								<view class="btn-cancel" @click.stop="handleCancel(order)">取消订单</view>
-								<view class="btn-pay" @click.stop="handlePay(order)">付款</view>
-							</template>
-							<template v-else>
-								<text class="time-tip closed-tip">订单已超时关闭</text>
-							</template>
-						</template>
-						<!-- 已取消：删除 / 再来一单 -->
-						<template v-else-if="isClosed(order)">
-							<view class="btn-delete" @click.stop="deleteOrder(order)">删除订单</view>
-							<view class="btn-buy-again" @click.stop="buyAgain(order)">再来一单</view>
-						</template>
-						<!-- 已发货（待收货）：确认收货 -->
-						<template v-else-if="isShipped(order)">
-							<text class="order-time">{{ formatOrderTime(order.createdAt) }}</text>
-							<view class="btn-confirm" @click.stop="confirmReceive(order)">确认收货</view>
-						</template>
-						<!-- 其它（待发货/已完成）：下单时间 + 合计 -->
-						<template v-else>
-							<text class="order-time">{{ formatOrderTime(order.createdAt) }}</text>
-							<view class="order-total">
-								<text class="total-label">共{{ totalCount(order) }}件 合计</text>
-								<text class="total-price">¥{{ fmtMoney(order.payAmount) }}</text>
-							</view>
-						</template>
-					</view>
-				</template>
-			</OrderCard>
+				@pay="handlePay"
+				@cancel="handleCancel"
+				@confirm="confirmReceive"
+				@delete="deleteOrder"
+				@buy-again="buyAgain"
+				@review="handleReview"
+			/>
 		</view>
 
 		<!-- 空态：加载完成且没有订单 -->
@@ -105,15 +76,7 @@
 	import {
 		ensureLogin
 	} from '../../utils/auth.js'
-	import {
-		fmtMoney,
-		formatOrderTime,
-		parseOrderTime
-	} from '../../utils/format.js'
 	import OrderCard from './order-card.vue'
-
-	// 待付款超时时长：与后端 OrderServiceImpl.PENDING_PAY_TIMEOUT_SECONDS（1800 秒 = 30 分钟）一致
-	const PAY_TIMEOUT_MS = 30 * 60 * 1000
 
 	export default {
 		components: {
@@ -166,8 +129,6 @@
 			this.stopTimer()
 		},
 		methods: {
-			fmtMoney,
-			formatOrderTime,
 			// 切换 Tab：重新按状态过滤
 			changeTab(index) {
 				this.activeIndex = index
@@ -177,11 +138,13 @@
 			search() {
 				this.loadOrders()
 			},
-			// 点订单卡片：按状态跳对应详情页（待发货 → pending-ship；其他状态详情页未建，暂不跳）
+			// 点订单卡片：按状态跳对应详情页（待发货 → pending-ship；待收货 → pending-receive）
 			goDetail(order) {
 				const status = Number(order.orderStatus)
 				if (status === 2 || status === 3) {
 					uni.navigateTo({ url: '/pages/order/pending-ship?id=' + order.id })
+				} else if (status === 4) {
+					uni.navigateTo({ url: '/pages/order/pending-receive?id=' + order.id })
 				}
 			},
 			// 拉全部订单，预计算待付款订单的超时时间戳，再按当前 Tab 过滤
@@ -189,13 +152,7 @@
 				ensureLogin()
 					.then(() => listOrders(this.keyword))
 					.then((list) => {
-						list = list || []
-						this.allOrders = list.map(o => {
-							if (Number(o.orderStatus) === 1) {
-								o._expireTime = parseOrderTime(o.createdAt) + PAY_TIMEOUT_MS
-							}
-							return o
-						})
+						this.allOrders = list || []
 						this.filterOrders()
 					})
 					.catch(() => {
@@ -225,32 +182,6 @@
 					clearInterval(this._timer)
 					this._timer = null
 				}
-			},
-			// 是否待付款（status=1）
-			isPendingPay(order) {
-				return Number(order.orderStatus) === 1
-			},
-			// 是否已取消（status=6）
-			isClosed(order) {
-				return Number(order.orderStatus) === 6
-			},
-			// 是否已发货（status=4，用户视角待收货）
-			isShipped(order) {
-				return Number(order.orderStatus) === 4
-			},
-			// 是否超时（前端临时标记，后端定时任务每分钟扫一次才真正改状态）
-			isExpired(order) {
-				return order._expireTime != null && order._expireTime <= this.now
-			},
-			// 剩余时间文案：MM : SS
-			countdownText(order) {
-				const remain = order._expireTime - this.now
-				if (remain <= 0) {
-					return '0分0秒'
-				}
-				const m = Math.floor(remain / 60000)
-				const s = Math.floor((remain % 60000) / 1000)
-				return String(m).padStart(2, '0') + ' : ' + String(s).padStart(2, '0')
 			},
 			// 付款：待付款 → 待确认，成功后刷新
 			handlePay(order) {
@@ -300,9 +231,9 @@
 						uni.hideLoading()
 					})
 			},
-			// 订单商品总件数
-			totalCount(order) {
-				return (order.items || []).reduce((s, i) => s + (i.quantity || 0), 0)
+			// 评价商品：跳评价页
+			handleReview(order) {
+				uni.navigateTo({ url: '/pages/order/review?orderId=' + order.id })
 			}
 		}
 	}
@@ -383,87 +314,6 @@
 
 	.order-list {
 		padding: 0 20rpx;
-	}
-
-	/* ═══ 卡片底 ═══ */
-	.order-foot {
-		display: flex;
-		align-items: center;
-		justify-content: flex-end;
-		padding: 18rpx 0 20rpx;
-		border-top: 1rpx solid #f0f0f0;
-	}
-
-	.order-time {
-		margin-right: auto;
-		font-size: 22rpx;
-		color: #999999;
-	}
-
-	.order-total {
-		display: flex;
-		align-items: baseline;
-	}
-
-	.total-label {
-		font-size: 24rpx;
-		color: #666666;
-	}
-
-	.total-price {
-		margin-left: 8rpx;
-		font-size: 32rpx;
-		font-weight: bold;
-		color: #FF4E2A;
-	}
-
-	/* 待付款倒计时 */
-	.time-tip {
-		margin-right: auto;
-		font-size: 26rpx;
-		color: #f56c6c;
-	}
-
-	.time-tip.closed-tip {
-		color: #999999;
-	}
-
-	/* 各按钮 */
-	.btn-delete {
-		padding: 10rpx 32rpx;
-		font-size: 22rpx;
-		color: #333333;
-	}
-
-	.btn-buy-again {
-		padding: 4rpx 28rpx;
-		border: 1rpx solid #cccccc;
-		border-radius: 32rpx;
-		font-size: 26rpx;
-		color: #333333;
-	}
-
-	.btn-cancel {
-		padding: 14rpx 22rpx;
-		margin-right: 20rpx;
-		color: #333333;
-		font-size: 22rpx;
-	}
-
-	.btn-pay {
-		padding: 10rpx 52rpx;
-		background: #FF6700;
-		color: #ffffff;
-		border-radius: 40rpx;
-		font-size: 28rpx;
-	}
-
-	.btn-confirm {
-		padding: 10rpx 36rpx;
-		background: #FF6700;
-		color: #ffffff;
-		border-radius: 32rpx;
-		font-size: 26rpx;
 	}
 
 	/* ═══ 空态 ═══ */
