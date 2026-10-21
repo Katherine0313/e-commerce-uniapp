@@ -96,7 +96,37 @@
 			}
 		},
 		{
+			"path":"pages/after-sales/return-refund",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/after-sales/exchange",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path":"pages/after-sales/only-refund-detail",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/after-sales/return-refund-detail",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/after-sales/return-tracking",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/after-sales/exchange-detail",
 			"style": {
 				"navigationStyle": "custom"
 			}

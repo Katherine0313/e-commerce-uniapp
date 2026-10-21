@@ -30,10 +30,20 @@
 			</view>
 		</scroll-view>
 
-		<!-- 售后 Tab：售后单列表还没做，先占位 -->
-		<view v-if="isAfterSaleTab" class="empty">
-			<text class="empty-text">售后功能开发中</text>
-		</view>
+		<!-- 售后 Tab：售后单列表 -->
+		<template v-if="isAfterSaleTab">
+			<view v-if="afterSaleList.length" class="order-list">
+				<AfterSaleCard
+					v-for="item in afterSaleList"
+					:key="item.id"
+					:after-sale="item"
+					@click="goAfterSaleDetail"
+				/>
+			</view>
+			<view v-else-if="afterSaleLoaded" class="empty">
+				<text class="empty-text">暂无售后记录</text>
+			</view>
+		</template>
 
 		<!-- 订单列表：复用 OrderCard，卡片内部按状态渲染头部与底部按钮 -->
 		<view v-else-if="orders.length" class="order-list">
@@ -77,10 +87,15 @@
 		ensureLogin
 	} from '../../utils/auth.js'
 	import OrderCard from './order-card.vue'
+	import AfterSaleCard from './after-sale-card.vue'
+	import {
+		listAfterSales
+	} from '../../api/after-sale.js'
 
 	export default {
 		components: {
-			OrderCard
+			OrderCard,
+			AfterSaleCard
 		},
 		data() {
 			return {
@@ -98,6 +113,8 @@
 				allOrders: [], // 一次拉取的全部订单
 				orders: [], // 当前 Tab 过滤后的订单
 				loaded: false, // 是否完成首次加载
+				afterSaleList: [], // 售后单列表（售后 Tab 用）
+				afterSaleLoaded: false, // 售后列表是否完成加载
 				now: Date.now() // 当前时间戳，每秒刷新驱动倒计时
 			}
 		},
@@ -108,7 +125,14 @@
 			}
 		},
 		onLoad(options) {
-			// 从「我的」页跳转带 status 参数，定位到对应 Tab（如 status=3 → 待发货、status=4 → 待收货）
+			// 从「我的」页跳转定位 Tab：afterSale 定位售后 Tab，status 定位对应状态 Tab
+			if (options.afterSale) {
+				const index = this.tabs.findIndex(tab => tab.afterSale)
+				if (index !== -1) {
+					this.activeIndex = index
+				}
+				return
+			}
 			const status = Number(options.status)
 			if (!status) {
 				return
@@ -119,7 +143,11 @@
 			}
 		},
 		onShow() {
-			this.loadOrders()
+			if (this.isAfterSaleTab) {
+				this.loadAfterSales()
+			} else {
+				this.loadOrders()
+			}
 			this.startTimer()
 		},
 		onHide() {
@@ -129,10 +157,14 @@
 			this.stopTimer()
 		},
 		methods: {
-			// 切换 Tab：重新按状态过滤
+			// 切换 Tab：重新按状态过滤；售后 Tab 单独加载售后列表
 			changeTab(index) {
 				this.activeIndex = index
-				this.filterOrders()
+				if (this.isAfterSaleTab) {
+					this.loadAfterSales()
+				} else {
+					this.filterOrders()
+				}
 			},
 			// 搜索：带关键词重拉订单（后端按订单号/收货人/商品名模糊匹配）
 			search() {
@@ -161,6 +193,30 @@
 					.finally(() => {
 						this.loaded = true
 					})
+			},
+			// 拉售后单列表（售后 Tab）
+			loadAfterSales() {
+				ensureLogin()
+					.then(() => listAfterSales())
+					.then((list) => {
+						this.afterSaleList = list || []
+					})
+					.catch(() => {
+						// 错误提示已在 request 封装里统一处理
+					})
+					.finally(() => {
+						this.afterSaleLoaded = true
+					})
+			},
+			// 点售后卡片：按售后类型跳对应详情页
+			goAfterSaleDetail(afterSale) {
+				let page = '/pages/after-sales/only-refund-detail'
+				if (afterSale.afterSaleType === 'return_refund') {
+					page = '/pages/after-sales/return-refund-detail'
+				} else if (afterSale.afterSaleType === 'exchange') {
+					page = '/pages/after-sales/exchange-detail'
+				}
+				uni.navigateTo({ url: page + '?id=' + afterSale.id })
 			},
 			// 按当前 Tab 的状态码过滤
 			filterOrders() {

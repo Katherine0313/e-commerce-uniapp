@@ -15,7 +15,7 @@
 			<!-- 进度时间轴（横向，节点完成态按后端时间戳动态） -->
 			<view class="timeline">
 				<view class="tl-item" v-for="(node, idx) in timeline" :key="idx" :class="{ lineDone: idx < timeline.length - 1 && timeline[idx + 1].done }">
-					<view class="tl-dot" :class="{ done: node.done, check: node.done && idx === timeline.length - 1 }"></view>
+					<view class="tl-dot" :class="{ done: node.done, check: node.done && idx === timeline.length - 1 && !node.reject, reject: node.reject }"></view>
 					<text class="tl-title">{{ node.title }}</text>
 					<text class="tl-time">{{ fmtTime(node.time) }}</text>
 				</view>
@@ -59,7 +59,7 @@
 		<!-- 模块6：商品&售后信息 -->
 		<view class="info-card">
 			<view class="merchant-row">
-				<text class="merchant-name">美的全屋净水器旗舰店</text>
+				<text class="merchant-name">杰米多多小店</text>
 				<text class="contact-btn" @click="contactMerchant">联系商家</text>
 			</view>
 			<view class="goods-row" v-for="item in items" :key="item.productId">
@@ -121,7 +121,7 @@
 				if (d.status === 'rejected') {
 					return [
 						{ title: '提交申请', time: d.createdAt, done: true },
-						{ title: '审核未通过', time: d.rejectedAt, done: true }
+						{ title: '审核未通过', time: d.rejectedAt, done: true, reject: true }
 					]
 				}
 				return [
@@ -287,6 +287,20 @@
 
 	.tl-dot.check::after {
 		content: '✓';
+		display: block;
+		color: #ffffff;
+		font-size: 14rpx;
+		text-align: center;
+		line-height: 20rpx;
+	}
+
+	/* 拒绝态：红色圆点 + 叉 */
+	.tl-dot.reject {
+		background: #ff4d4f;
+	}
+
+	.tl-dot.reject::after {
+		content: '×';
 		display: block;
 		color: #ffffff;
 		font-size: 14rpx;
@@ -476,17 +490,18 @@
 		right: 0;
 		bottom: 0;
 		display: flex;
+		justify-content: space-between;
 		gap: 20rpx;
-		padding: 16rpx 20rpx;
+		padding: 16rpx 100rpx;
 		padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
 		background: #ffffff;
 		box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.04);
 	}
 
 	.btn-outline {
-		flex: 1;
-		height: 88rpx;
-		line-height: 88rpx;
+		width:200rpx;
+		height: 48rpx;
+		line-height: 48rpx;
 		text-align: center;
 		font-size: 28rpx;
 		color: #333333;
@@ -495,9 +510,9 @@
 	}
 
 	.btn-primary {
-		flex: 1;
-		height: 88rpx;
-		line-height: 88rpx;
+		width:200rpx;
+		height: 48rpx;
+		line-height: 48rpx;
 		text-align: center;
 		font-size: 28rpx;
 		color: #ffffff;

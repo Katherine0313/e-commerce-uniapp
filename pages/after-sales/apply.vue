@@ -114,12 +114,14 @@
 					})
 					return
 				}
-				// 按服务类型跳对应表单页：仅退款 → only-refund；退货退款/换货页待做
+				// 按服务类型跳对应表单页：仅退款 / 退货退款 / 换货
+				const query = '?orderId=' + this.orderId + '&orderItemId=' + (this.orderItemId || '')
 				if (this.selectedType === 'only_refund') {
-					uni.navigateTo({
-						url: '/pages/after-sales/only-refund?orderId=' + this.orderId
-							+ '&orderItemId=' + (this.orderItemId || '')
-					})
+					uni.navigateTo({ url: '/pages/after-sales/only-refund' + query })
+				} else if (this.selectedType === 'return_refund') {
+					uni.navigateTo({ url: '/pages/after-sales/return-refund' + query })
+				} else if (this.selectedType === 'exchange') {
+					uni.navigateTo({ url: '/pages/after-sales/exchange' + query })
 				} else {
 					uni.showToast({
 						title: '该类型页面待开发',

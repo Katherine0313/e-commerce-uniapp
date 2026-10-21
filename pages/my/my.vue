@@ -37,9 +37,12 @@
 			</view>
 			<view class="order-grid">
 				<view class="order-item" v-for="item in orderTabs" :key="item.type" @click="handleNav(item.url)">
-					<!-- fontIcon 有值就用 myvue-icon 那套 iconfont，没有的先用 uni-icons 顶着 -->
-					<text v-if="item.fontIcon" class="myvue-icon order-icon" :class="item.fontIcon"></text>
-					<uni-icons v-else :type="item.icon" size="52rpx" ></uni-icons>
+					<!-- fontIcon 有值就用 myvue-icon 那套 iconfont，没有的先用 uni-icons 顶着；图标右上角红色数字角标 -->
+					<view class="order-icon-box">
+						<text v-if="item.fontIcon" class="myvue-icon order-icon" :class="item.fontIcon"></text>
+						<uni-icons v-else :type="item.icon" size="52rpx"></uni-icons>
+						<view v-if="item.badge > 0" class="order-badge">{{ item.badge > 99 ? '99+' : item.badge }}</view>
+					</view>
 					<text class="order-text">{{ item.text }}</text>
 				</view>
 			</view>
@@ -90,6 +93,12 @@
 		getProfile,
 		uploadAvatar
 	} from '../../api/login.js'
+	import {
+		listOrders
+	} from '../../api/order.js'
+	import {
+		listAfterSales
+	} from '../../api/after-sale.js'
 
 	export default {
 		data() {
@@ -106,35 +115,40 @@
 						text: '待付款',
 						fontIcon: '',
 						icon: 'wallet',
-						url: '/pages/order/pending-pay'
+						url: '/pages/order/pending-pay',
+						badge: 0
 					},
 					{
 						type: 1,
 						text: '待发货',
 						fontIcon: 'icon-31daifahuo',
 						icon: 'gift',
-						url: '/pages/order/list?status=3'
+						url: '/pages/order/list?status=3',
+						badge: 0
 					},
 					{
 						type: 2,
 						text: '待收货',
 						fontIcon: 'icon-daishouhuo',
 						icon: 'paperplane',
-						url: '/pages/order/list?status=4'
+						url: '/pages/order/list?status=4',
+						badge: 0
 					},
 					{
 						type: 3,
 						text: '待评价',
 						fontIcon: '',
 						icon: 'compose',
-						url: ''
+						url: '',
+						badge: 0
 					},
 					{
 						type: 4,
 						text: '退款/售后',
 						fontIcon: 'icon-shouhou',
 						icon: 'refreshempty',
-						url: ''
+						url: '/pages/order/list?afterSale=1',
+						badge: 0
 					}
 				],
 				// 优惠券 / 积分 / 专属客服（占位）：前两个数字先写死 0，后端有对应字段后再换成接口值
@@ -197,7 +211,11 @@
 		onShow() {
 			// 免登录：进页面确保已静默登录（已登录会短路），再补拉一次资料（昵称/头像），失败静默忽略
 			ensureLogin()
-				.then(() => getProfile())
+				.then(() => {
+					// 登录就绪后再拉角标数量 + 资料
+					this.loadBadges()
+					return getProfile()
+				})
 				.then((profile) => {
 					this.store.setUserInfo({
 						id: profile.id,
@@ -208,6 +226,26 @@
 				.catch(() => {})
 		},
 		methods: {
+			// 拉各状态订单/售后数量，回填图标角标
+			loadBadges() {
+				listOrders().then((list) => {
+					const orders = list || []
+					this.setBadge('待付款', orders.filter(o => Number(o.orderStatus) === 1).length)
+					this.setBadge('待发货', orders.filter(o => [2, 3].includes(Number(o.orderStatus))).length)
+					this.setBadge('待收货', orders.filter(o => Number(o.orderStatus) === 4).length)
+					this.setBadge('待评价', orders.filter(o => Number(o.orderStatus) === 5 && !o.reviewed).length)
+				}).catch(() => {})
+				listAfterSales().then((list) => {
+					this.setBadge('退款/售后', (list || []).length)
+				}).catch(() => {})
+			},
+			// 回填某个入口的角标数量
+			setBadge(text, count) {
+				const item = this.orderTabs.find(i => i.text === text)
+				if (item) {
+					item.badge = count
+				}
+			},
 			// 页面跳转：url 为空说明目标页还没做，先给个提示，比点了没反应清楚
 			handleNav(url) {
 				if (!url) {
@@ -419,6 +457,31 @@
 	   同一行的 uni-icons 也写成 size="52rpx"，两套名义尺寸保持一致 */
 	.order-icon {
 		font-size: 52rpx;
+	}
+
+	/* 图标容器：相对定位，作为右上角角标的定位基准 */
+	.order-icon-box {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	/* 右上角红色数字角标 */
+	.order-badge {
+		position: absolute;
+		top: -10rpx;
+		right: -18rpx;
+		min-width: 32rpx;
+		height: 32rpx;
+		padding: 0 8rpx;
+		box-sizing: border-box;
+		background: #ff4d4f;
+		color: #ffffff;
+		font-size: 20rpx;
+		line-height: 32rpx;
+		text-align: center;
+		border-radius: 16rpx;
 	}
 
 	/* 优惠券 / 积分 / 专属客服（占位）：三栏等分，非首栏加左边框当分隔线。

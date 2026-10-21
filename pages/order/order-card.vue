@@ -200,12 +200,17 @@
 					url: '/pages/after-sales/apply?orderId=' + this.order.id + '&orderItemId=' + (item.orderItemId || '')
 				})
 			},
-			// 查看售后详情：按订单查售后单，跳详情页
+			// 查看售后详情：按订单查售后单，按类型跳对应详情页
 			goAfterSaleDetail() {
 				getAfterSaleByOrder(this.order.id).then((afterSale) => {
-					if (afterSale) {
-						uni.navigateTo({ url: '/pages/after-sales/only-refund-detail?id=' + afterSale.id })
+					if (!afterSale) return
+					let page = '/pages/after-sales/only-refund-detail'
+					if (afterSale.afterSaleType === 'return_refund') {
+						page = '/pages/after-sales/return-refund-detail'
+					} else if (afterSale.afterSaleType === 'exchange') {
+						page = '/pages/after-sales/exchange-detail'
 					}
+					uni.navigateTo({ url: page + '?id=' + afterSale.id })
 				}).catch(() => {})
 			}
 		}

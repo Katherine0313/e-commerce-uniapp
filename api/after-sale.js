@@ -24,7 +24,20 @@ export function getAfterSaleByOrder(orderId) {
 	return request('/api/after-sales/by-order?orderId=' + orderId, { method: 'GET' })
 }
 
+// 售后列表，对应 GET /api/after-sales
+export function listAfterSales() {
+	return request('/api/after-sales', { method: 'GET' })
+}
+
 // 售后详情，对应 GET /api/after-sales/{id}
 export function getAfterSale(id) {
 	return request('/api/after-sales/' + id, { method: 'GET' })
+}
+
+// 回填退货物流（退货退款·自行寄回），对应 POST /api/after-sales/{id}/submit-return
+export function submitAfterSaleReturn(id, data) {
+	return request('/api/after-sales/' + id + '/submit-return', {
+		method: 'POST',
+		data: data
+	})
 }
