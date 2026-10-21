@@ -22,8 +22,8 @@
 			<view class="goods-info-r">
 				<text class="goods-qty">×{{ item.quantity }}</text>
 				<view>
-					<text class="goods-action" v-if="isRefundable">申请退款</text>
-					<text class="goods-action" v-if="isAfterSaleable">申请售后</text>
+					<text class="goods-action" v-if="order.afterSale" @click.stop="goAfterSaleDetail">售后详情</text>
+					<text class="goods-action" v-else-if="isRefundable || isAfterSaleable" @click.stop="applyAfterSale(item)">申请售后</text>
 				</view>
 			</view>
 		</view>
@@ -59,10 +59,14 @@
 					<text class="order-time">{{ formatOrderTime(order.createdAt) }}</text>
 					<view class="btn-confirm" @click.stop="$emit('confirm', order)">确认收货</view>
 				</template>
-				<!-- 已完成：删除 / 评价商品 -->
+				<!-- 已完成：删除 / 再来一单 / 评价商品（已评价则显示「已评价」） -->
 				<template v-else-if="isFinished">
 					<view class="btn-delete" @click.stop="$emit('delete', order)">删除订单</view>
-					<view class="btn-review" @click.stop="$emit('review', order)">评价商品</view>
+					<view class="foot-right">
+						<view class="btn-buy-again" @click.stop="$emit('buy-again', order)">再来一单</view>
+						<view v-if="!order.reviewed" class="btn-review" @click.stop="$emit('review', order)">评价商品</view>
+						<text v-else class="reviewed-tag">已评价</text>
+					</view>
 				</template>
 				<!-- 其它（待发货）：下单时间 + 合计 -->
 				<template v-else>
@@ -84,6 +88,9 @@
 		formatOrderTime,
 		parseOrderTime
 	} from '../../utils/format.js'
+	import {
+		getAfterSaleByOrder
+	} from '../../api/after-sale.js'
 
 	// 待付款超时时长：与后端 OrderServiceImpl.PENDING_PAY_TIMEOUT_SECONDS（1800 秒 = 30 分钟）一致
 	const PAY_TIMEOUT_MS = 30 * 60 * 1000
@@ -143,7 +150,7 @@
 			isFinished() {
 				return Number(this.order.orderStatus) === 5
 			},
-			// 待发货（2 待确认 / 3 待发货）可申请退款
+			// 待发货（2 待确认 / 3 待发货）可申请售后
 			isRefundable() {
 				const s = Number(this.order.orderStatus)
 				return s === 2 || s === 3
@@ -186,6 +193,20 @@
 				uni.navigateTo({
 					url: '/pages/order/logistics?id=' + this.order.id
 				})
+			},
+			// 申请售后：跳售后服务页（单品售后，传订单项 ID）
+			applyAfterSale(item) {
+				uni.navigateTo({
+					url: '/pages/after-sales/apply?orderId=' + this.order.id + '&orderItemId=' + (item.orderItemId || '')
+				})
+			},
+			// 查看售后详情：按订单查售后单，跳详情页
+			goAfterSaleDetail() {
+				getAfterSaleByOrder(this.order.id).then((afterSale) => {
+					if (afterSale) {
+						uni.navigateTo({ url: '/pages/after-sales/only-refund-detail?id=' + afterSale.id })
+					}
+				}).catch(() => {})
 			}
 		}
 	}
@@ -415,5 +436,21 @@
 		border-radius: 32rpx;
 		font-size: 26rpx;
 		color: #333333;
+	}
+
+	/* 已完成状态右侧按钮组：再来一单 + 评价商品 靠右相邻 */
+	.foot-right {
+		display: flex;
+		align-items: center;
+	}
+
+	.foot-right .btn-buy-again {
+		margin-right: 20rpx;
+	}
+
+	/* 已评价：纯文本占位，与「评价商品」按钮位置对齐 */
+	.reviewed-tag {
+		font-size: 24rpx;
+		color: #999999;
 	}
 </style>

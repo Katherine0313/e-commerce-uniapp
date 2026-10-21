@@ -289,7 +289,7 @@
 	}
 
 	.tab-item {
-		padding: 24rpx 30rpx;
+		padding: 24rpx 24rpx;
 		font-size: 30rpx;
 		color: #666666;
 		position: relative;

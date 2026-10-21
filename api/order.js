@@ -1,4 +1,5 @@
-import { request } from '../utils/server-api.js'
+import { request, BASE_URL } from '../utils/server-api.js'
+import { getToken } from '../utils/token.js'
 
 // ===== 订单接口 =====
 // /api/orders/** 不在后端免登录白名单内，调用前需先登录（走 utils/auth.js 的 ensureLogin）。
@@ -66,4 +67,46 @@ export function deleteOrder(id) {
 // 确认收货，对应 PUT /api/orders/{id}/finish；已发货 → 已完成
 export function finishOrder(id) {
 	return request('/api/orders/' + id + '/finish', { method: 'PUT' })
+}
+
+// 提交订单评价，对应 POST /api/orders/{id}/review。
+// data 字段：{ productId, rating, tag, content, images }
+// 后端校验：订单已完成且未评价过，成功后订单列表里该订单 reviewed=true。
+export function submitReview(orderId, data) {
+	return request('/api/orders/' + orderId + '/review', {
+		method: 'POST',
+		data: data
+	})
+}
+
+// 上传图片/视频：用 uni.uploadFile 传本地文件，对应 POST /api/upload?type=xxx。
+// type 分流目录（review=评价晒图，after-sale=售后凭证）；不走 request 封装（multipart），返回相对路径。
+export function uploadMedia(filePath, type = 'review') {
+	return new Promise((resolve, reject) => {
+		uni.uploadFile({
+			url: BASE_URL + '/api/upload?type=' + type,
+			filePath: filePath,
+			name: 'file',
+			header: {
+				Authorization: 'Bearer ' + getToken()
+			},
+			success: (res) => {
+				let data
+				try {
+					data = JSON.parse(res.data)
+				} catch (e) {
+					reject({ message: '上传失败' })
+					return
+				}
+				if (data.success) {
+					resolve(data.data.url)
+				} else {
+					reject(data)
+				}
+			},
+			fail: (err) => {
+				reject(err)
+			}
+		})
+	})
 }

@@ -84,6 +84,24 @@
 			}
 		},
 		{
+			"path":"pages/after-sales/apply",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/after-sales/only-refund",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/after-sales/only-refund-detail",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path":"pages/search/search",
 			"style": {
 				"navigationStyle": "custom"
