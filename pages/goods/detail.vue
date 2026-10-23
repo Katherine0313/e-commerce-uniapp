@@ -328,7 +328,7 @@
 	.info-card {
 		display: flex;
 		flex-direction: column;
-		padding: 24rpx;
+		padding: 20rpx 30rpx;
 		background: #ffffff;
 	}
 
@@ -368,7 +368,7 @@
 	.assurance-row {
 		display: flex;
 		margin-top: 16rpx;
-		padding: 20rpx 14rpx;
+		padding: 20rpx 30rpx;
 		background: #ffffff;
 	}
 
@@ -391,7 +391,7 @@
 		align-items: center;
 		justify-content: space-between;
 		margin-top: 16rpx;
-		padding: 24rpx;
+		padding: 20rpx 30rpx;
 		background: #ffffff;
 	}
 
@@ -410,7 +410,7 @@
 		display: flex;
 		flex-direction: column;
 		margin-top: 16rpx;
-		padding: 24rpx;
+		padding: 20rpx 30rpx;
 		background: #ffffff;
 	}
 
@@ -457,7 +457,7 @@
 		display: flex;
 		flex-direction: column;
 		margin-top: 16rpx;
-		padding: 24rpx;
+		padding: 20rpx 0rpx;
 		background: #ffffff;
 	}
 

@@ -73,7 +73,8 @@
 			// 所以这里统一再拉一次资料，头像由后端带回自动展示，不用用户点任何东西。
 			// 失败提示已由 request 封装统一 toast，这里不重复提示
 			startLogin() {
-				ensureLogin().then(() => {
+				// force：这是用户主动触发的登录弹窗，手动退出过也要能重新登录
+				ensureLogin({ force: true }).then(() => {
 					return getProfile()
 				}).then((res) => {
 					this.store.setUserInfo({

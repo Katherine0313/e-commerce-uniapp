@@ -5,14 +5,18 @@
 
 		<!-- 用户卡片：白底圆角卡片，浮在浅灰页面背景上，与下方功能卡片统一；头像可点击更换 -->
 		<view class="user-card">
-			<!-- chooseAvatar 必须由用户点击触发，所以包在 button 里 -->
-			<button open-type="chooseAvatar" @chooseavatar="onChooseAvatar" class="avatar-btn">
+			<!-- chooseAvatar 必须由用户点击触发，所以包在 button 里；未登录时换成普通 view，点击提示登录 -->
+			<button v-if="isLogin" open-type="chooseAvatar" @chooseavatar="onChooseAvatar" class="avatar-btn">
 				<image v-if="userInfo.avatar" :src="userInfo.avatar" class="avatar"></image>
 				<view v-else class="avatar avatar-default">微</view>
 			</button>
+			<view v-else class="avatar-btn" @click="handleAvatarClick">
+				<image v-if="userInfo.avatar" :src="userInfo.avatar" class="avatar"></image>
+				<view v-else class="avatar avatar-default">微</view>
+			</view>
 			<view class="user-meta">
 				<text class="nickname">{{ userInfo.name || '微信用户' }}</text>
-				<text class="user-tip">点击头像可更换</text>
+				<text class="user-tip">{{ isLogin ? '点击头像可更换' : '点击头像可登录' }}</text>
 			</view>
 			<!-- 设置入口：右上角齿轮，进个人信息页 -->
 			<view class="setting-btn" @click="handleNav('/pages/my/personal-info')">
@@ -91,7 +95,8 @@
 		useUserStore
 	} from '../../store/user.js'
 	import {
-		ensureLogin
+		ensureLogin,
+		login
 	} from '../../utils/auth.js'
 	import {
 		getProfile,
@@ -210,6 +215,10 @@
 		computed: {
 			userInfo() {
 				return this.store.userInfo
+			},
+			// 手动退出后 token 被清掉，头像区切换成「点击登录」形态
+			isLogin() {
+				return this.store.isLogin
 			}
 		},
 		onShow() {
@@ -268,6 +277,22 @@
 				uni.showToast({
 					title: '商品详情开发中',
 					icon: 'none'
+				})
+			},
+			// 未登录点头像：直接静默登录并刷新资料，登录后头像区自动切回 chooseAvatar 按钮
+			handleAvatarClick() {
+				login().then(() => getProfile()).then((profile) => {
+					this.store.setUserInfo({
+						id: profile.id,
+						name: profile.name,
+						avatar: profile.avatar
+					})
+					uni.showToast({
+						title: '登录成功',
+						icon: 'success'
+					})
+				}).catch(() => {
+					// 登录失败提示已在 request 封装里统一处理
 				})
 			},
 			// 换头像：chooseAvatar 给的是本地临时路径，必须上传后端换成可访问 URL
