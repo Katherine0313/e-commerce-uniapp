@@ -21,7 +21,7 @@
 
 ## 当前阶段
 
-阶段 25：多租户沙箱 C 端 shopId 支持（完成）
+阶段 26：个人信息页 + 商品收藏（完成）
 
 ## 各阶段
 
@@ -223,6 +223,14 @@
 - [✓] `api/login.js` 的 `wxLogin(code, shopId)` 加 shopId 参数
 - [✓] `utils/auth.js` 的 `ensureLogin` 登录传 `SHOP_ID`（后端签进 user 令牌，按店铺隔离下单/购物车/地址）
 - **状态：** complete（扫码进店/分享链接带 shopId 暂不做，当前 SHOP_ID 写死常量）
+
+### 阶段 26：个人信息页 + 商品收藏（2026-10-23）
+- [✓] 「我的」页用户卡片右上角齿轮 → `/pages/my/personal-info`
+- [✓] `pages/my/personal-info.vue`：头像 `chooseAvatar` 上传、昵称失焦/回车保存（`POST /api/user/name`）、未绑定手机号走 `getPhoneNumber` → `POST /api/user/phone`、注册时间只读；数据来自 `GET /api/user/profile`，改完同步 Pinia
+- [✓] 商品详情页假收藏（`uni.setStorageSync('favoriteIds')`）换成后端接口：已登录 `checkFavorite` 回显，点击 `ensureLogin` 静默登录后 `addFavorite/removeFavorite`，`favoriteLoading` 防连点
+- [✓] 新增 `api/favorite.js`（列表/check/收藏/取消）
+- [✓] 新增 `pages/my/favorites.vue` + `pages.json` 注册：收藏列表/取消收藏/空态，下架商品打「已下架」；「我的」页「收藏与浏览」入口接通（名称保留，本期只做收藏）
+- **状态：** complete（浏览记录未做）
 
 ## 关键问题
 

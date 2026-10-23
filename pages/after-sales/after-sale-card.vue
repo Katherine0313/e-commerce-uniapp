@@ -1,8 +1,11 @@
 <template>
 	<view class="after-sale-card" @click="$emit('click', afterSale)">
-		<!-- 头部：售后类型 + 状态 -->
+		<!-- 头部：售后类型 + 原订单号 + 状态 -->
 		<view class="card-head">
-			<text class="type">{{ afterSale.afterSaleTypeDesc }}</text>
+			<view class="head-left">
+				<text class="type">{{ afterSale.afterSaleTypeDesc }}</text>
+				<text v-if="afterSale.orderNo" class="order-no">订单号 {{ afterSale.orderNo }}</text>
+			</view>
 			<text class="status">{{ afterSale.statusDesc }}</text>
 		</view>
 		<!-- 商品明细 -->
@@ -62,8 +65,16 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		height: 80rpx;
+		padding: 16rpx 0;
 		border-bottom: 1rpx solid #f0f0f0;
+	}
+
+	/* 左侧两行：售后类型 + 原订单号 */
+	.head-left {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		min-width: 0;
 	}
 
 	.type {
@@ -72,7 +83,19 @@
 		font-weight: bold;
 	}
 
+	/* 原订单号：小字灰色，帮助用户对上具体是哪一单；过长省略 */
+	.order-no {
+		margin-top: 4rpx;
+		font-size: 22rpx;
+		color: #999999;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
 	.status {
+		flex-shrink: 0;
+		margin-left: 16rpx;
 		font-size: 26rpx;
 		color: #FF6700;
 	}

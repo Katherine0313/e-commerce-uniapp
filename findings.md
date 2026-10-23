@@ -483,6 +483,20 @@
 - 新建 `pages/order/logistics.vue`：快递卡片（📮 公司+单号+复制）+ 轨迹时间线（倒序、最新高亮）。
 - 物流轨迹是假数据（参考旧 Node 后端的 `getLogistics`），真实物流 API（微信物流助手）未接，后端 `task_plan` 挂着待办。
 
+### 个人信息页 + 商品收藏（2026-10-23）
+
+**个人信息页**
+- 「我的」页用户卡片右上角加齿轮（`uni-icons type="gear"`），跳 `/pages/my/personal-info`；卡片 `position: relative`，`user-meta` 留右内边距，昵称过长不压图标。
+- `pages/my/personal-info.vue`：进页 `ensureLogin()` → `GET /api/user/profile`；头像 `open-type="chooseAvatar"` → `uploadAvatar`；昵称失焦/回车 → `POST /api/user/name`（空值回退、未改动不发请求、`savingName` 防 confirm+blur 重复提交）；未绑定手机号显示「去绑定」，`open-type="getPhoneNumber"` → `POST /api/user/phone`；注册时间只读，兼容 Jackson 3 的字符串/数组两种序列化。
+- 手机号显示 `user.phone`（账号手机号），不是 `orders.phone`（订单收货人快照，可能不是本人的、一单一号、且跨服务）。
+
+**商品收藏**
+- 后端 product-service `product_favorites`（`shop_id + user_id + product_id` 唯一键），接口：`GET /api/favorites`、`GET /api/favorites/check?productId=`、`POST/DELETE /api/favorites/{productId}`；需 user 令牌。
+- 详情页 `pages/goods/detail.vue`：删掉 `uni.setStorageSync('favoriteIds')` 假收藏；已登录 `checkFavorite` 回显；点击先 `ensureLogin()`（静默）再增删，`favoriteLoading` 防连点，成功后才翻转星标。
+- 新增 `pages/my/favorites.vue`：`ensureLogin` → 列表；卡片展示图/名称/售价/划线价，右上角星标取消收藏（成功后本地移除）；空态「去逛逛」；下架商品打「已下架」但仍可点进详情（后端列表不按 `listing_status` 过滤）。
+- 「我的」页「收藏与浏览」入口接通 `/pages/my/favorites`，名称按用户要求保留，本期只做收藏（浏览记录未做）。
+- 商品图统一用 `utils/format.js` 的 `goodsImgUrl` 补 `BASE_URL`，空图回退本地占位图。
+
 ## 技术决策
 
 | 决策 | 理由 |

@@ -101,6 +101,8 @@
 	import { BASE_URL } from '../../utils/server-api.js'
 	import { getProductDetail } from '../../api/product.js'
 	import { addToCart } from '../../api/cart.js'
+	import { checkFavorite, addFavorite, removeFavorite } from '../../api/favorite.js'
+	import { ensureLogin } from '../../utils/auth.js'
 	import { useUserStore } from '../../store/user.js'
 	import { useCartStore } from '../../store/cart.js'
 
@@ -114,7 +116,8 @@
 				selectedInsurance2: false, // 一年意外保
 				selectedBattery: false, // 电池无忧
 				adding: false, // 正在请求加购接口，按钮置灰防重复点
-				favorited: false, // 本地假收藏状态（存 Storage，不落库）
+				favorited: false, // 是否已收藏（后端账号级数据）
+				favoriteLoading: false, // 收藏请求中，防重复点击
 				showLoginPopup: false, // 登录弹窗显隐
 				store: useUserStore() // 登录态，加购/购买前先判断
 			}
@@ -125,8 +128,8 @@
 				return
 			}
 			this.loadDetail(id)
-			// 本地假收藏：进页面就按 id 查一次是否已收藏
-			this.favorited = this.isFavorite(id)
+			// 已登录才查收藏态；未登录点收藏时会静默登录
+			this.loadFavorite(id)
 		},
 		computed: {
 			// 购物车角标件数：读全局 cart store，加购后自动同步到详情页底部购物车 icon
@@ -193,32 +196,40 @@
 			setQuantity(n) {
 				this.quantity = n
 			},
-			// 读本地假收藏 id 列表
-			getFavoriteIds() {
-				return uni.getStorageSync('favoriteIds') || []
-			},
-			// 是否已收藏（本地假收藏，只存 Storage 不落库）
-			isFavorite(id) {
-				return this.getFavoriteIds().indexOf(String(id)) !== -1
-			},
-			// 点收藏：toggle 本地收藏态，图标高亮/灰掉
-			toggleFavorite() {
-				const id = String(this.product.id)
-				if (!id || id === 'undefined') {
+			// 查收藏态：未登录不查，点收藏时再静默登录
+			loadFavorite(id) {
+				if (!this.store.isLogin) {
 					return
 				}
-				const ids = this.getFavoriteIds()
-				const idx = ids.indexOf(id)
-				if (idx !== -1) {
-					ids.splice(idx, 1)
-					this.favorited = false
-					uni.showToast({ title: '已取消收藏', icon: 'none' })
-				} else {
-					ids.push(id)
-					this.favorited = true
-					uni.showToast({ title: '已收藏', icon: 'success' })
+				checkFavorite(id).then((flag) => {
+					this.favorited = !!flag
+				}).catch(() => {})
+			},
+			// 点收藏：未登录先静默登录，再按当前状态调收藏/取消收藏
+			toggleFavorite() {
+				if (this.favoriteLoading) {
+					return
 				}
-				uni.setStorageSync('favoriteIds', ids)
+				const id = this.product.id
+				if (!id) {
+					return
+				}
+				this.favoriteLoading = true
+				ensureLogin()
+					.then(() => this.favorited ? removeFavorite(id) : addFavorite(id))
+					.then(() => {
+						this.favorited = !this.favorited
+						uni.showToast({
+							title: this.favorited ? '已收藏' : '已取消收藏',
+							icon: 'none'
+						})
+					})
+					.catch(() => {
+						// 错误提示已在 request 封装里统一处理
+					})
+					.finally(() => {
+						this.favoriteLoading = false
+					})
 			},
 			// 点购物车：切到购物车 tab（switchTab 只能切 tab 页，会关掉当前详情页）
 			goCart() {

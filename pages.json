@@ -8,6 +8,7 @@
 			}
 		},
 	"pages":[
+		// ===== 首页 / 分类 / 购物车（tabBar 页，index 必须放第一个作为启动页）=====
 		{
 			"path":"pages/index/index",
 			"style": {
@@ -29,8 +30,70 @@
 				"navigationStyle": "custom"
 			}
 		},
+
+		// ===== 商品 / 搜索 =====
+		{
+			"path":"pages/goods/detail",
+			"style": {
+				"navigationBarTitleText": "商品详情",
+				"navigationBarTextStyle": "black",
+				"navigationBarBackgroundColor": "#ffffff"
+			}
+		},
+		{
+			"path":"pages/search/search",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+
+		// ===== 我的 =====
 		{
 			"path":"pages/my/my",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/personal-info",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/address",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/address-edit",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/favorites",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/about-us",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/feedback",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+
+		// ===== 订单 =====
+		{
+			"path":"pages/order/list",
 			"style": {
 				"navigationStyle": "custom"
 			}
@@ -48,12 +111,6 @@
 			}
 		},
 		{
-			"path":"pages/order/list",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
 			"path":"pages/order/pending-pay",
 			"style": {
 				"navigationStyle": "custom"
@@ -66,13 +123,13 @@
 			}
 		},
 		{
-			"path":"pages/order/logistics",
+			"path":"pages/order/pending-receive",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/order/pending-receive",
+			"path":"pages/order/logistics",
 			"style": {
 				"navigationStyle": "custom"
 			}
@@ -83,6 +140,8 @@
 				"navigationStyle": "custom"
 			}
 		},
+
+		// ===== 售后 =====
 		{
 			"path":"pages/after-sales/apply",
 			"style": {
@@ -120,41 +179,15 @@
 			}
 		},
 		{
-			"path":"pages/after-sales/return-tracking",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
 			"path":"pages/after-sales/exchange-detail",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/search/search",
+			"path":"pages/after-sales/return-tracking",
 			"style": {
 				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/my/address",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/my/address-edit",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/goods/detail",
-			"style": {
-				"navigationBarTitleText": "商品详情",
-				"navigationBarTextStyle": "black",
-				"navigationBarBackgroundColor": "#ffffff"
 			}
 		}
 	],

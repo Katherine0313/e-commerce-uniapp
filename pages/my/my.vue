@@ -14,6 +14,10 @@
 				<text class="nickname">{{ userInfo.name || '微信用户' }}</text>
 				<text class="user-tip">点击头像可更换</text>
 			</view>
+			<!-- 设置入口：右上角齿轮，进个人信息页 -->
+			<view class="setting-btn" @click="handleNav('/pages/my/personal-info')">
+				<uni-icons type="gear" size="22" color="#999999"></uni-icons>
+			</view>
 		</view>
 
 		<!-- VIP 会员卡（占位）：权益、开通流程都还没做，先占住位置，点击走「功能开发中」提示 -->
@@ -139,7 +143,7 @@
 						text: '待评价',
 						fontIcon: '',
 						icon: 'compose',
-						url: '',
+						url: '/pages/order/list?status=5',
 						badge: 0
 					},
 					{
@@ -180,7 +184,7 @@
 						text: '收藏与浏览',
 						fontIcon: '',
 						icon: 'star',
-						url: ''
+						url: '/pages/my/favorites'
 					},
 					{
 						text: '收货地址',
@@ -192,13 +196,13 @@
 						text: '意见反馈',
 						fontIcon: '',
 						icon: 'chat',
-						url: ''
+						url: '/pages/my/feedback'
 					},
 					{
 						text: '关于我们',
 						fontIcon: '',
 						icon: 'info',
-						url: ''
+						url: '/pages/my/about-us'
 					}
 				]
 			}
@@ -301,12 +305,21 @@
 
 	/* 用户卡片：白底圆角卡片，与下方功能卡片同一套间距/圆角，去掉大面积橙色 */
 	.user-card {
+		position: relative;
 		display: flex;
 		align-items: center;
 		margin: 20rpx 20rpx 0;
 		padding: 32rpx 24rpx;
 		background: #ffffff;
 		border-radius: 16rpx;
+	}
+
+	/* 右上角设置齿轮：绝对定位到卡片右上角，点击进个人信息页 */
+	.setting-btn {
+		position: absolute;
+		top: 52rpx;
+		right: 22rpx;
+		padding: 12rpx;
 	}
 
 	/* 头像按钮：去掉 button 默认的边框、背景和内边距，只当点击区域用 */
@@ -344,6 +357,8 @@
 		display: flex;
 		flex-direction: column;
 		margin-left: 28rpx;
+		/* 给右上角齿轮留出位置，昵称过长时不会压到图标 */
+		padding-right: 56rpx;
 	}
 
 	.nickname {

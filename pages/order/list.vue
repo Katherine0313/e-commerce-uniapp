@@ -87,7 +87,7 @@
 		ensureLogin
 	} from '../../utils/auth.js'
 	import OrderCard from './order-card.vue'
-	import AfterSaleCard from './after-sale-card.vue'
+	import AfterSaleCard from '../after-sales/after-sale-card.vue'
 	import {
 		listAfterSales
 	} from '../../api/after-sale.js'

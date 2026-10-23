@@ -1,5 +1,30 @@
 # 进度日志
 
+## 会话 25：2026-10-23（个人信息页 + 商品收藏）
+
+### 当前状态
+「我的」页齿轮入口 → 个人信息页已完成（头像/昵称/手机号/注册时间）；商品收藏由本地 Storage 假收藏改为后端落库，新增收藏列表页。
+
+### 已执行操作
+- 后端（product-service）：`product_favorites` 表 + `FavoriteController/Service/Mapper`，`/api/favorites` 列表/check/收藏/取消 4 接口；`shop_id+user_id+product_id` 唯一键幂等，取消物理删除，下架商品保留并下发 `status`；网关补 `/api/favorites/**` 路由。
+- 前端：新增 `api/favorite.js`；`pages/goods/detail.vue` 收藏改走接口（已登录 `checkFavorite` 回显，点击 `ensureLogin` 后增删，`favoriteLoading` 防连点）；新增 `pages/my/favorites.vue`（列表/取消/空态/下架标记）并注册；「我的」页「收藏与浏览」入口接通。
+- 个人信息页：`pages/my/personal-info.vue`（`getProfile` 回显，头像 `chooseAvatar` 上传、昵称 `updateName`、手机号 `getPhoneNumber` + `bindPhone`、注册时间只读）；「我的」页用户卡片右上角加齿轮入口。
+
+### 改动的文件
+| 文件 | 改动 |
+|---|---|
+| `api/favorite.js` | 新建：收藏 4 接口 |
+| `pages/goods/detail.vue` | Storage 假收藏换真接口 + 静默登录 |
+| `pages/my/favorites.vue` | 新建：收藏列表页 |
+| `pages/my/personal-info.vue` | 新建：个人信息页 |
+| `pages/my/my.vue` | 齿轮入口 + 「收藏与浏览」接通 |
+| `pages.json` | 注册 `pages/my/favorites` |
+
+### 错误
+| 错误 | 解决方案 |
+|------|---------|
+| （暂无） | |
+
 ## 会话 24：2026-10-20（多租户沙箱 C 端 shopId）
 
 ### 当前状态

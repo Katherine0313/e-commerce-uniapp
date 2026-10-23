@@ -33,6 +33,11 @@
 	import CategoryPanel from './component/category-panel.vue'
 	// 热门推荐
 	import HotPanel from './component/hot-panel.vue'
+	// 分享卡片统一文案：胶囊菜单的「转发」「分享到朋友圈」「收藏」共用
+	const SHARE_TITLE = '杰米多多小店｜全新正品3C数码'
+	// 分享封面：商品通用数码图，已按微信分享卡片 5:4 裁切（jpg，兼容性最好）
+	const SHARE_IMAGE = '/static/image/share-3c.jpg'
+
 	export default {
 		components: {
 			CategoryPanel,
@@ -48,6 +53,33 @@
 			// 滚动区高度 = 整屏 - 导航栏占位高度，必须是确定值（下拉刷新依赖它）
 			scrollHeight() {
 				return 'calc(100vh - ' + this.navHeight + 'px)'
+			}
+		},
+		// 胶囊菜单「转发给朋友」：定义了它，胶囊里的「转发」自动可用
+		onShareAppMessage() {
+			return {
+				title: SHARE_TITLE,
+				imageUrl: SHARE_IMAGE,
+				// 分享当前页（首页无参数）
+				path: '/pages/index/index'
+			}
+		},
+		// 胶囊菜单「分享到朋友圈」：定义了它，朋友圈分享卡片自动开启
+		onShareTimeline() {
+			return {
+				title: SHARE_TITLE,
+				imageUrl: SHARE_IMAGE,
+				// 无额外查询参数；页面路径由微信自动取当前页
+				query: ''
+			}
+		},
+		// 胶囊菜单「收藏」：定义了它，胶囊里的「收藏」自动可用
+		onAddToFavorites() {
+			return {
+				title: SHARE_TITLE,
+				imageUrl: SHARE_IMAGE,
+				// 收藏后再次打开时的页面参数（首页无需携带）
+				query: ''
 			}
 		},
 		methods: {

@@ -18,8 +18,8 @@
 			</view>
 		</view>
 
-		<!-- 模块2：退货方式 -->
-		<view class="row-card">
+		<!-- 模块2：退货方式（自行寄回点击打开回填物流弹窗；上门取件无需回填） -->
+		<view class="row-card" @click="handleReturnWayClick">
 			<text class="row-label">{{ returnWayText }}</text>
 			<view class="arrow"></view>
 		</view>
@@ -75,8 +75,11 @@
 				<picker mode="selector" :range="courierNames" @change="onCourierChange">
 					<view class="popup-item">
 						<text class="popup-label">快递公司</text>
-						<text :class="{ placeholder: !courier }">{{ courierName || '请选择' }}</text>
+						<text :class="{ placeholder: !courier }">{{ courierName }}</text>
+						<view class="choose">
+						<text>请选择</text>
 						<view class="arrow"></view>
+						</view>
 					</view>
 				</picker>
 				<view class="popup-item">
@@ -196,6 +199,17 @@
 			},
 			contactMerchant() {
 				uni.showToast({ title: '联系商家待接入', icon: 'none' })
+			},
+			// 点退货方式行：上门取件由商家安排，不弹回填物流；其余情况打开弹窗
+			handleReturnWayClick() {
+				if (this.detail && this.detail.returnWay === 'pickup') {
+					uni.showToast({
+						title: '上门取件无需回填物流单号',
+						icon: 'none'
+					})
+					return
+				}
+				this.openTracking()
 			},
 			openTracking() {
 				this.courier = ''
@@ -510,6 +524,11 @@
 		justify-content: space-between;
 		height: 100rpx;
 		border-bottom: 1rpx solid #f5f5f5;
+	}
+	.popup-item .choose{
+		display:flex;
+		gap:20rpx;
+		align-items:center;
 	}
 
 	.popup-label {
