@@ -15,6 +15,8 @@ import FlyToCart from './components/fly-to-cart.vue'
 import QuantityStepper from './components/quantity-stepper.vue'
 // 收货地址弹窗（列表 + 新增/编辑），下单/我的等页面共用
 import AddressPopup from './components/address-popup.vue'
+// 全局悬浮 AI 客服（右侧中间悬浮球 + 聊天面板）
+import FloatingChat from './components/floating-chat/floating-chat.vue'
 // #ifndef VUE3
 import Vue from 'vue'
 import './uni.promisify.adaptor'
@@ -27,6 +29,7 @@ Vue.component('LoginPopup', LoginPopup)
 Vue.component('FlyToCart', FlyToCart)
 Vue.component('QuantityStepper', QuantityStepper)
 Vue.component('AddressPopup', AddressPopup)
+Vue.component('FloatingChat', FloatingChat)
 App.mpType = 'app'
 const app = new Vue({
 	...App
@@ -60,6 +63,8 @@ export function createApp() {
 	app.component('QuantityStepper', QuantityStepper)
 	// 全局注册收货地址弹窗组件
 	app.component('AddressPopup', AddressPopup)
+	// 全局注册悬浮 AI 客服组件
+	app.component('FloatingChat', FloatingChat)
 	// 注册 uview-plus 组件库（u-switch 等）
 	app.use(uviewPlus)
 	// 创建 Pinia 实例并注册，统一管理全局状态

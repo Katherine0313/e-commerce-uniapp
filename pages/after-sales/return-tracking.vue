@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="page">
 		<CustomNavbar title="回填物流单号" :show-back="true" />
 

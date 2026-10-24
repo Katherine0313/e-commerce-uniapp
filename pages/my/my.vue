@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="page">
 		<!-- 自定义顶部导航栏：tabBar 页没有上一级，只留标题 -->
 		<CustomNavbar />
@@ -172,7 +173,7 @@
 					{
 						text: '专属客服',
 						icon: 'headphones',
-						url: ''
+						url: '/pages/my/customer-service'
 					}
 				],
 				// 功能入口：url 留空的（如优惠券/积分）点击时给「功能开发中」占位提示

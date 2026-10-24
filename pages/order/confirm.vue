@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="page">
 		<!-- 自定义导航栏：二级页，带返回按钮 -->
 		<CustomNavbar title="提交订单" :show-back="true" />

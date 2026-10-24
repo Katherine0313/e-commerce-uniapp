@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="page">
 		<CustomNavbar title="搜索" :show-back="true" />
 

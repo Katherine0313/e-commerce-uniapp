@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="content">
 		<!-- 自定义顶部导航栏：橙色底 + 搜索框。留在滚动区外，固定不动 -->
 		<CustomNavbar :showSearch="true" @heightChange="handleNavHeightChange" @search="goSearch" />

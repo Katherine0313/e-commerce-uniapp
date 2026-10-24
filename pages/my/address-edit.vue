@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="page">
 		<CustomNavbar :title="editingId ? '编辑地址' : '新增地址'" :show-back="true" />
 

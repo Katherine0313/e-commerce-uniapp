@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="page">
 		<CustomNavbar title="收货地址" :show-back="true" />
 

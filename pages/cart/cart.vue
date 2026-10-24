@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="page">
 		<!-- 自定义顶部导航栏：tabBar 页没有上一级，只留标题 -->
 		<CustomNavbar />

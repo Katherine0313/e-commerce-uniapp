@@ -96,6 +96,12 @@
 				"navigationStyle": "custom"
 			}
 		},
+		{
+			"path":"pages/my/customer-service",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
 
 		// ===== 订单 =====
 		{

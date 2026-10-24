@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="page">
 		<!-- 自定义导航栏：标题固定「我的订单」 -->
 		<CustomNavbar title="我的订单" :show-back="true" />

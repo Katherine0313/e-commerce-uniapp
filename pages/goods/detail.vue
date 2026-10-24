@@ -1,4 +1,5 @@
 <template>
+	<FloatingChat />
 	<view class="page">
 		<!-- 页面内容：随页面原生滚动，底部固定栏用 fixed 盖在最上层 -->
 		<view class="content">
