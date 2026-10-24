@@ -82,9 +82,6 @@
 			</view>
 		</view>
 
-		<!-- 好物推荐：直接用首页/购物车那套「猜你喜欢」，点商品抛 id 交页面处理 -->
-		<Guess @select="handleGoodsSelect" />
-
 		<!-- 自定义底部导航栏 -->
 		<CustomTabBar />
 	</view>
@@ -178,12 +175,12 @@
 						url: ''
 					}
 				],
-				// 功能入口，图标规则同上，url 同样先留空
+				// 功能入口：url 留空的（如优惠券/积分）点击时给「功能开发中」占位提示
 				funcList: [{
 						text: '物流查询',
 						fontIcon: 'icon-wuliuchaxun',
 						icon: 'map-pin',
-						url: ''
+						url: '/pages/my/logistics'
 					},
 					{
 						text: '收藏与浏览',
@@ -270,13 +267,6 @@
 				}
 				uni.navigateTo({
 					url
-				})
-			},
-			// 好物推荐点商品：同购物车页，后续接商品详情弹窗
-			handleGoodsSelect() {
-				uni.showToast({
-					title: '商品详情开发中',
-					icon: 'none'
 				})
 			},
 			// 未登录点头像：直接静默登录并刷新资料，登录后头像区自动切回 chooseAvatar 按钮
