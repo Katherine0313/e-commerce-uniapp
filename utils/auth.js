@@ -10,6 +10,10 @@ export function isManualLogout(){
 	return !!uni.getStorageSync(MANUAL_LOGOUT_KEY)
 }
 
+// 进行中的登录 Promise：首页延后的静默登录和用户点加购可能同时触发，
+// 复用同一次请求，避免并发 wxlogin、重复写 token
+let loginPromise = null
+
 // 需要登录的操作（加购、下单）前调用：已登录直接放行，未登录则静默登录。
 // uni.login 只换 code，不弹授权框，用户全程无感；
 // 需要用户主动操作的只有头像（chooseAvatar）和昵称（nickname 输入框）。
@@ -27,13 +31,21 @@ export async function ensureLogin(options = {}){
 		throw err
 	}
 
-	const { code } = await uni.login({ provider: 'weixin' })
-	const res = await wxLogin(code, SHOP_ID)
-	store.setToken(res.token)
-	store.setUserInfo({ id: res.id, name: res.name, avatar: res.avatar })
-	// 重新登录成功，清掉手动退出标记，恢复自动登录
-	uni.removeStorageSync(MANUAL_LOGOUT_KEY)
-	return true
+	if(!loginPromise){
+		loginPromise = (async () => {
+			const { code } = await uni.login({ provider: 'weixin' })
+			const res = await wxLogin(code, SHOP_ID)
+			store.setToken(res.token)
+			store.setUserInfo({ id: res.id, name: res.name, avatar: res.avatar })
+			// 重新登录成功，清掉手动退出标记，恢复自动登录
+			uni.removeStorageSync(MANUAL_LOGOUT_KEY)
+			return true
+		})().finally(() => {
+			// 无论成功失败都释放锁，失败后下次操作还能重试
+			loginPromise = null
+		})
+	}
+	return loginPromise
 }
 
 // 主动登录：用户点「微信登录」时调用，清除手动退出标记后重新登录

@@ -15,12 +15,12 @@
 				<CustomSwiper />
 
 				<!-- 前台分类面板：手机 / 笔记本 / 平板 / 相机 / 手表 / 耳机 -->
-				<CategoryPanel ref="categoryPanel" @select="handleCategorySelect" />
+				<CategoryPanel ref="categoryPanel" :list="categories" @select="handleCategorySelect" />
 				<!-- 热门推荐：点商品图跳商品详情页 -->
 				<HotPanel @select="handleProductSelect" />
 
 				<!-- 猜你喜欢：全局注册，点商品图复用 handleProductSelect 跳详情 -->
-				<Guess ref="guess" @select="handleProductSelect" />
+				<Guess ref="guess" :list="recommend" @select="handleProductSelect" />
 			</view>
 		</scroll-view>
 
@@ -37,6 +37,7 @@
 	import {
 		BASE_URL
 	} from '../../utils/server-api.js'
+	import { getHome } from '../../api/home.js'
 	// 分享卡片统一文案：胶囊菜单的「转发」「分享到朋友圈」「收藏」共用
 	const SHARE_TITLE = '杰米多多小店｜全新正品3C数码'
 	// 分享封面：放后端 /image/share/，不要把图片打进小程序主包
@@ -51,6 +52,9 @@
 			return {
 				refreshing: false, // 滚动区下拉刷新状态，由 scroll-view 的 refresher-triggered 绑定
 				navHeight: 0, // 导航栏总高度（px），由 CustomNavbar 算好后抛上来
+				// 聚合接口数据：null 表示还没回来（子组件显示骨架），[] 表示已加载但为空
+				categories: null,
+				recommend: null
 			}
 		},
 		computed: {
@@ -86,7 +90,22 @@
 				query: ''
 			}
 		},
+		onLoad() {
+			// 页面创建即发请求，比等子组件 mounted 再各发一次更早，也只发一个请求
+			this.loadHome()
+		},
 		methods: {
+			// 拉首页聚合数据（分类 + 猜你喜欢），返回 Promise 供下拉刷新等待
+			loadHome() {
+				return getHome(10).then((data) => {
+					this.categories = data.categories || []
+					this.recommend = data.recommend || []
+				}).catch(() => {
+					// 请求封装已统一提示；标记为空，避免骨架屏一直转
+					if (this.categories === null) this.categories = []
+					if (this.recommend === null) this.recommend = []
+				})
+			},
 			// 接导航栏抛上来的高度，用于算滚动区高度
 			handleNavHeightChange(height) {
 				this.navHeight = height
@@ -95,13 +114,12 @@
 			goSearch() {
 				uni.navigateTo({ url: '/pages/search/search' })
 			},
-			// 下拉刷新：重拉分类和猜你喜欢，并至少转圈 600ms 再收起，避免动画一闪而过
+			// 下拉刷新：重拉首页聚合数据，并至少转圈 600ms 再收起，避免动画一闪而过
 			onRefresh() {
 				this.refreshing = true
 				Promise.all([
-					this.$refs.categoryPanel.fetchCategories(),
-					this.$refs.guess.fetchRecommend(),
-					new Promise((resolve) => setTimeout(resolve, 2000))
+					this.loadHome(),
+					new Promise((resolve) => setTimeout(resolve, 600))
 				]).then(() => {
 					this.refreshing = false
 				})

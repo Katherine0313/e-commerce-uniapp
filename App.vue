@@ -12,10 +12,12 @@
 		},
 		onLaunch: function() {
 			console.log('App Launch')
-			// 免登录：启动即静默登录（uni.login 换 openid），用户无感，不弹任何授权框；
-			// 失败不阻塞，后续需要登录的操作（加购/下单）会再触发 ensureLogin 兜底；
-			// 登录成功后拉一次购物车件数，初始化底部购物车角标
-			ensureLogin().then(() => useCartStore().refresh()).catch(() => {})
+			// 首屏优先：登录和购物车角标都延后执行，不和首页的分类/推荐接口抢带宽。
+			// 角标先用本地缓存立即显示（store 初始化时读取），登录成功后静默刷新；
+			// 用户提前点加购/下单时，ensureLogin 内部有并发锁，不会重复登录
+			setTimeout(() => {
+				ensureLogin().then(() => useCartStore().refresh()).catch(() => {})
+			}, 1000)
 		},
 		onShow: function() {
 			console.log('App Show')

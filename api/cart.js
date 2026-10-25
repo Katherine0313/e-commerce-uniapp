@@ -22,6 +22,11 @@ export function getCart() {
 	return request('/api/cart', { method: 'GET' })
 }
 
+// 购物车商品总件数，对应 GET /api/cart/count（首页角标用，不拉完整列表）
+export function getCartCount() {
+	return request('/api/cart/count', { method: 'GET' })
+}
+
 // 更新数量，对应 PUT /api/cart/{productId}；quantity 最小 1，由后端兜底
 export function updateQuantity(productId, quantity) {
 	return request('/api/cart/' + productId, {

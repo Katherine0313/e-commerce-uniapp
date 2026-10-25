@@ -1,6 +1,6 @@
 <template>
-	<!-- 前台分类面板：一级分类宫格，来自后端 GET /api/categories，点击抛出分类项，跳转交给页面处理 -->
-	<view class="category-panel">
+	<!-- 前台分类面板：一级分类宫格。首页由聚合接口传入 list，其他页面不传则组件自己请求 -->
+	<view class="category-panel" v-if="!showSkeleton">
 		<view
 			v-for="item in categories"
 			:key="item.id"
@@ -11,6 +11,13 @@
 			<text class="category-name">{{ item.name }}</text>
 		</view>
 	</view>
+	<!-- 骨架屏：接口未返回时先占好 6 个格子的位置，避免数据回来时页面跳动 -->
+	<view class="category-panel" v-else>
+		<view class="category-item" v-for="n in 6" :key="n">
+			<view class="category-icon skeleton-block"></view>
+			<view class="category-name skeleton-line"></view>
+		</view>
+	</view>
 </template>
 
 <script>
@@ -19,14 +26,33 @@
 
 	export default {
 		name: 'CategoryPanel',
+		props: {
+			// 首页聚合接口传入的一级分类：undefined=没传（自请求），null=加载中，数组=已加载
+			list: { type: Array, default: undefined }
+		},
 		data() {
 			return {
-				// 一级父分类列表：来自 GET /api/categories（树形，每个元素就是一级父分类）
-				categories: []
+				// 自请求时的一级父分类列表（购物车等页面单独使用组件时）
+				internalCategories: [],
+				selfLoaded: false
+			}
+		},
+		computed: {
+			// 外部传入优先，否则用自请求数据
+			categories() {
+				return this.list !== undefined ? (this.list || []) : this.internalCategories
+			},
+			// 没数据且仍在加载时显示骨架
+			showSkeleton() {
+				if (this.categories.length > 0) return false
+				return this.list === undefined ? !this.selfLoaded : this.list === null
 			}
 		},
 		mounted() {
-			this.fetchCategories()
+			// 首页会传 list，不再重复请求
+			if (this.list === undefined) {
+				this.fetchCategories()
+			}
 		},
 		methods: {
 			// 拉一级分类：后端 categories 表 parentId 为 null 的是顶级分类，名称和图片都用后端的
@@ -34,9 +60,11 @@
 			fetchCategories() {
 				return getCategories().then((list) => {
 					// 后端返回树形列表，每个元素就是一级父分类
-					this.categories = list || []
+					this.internalCategories = list || []
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
+				}).finally(() => {
+					this.selfLoaded = true
 				})
 			},
 			// 分类图：后端 image 是 /image/category/xxx.png 相对路径，小程序把开头的 / 当包内路径，需补 BASE_URL
@@ -81,5 +109,17 @@
 		font-size: 26rpx;
 		line-height: 1;
 		color: #333333;
+	}
+
+	/* 骨架占位：和真实分类图/文字同尺寸，数据回来不跳位置 */
+	.skeleton-block {
+		background: #f0f0f0;
+	}
+
+	.skeleton-line {
+		width: 56rpx;
+		height: 24rpx;
+		background: #f0f0f0;
+		border-radius: 8rpx;
 	}
 </style>

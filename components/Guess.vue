@@ -27,23 +27,39 @@
 
 	export default {
 		name: 'Guess',
+		props: {
+			// 首页聚合接口传入的推荐列表：undefined=没传（自请求），null=加载中，数组=已加载
+			list: { type: Array, default: undefined }
+		},
 		data() {
 			return {
-				// 推荐商品列表：来自 GET /api/products/recommend，字段对齐后端 ProductVO（id/name/image/price）
-				products: []
+				// 自请求时的推荐列表（购物车等页面单独使用组件时）
+				internalProducts: [],
+				selfLoaded: false
+			}
+		},
+		computed: {
+			// 外部传入优先，否则用自请求数据
+			products() {
+				return this.list !== undefined ? (this.list || []) : this.internalProducts
 			}
 		},
 		mounted() {
-			this.fetchRecommend()
+			// 首页会传 list，不再重复请求
+			if (this.list === undefined) {
+				this.fetchRecommend()
+			}
 		},
 		methods: {
 			// 拉猜你喜欢推荐：免登录，未登录后端走销量热门兜底
 			// 返回 Promise，供页面下拉刷新时等请求结束
 			fetchRecommend() {
 				return getRecommend(10).then((list) => {
-					this.products = list || []
+					this.internalProducts = list || []
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
+				}).finally(() => {
+					this.selfLoaded = true
 				})
 			},
 			// 商品主图：后端 image 是 /image/upload/N.webp 相对路径，小程序把开头的 / 当包内路径，需补 BASE_URL；没有则回退后端同命名商品图
