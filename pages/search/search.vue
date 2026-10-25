@@ -19,7 +19,7 @@
 		<!-- 搜索结果：两列商品网格 -->
 		<view v-if="products.length" class="goods-grid">
 			<view class="goods-card" v-for="item in products" :key="item.id" @click="goDetail(item.id)">
-				<image class="goods-img" :src="goodsImgUrl(item.image, item.id)" mode="aspectFill"></image>
+				<image lazy-load class="goods-img" :src="goodsImgUrl(item.image, item.id)" mode="aspectFill"></image>
 				<view class="goods-info">
 					<text class="goods-name">{{ item.name }}</text>
 					<view class="goods-bottom">

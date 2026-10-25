@@ -25,7 +25,7 @@
 			<text class="section-title">上传截图（选填）</text>
 			<view class="upload-grid">
 				<view class="upload-item" v-for="(img, idx) in imageList" :key="img + idx">
-					<image class="upload-thumb" :src="mediaUrl(img)" mode="aspectFill"
+					<image lazy-load class="upload-thumb" :src="mediaUrl(img)" mode="aspectFill"
 						@click="previewImage(idx)"></image>
 					<view class="upload-del" @click.stop="removeImage(idx)">×</view>
 				</view>

@@ -6,7 +6,7 @@
 		<!-- 换货商品 -->
 		<view class="goods-card">
 			<view class="goods-item" v-for="item in items" :key="item.productId">
-				<image class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
+				<image lazy-load class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
 				<view class="goods-info">
 					<text class="goods-name">{{ item.productName }}</text>
 					<view class="goods-bottom">
@@ -55,7 +55,7 @@
 
 			<view class="upload-row">
 				<view class="upload-item" v-for="(img, idx) in imageList" :key="idx">
-					<image class="upload-thumb" :src="mediaUrl(img)" mode="aspectFill"></image>
+					<image lazy-load class="upload-thumb" :src="mediaUrl(img)" mode="aspectFill"></image>
 					<view class="upload-del" @click="removeImage(idx)">×</view>
 				</view>
 				<view v-if="imageList.length < 3" class="upload-add" @click="uploadImage">
@@ -108,7 +108,8 @@
 				returnTimeSlot: '', // 取件时段：morning 上午 / afternoon 下午
 				shipAddress: '', // 换货发货地址（商家寄新货地址）
 				remark: '',
-				imageList: []
+				imageList: [],
+				submitting: false // 提交中，防连点重复创建售后单
 			}
 		},
 		computed: {
@@ -200,6 +201,7 @@
 				return url.indexOf('http') === 0 ? url : BASE_URL + url
 			},
 			submitExchange() {
+				if (this.submitting) return
 				if (!this.returnWay) {
 					uni.showToast({ title: '请选择退货方式', icon: 'none' })
 					return
@@ -212,6 +214,7 @@
 					uni.showToast({ title: '请输入发货地址', icon: 'none' })
 					return
 				}
+				this.submitting = true
 				createAfterSale({
 					orderId: this.orderId,
 					orderItemId: this.orderItemId || null,
@@ -229,7 +232,10 @@
 					setTimeout(() => {
 						uni.switchTab({ url: '/pages/index/index' })
 					}, 800)
-				}).catch(() => {})
+				}).catch(() => {
+					// 失败允许重试；成功保持 submitting=true，直到跳走
+					this.submitting = false
+				})
 			}
 		}
 	}

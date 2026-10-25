@@ -6,7 +6,7 @@
 		<!-- 收藏列表：账号级数据，下架商品也保留并打「已下架」标记 -->
 		<view v-if="list.length" class="fav-list">
 			<view class="fav-card" v-for="item in list" :key="item.productId" @click="goDetail(item)">
-				<image class="fav-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
+				<image lazy-load class="fav-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
 				<view class="fav-info">
 					<text class="fav-name">{{ item.name }}</text>
 					<view class="fav-price-row">

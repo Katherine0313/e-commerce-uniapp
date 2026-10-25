@@ -4,7 +4,7 @@
 		<!-- 页面内容：随页面原生滚动，底部固定栏用 fixed 盖在最上层 -->
 		<view class="content">
 			<!-- 主图：单图（商品数据只有一张 image，无多图轮播） -->
-			<image v-if="cover" class="cover" :src="cover" mode="aspectFill"></image>
+			<image lazy-load v-if="cover" class="cover" :src="cover" mode="aspectFill"></image>
 
 			<!-- 商品信息卡：价格 / 名称 / 副标题 -->
 			<view class="info-card">

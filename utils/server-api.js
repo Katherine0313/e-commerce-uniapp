@@ -5,10 +5,13 @@ import { getToken, clearToken } from "./token.js"
 // 后端微服务端口规划（仅维护参考，前端只需记住网关 8080）：
 //   gateway 8080 / auth 9001 / shop 9002 / product 9003 / order 9004
 //   aftersale 9005 / user 9006 / file 9007
-// 环境判断：开发环境连本机网关，生产环境连线上 API
-export const BASE_URL = process.env.NODE_ENV === 'development'
-  ? 'http://127.0.0.1:8080'   // 本地开发：本机 SpringBoot 网关
-  : 'https://api.jiemids.com'  // 打包上线：线上 API 域名
+// 环境判断：
+//   HBuilderX「运行」→ development → 本机网关
+//   HBuilderX「发行」→ production  → 线上 API 域名
+// process.env.NODE_ENV 在编译期被替换成字符串，生产包里不会残留 127.0.0.1
+const DEV_BASE_URL = 'http://127.0.0.1:8080'   // 本地开发：本机 SpringBoot 网关
+const PROD_BASE_URL = 'https://api.jiemids.com' // 打包上线：线上 API 域名
+export const BASE_URL = process.env.NODE_ENV === 'development' ? DEV_BASE_URL : PROD_BASE_URL
 
 // 当前店铺 ID（多租户沙箱）：模板店=1，测沙箱店时改成对应 shopId（登录时签进 token，后端按店铺隔离）
 export const SHOP_ID = 1
@@ -34,8 +37,10 @@ export function request(url, options = {}){
 			throw { statusCode: 401, message: '登录已过期，请重新登录' }
 		}
 		// 其余非 2xx（网关 502、后端 500 等）：带上状态码，不与业务错误混淆
+		// 后端 Result 里有 message 时透出来，方便定位（例如 wxlogin 的 400）
 		if(code < 200 || code >= 300){
-			throw { statusCode: code, message: '请求失败（' + code + '）' }
+			const backendMsg = res.data && (res.data.message || res.data.msg)
+			throw { statusCode: code, message: backendMsg || ('请求失败（' + code + '）') }
 		}
 		// 后端约定：{ success, data } 成功，{ success, message } 失败
 		if(res.data.success){

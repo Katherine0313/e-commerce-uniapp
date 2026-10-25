@@ -5,11 +5,11 @@
 			<view class="item" v-for="(block, bi) in row" :key="bi">
 				<view class="l">
 					<text class="title">{{ block.left.title }}</text>
-					<image :src="imgUrl(block.left.id)" mode="aspectFill" @click="handleSelect(block.left.id)"></image>
+					<image lazy-load :src="imgUrl(block.left.id)" mode="aspectFill" @click="handleSelect(block.left.id)"></image>
 				</view>
 				<view class="r">
 					<text class="title">{{ block.right.title }}</text>
-					<image :src="imgUrl(block.right.id)" mode="aspectFill" @click="handleSelect(block.right.id)"></image>
+					<image lazy-load :src="imgUrl(block.right.id)" mode="aspectFill" @click="handleSelect(block.right.id)"></image>
 				</view>
 			</view>
 		</view>
@@ -17,6 +17,10 @@
 </template>
 
 <script>
+	import {
+		BASE_URL
+	} from '../../../utils/server-api.js'
+
 	export default {
 		name: 'HotPanel',
 		data() {
@@ -35,9 +39,9 @@
 			}
 		},
 		methods: {
-			// 占位图：按商品 id 取 static/image/upload 下的本地图，后续换成后端返回的 image
+			// 商品图：按商品 id 走后端同命名商品图（/image/upload/{id}.webp）
 			imgUrl(id) {
-				return '/static/image/upload/' + id + '.webp'
+				return BASE_URL + '/image/upload/' + id + '.webp'
 			},
 			// 点击商品图：只把 id 抛出去，拉详情和弹窗都由页面处理
 			handleSelect(id) {

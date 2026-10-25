@@ -54,7 +54,7 @@
 		fmtMoney,
 		parseOrderTime
 	} from '../../utils/format.js'
-	import OrderCard from './order-card.vue'
+	import OrderCard from '../../components/order-card/order-card.vue'
 
 	// 待付款超时时长：与后端 OrderServiceImpl.PENDING_PAY_TIMEOUT_SECONDS（1800 秒 = 30 分钟）一致
 	const PAY_TIMEOUT_MS = 30 * 60 * 1000
@@ -67,7 +67,8 @@
 			return {
 				orders: [], // 待付款订单（status=1）
 				loaded: false, // 是否完成首次加载
-				now: Date.now() // 当前时间戳，每秒刷新驱动所有倒计时
+				now: Date.now(), // 当前时间戳，每秒刷新驱动所有倒计时
+				operating: false // 付款/取消处理中，防连点重复提交
 			}
 		},
 		onShow() {
@@ -132,23 +133,31 @@
 			},
 			// 取消订单：直接调接口（不弹确认），成功后刷新
 			handleCancel(order) {
+				if (this.operating) return
+				this.operating = true
 				cancelOrder(order.id).then(() => {
 					uni.showToast({
 						title: '订单已取消',
 						icon: 'success'
 					})
 					this.loadOrders()
-				}).catch(() => {})
+				}).catch(() => {}).finally(() => {
+					this.operating = false
+				})
 			},
 			// 付款：调支付接口（暂未接微信收银台，后端记账），成功后从待付款列表消失
 			handlePay(order) {
+				if (this.operating) return
+				this.operating = true
 				payOrder(order.id).then(() => {
 					uni.showToast({
 						title: '支付成功',
 						icon: 'success'
 					})
 					this.loadOrders()
-				}).catch(() => {})
+				}).catch(() => {}).finally(() => {
+					this.operating = false
+				})
 			}
 		}
 	}

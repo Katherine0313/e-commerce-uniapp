@@ -8,7 +8,7 @@
 			<view></view>
 			<text>退款商品</text>
 			<view class="goods-item" v-for="item in items" :key="item.productId">
-				<image class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
+				<image lazy-load class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
 				<view class="goods-info">
 					<text class="goods-name">{{ item.productName }}</text>
 					<view class="goods-bottom">

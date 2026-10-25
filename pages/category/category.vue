@@ -15,7 +15,6 @@
 					:class="{ active: index === activeIndex }"
 					@click="handleSelect(index)"
 				>
-					<image class="sidebar-icon" :src="item.icon" mode="aspectFit"></image>
 					<text class="sidebar-name">{{ item.name }}</text>
 				</view>
 			</scroll-view>
@@ -29,7 +28,7 @@
 				<!-- 商品网格：每行两个，卡片是 图片 + 名称 + 价格 + 购物车图标 -->
 				<view class="goods-grid">
 					<view class="goods-card" v-for="item in currentProducts" :key="item.id" @click="handleProductClick(item)">
-						<image class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
+						<image lazy-load class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
 						<view class="goods-info">
 							<text class="goods-name">{{ item.name }}</text>
 							<view class="goods-bottom">
@@ -62,6 +61,10 @@
 				categories: [],
 				// 当前父类名下商品：按选中的一级分类懒加载（GET /api/products?categoryId=x）
 				currentProducts: [],
+				// 分类商品缓存：{ [categoryId]: { list, expireAt } }，切回已加载过的分类直接显示
+				productCache: {},
+				// 请求序号：快速切分类时只应用最后一次请求的结果
+				loadSeq: 0,
 			}
 		},
 		computed: {
@@ -106,8 +109,23 @@
 					this.currentProducts = []
 					return
 				}
+				// 命中缓存直接显示，切回已看过的分类不再等接口
+				const cached = this.productCache[cat.id]
+				if (cached && Date.now() < cached.expireAt) {
+					this.currentProducts = cached.list
+					return
+				}
+				const seq = ++this.loadSeq
 				getProductsByCategory(cat.id).then((list) => {
-					this.currentProducts = list || []
+					// 只应用最后一次切换的结果，避免旧响应覆盖新分类
+					if (seq !== this.loadSeq) return
+					const data = list || []
+					this.currentProducts = data
+					// 缓存 60 秒：库存/价格变更能较快反映，同时来回切分类是瞬时的
+					this.productCache[cat.id] = {
+						list: data,
+						expireAt: Date.now() + 60 * 1000
+					}
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
 				})
@@ -182,16 +200,10 @@
 		background: #ffffff;
 		border-left-color: #FF6700;
 	}
-
-	.sidebar-icon {
-		width: 56rpx;
-		height: 56rpx;
-	}
-
 	.sidebar-name {
-		margin-top: 8rpx;
+		margin-top: 10rpx;
 		font-size: 24rpx;
-		line-height: 1;
+		line-height: 2;
 		color: #333333;
 	}
 

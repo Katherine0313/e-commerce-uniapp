@@ -38,6 +38,7 @@
 				id: null,
 				courier: '',
 				trackingNumber: '',
+				submitting: false, // 提交中，防连点重复回填
 				// 快递公司列表（对齐后端 CourierEnum）
 				courierOptions: [
 					{ code: 'shunfeng', name: '顺丰速运' },
@@ -69,6 +70,7 @@
 				this.courier = this.courierOptions[idx].code
 			},
 			submit() {
+				if (this.submitting) return
 				if (!this.courier) {
 					uni.showToast({ title: '请选择快递公司', icon: 'none' })
 					return
@@ -77,6 +79,7 @@
 					uni.showToast({ title: '请输入快递单号', icon: 'none' })
 					return
 				}
+				this.submitting = true
 				submitAfterSaleReturn(this.id, {
 					courier: this.courier,
 					trackingNumber: this.trackingNumber.trim()
@@ -85,7 +88,10 @@
 					setTimeout(() => {
 						uni.navigateBack()
 					}, 600)
-				}).catch(() => {})
+				}).catch(() => {
+					// 失败允许重试
+					this.submitting = false
+				})
 			}
 		}
 	}

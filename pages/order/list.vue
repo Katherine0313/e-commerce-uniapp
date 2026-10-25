@@ -87,8 +87,8 @@
 	import {
 		ensureLogin
 	} from '../../utils/auth.js'
-	import OrderCard from './order-card.vue'
-	import AfterSaleCard from '../after-sales/after-sale-card.vue'
+	import OrderCard from '../../components/order-card/order-card.vue'
+	import AfterSaleCard from '../../components/after-sale-card/after-sale-card.vue'
 	import {
 		listAfterSales
 	} from '../../api/after-sale.js'
@@ -116,7 +116,8 @@
 				loaded: false, // 是否完成首次加载
 				afterSaleList: [], // 售后单列表（售后 Tab 用）
 				afterSaleLoaded: false, // 售后列表是否完成加载
-				now: Date.now() // 当前时间戳，每秒刷新驱动倒计时
+				now: Date.now(), // 当前时间戳，每秒刷新驱动倒计时
+				operating: false // 订单操作中（付款/取消/确认收货/删除/再来一单），防连点重复提交
 			}
 		},
 		computed: {
@@ -242,38 +243,55 @@
 			},
 			// 付款：待付款 → 待确认，成功后刷新
 			handlePay(order) {
+				if (this.operating) return
+				this.operating = true
 				payOrderApi(order.id).then(() => {
 					uni.showToast({ title: '支付成功', icon: 'success' })
 					this.loadOrders()
-				}).catch(() => {})
+				}).catch(() => {}).finally(() => {
+					this.operating = false
+				})
 			},
 			// 取消订单：成功后刷新
 			handleCancel(order) {
+				if (this.operating) return
+				this.operating = true
 				cancelOrderApi(order.id).then(() => {
 					uni.showToast({ title: '订单已取消', icon: 'success' })
 					this.loadOrders()
-				}).catch(() => {})
+				}).catch(() => {}).finally(() => {
+					this.operating = false
+				})
 			},
 			// 确认收货：已发货 → 已完成，成功后刷新
 			confirmReceive(order) {
+				if (this.operating) return
+				this.operating = true
 				finishOrder(order.id).then(() => {
 					uni.showToast({ title: '已确认收货', icon: 'success' })
 					this.loadOrders()
-				}).catch(() => {})
+				}).catch(() => {}).finally(() => {
+					this.operating = false
+				})
 			},
 			// 删除订单：软删，成功后刷新
 			deleteOrder(order) {
+				if (this.operating) return
+				this.operating = true
 				deleteOrderApi(order.id).then(() => {
 					uni.showToast({ title: '已删除', icon: 'success' })
 					this.loadOrders()
-				}).catch(() => {})
+				}).catch(() => {}).finally(() => {
+					this.operating = false
+				})
 			},
 			// 再来一单：把订单商品重新加入购物车
 			buyAgain(order) {
 				const items = order.items || []
-				if (!items.length) {
+				if (!items.length || this.operating) {
 					return
 				}
+				this.operating = true
 				uni.showLoading({ title: '加入购物车中...' })
 				Promise.all(items.map(item => addToCart(item.productId, item.quantity, [], 0)))
 					.then(() => {
@@ -286,6 +304,9 @@
 					})
 					.catch(() => {
 						uni.hideLoading()
+					})
+					.finally(() => {
+						this.operating = false
 					})
 			},
 			// 评价商品：跳评价页

@@ -7,7 +7,7 @@
 			class="category-item"
 			@click="handleSelect(item)"
 		>
-			<image class="category-icon" :src="imgUrl(item)" mode="aspectFit"></image>
+			<image lazy-load class="category-icon" :src="imgUrl(item)" mode="aspectFit"></image>
 			<text class="category-name">{{ item.name }}</text>
 		</view>
 	</view>

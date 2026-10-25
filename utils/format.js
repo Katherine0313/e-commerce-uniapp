@@ -44,10 +44,10 @@ export function parseOrderTime(t) {
 	return isNaN(time) ? 0 : time
 }
 
-// 商品图 URL：后端 image 是 /image/upload/N.webp 相对路径，补 BASE_URL；没有则回退本地占位图
+// 商品图 URL：后端 image 是 /image/upload/N.webp 相对路径，补 BASE_URL；没有则回退后端同命名商品图
 export function goodsImgUrl(image, productId) {
 	if (image) {
 		return image.indexOf('http') === 0 ? image : BASE_URL + image
 	}
-	return '/static/image/upload/' + productId + '.webp'
+	return productId ? BASE_URL + '/image/upload/' + productId + '.webp' : ''
 }

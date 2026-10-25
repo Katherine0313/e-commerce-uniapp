@@ -11,7 +11,7 @@
 
 		<view class="guess-grid">
 			<view class="goods-card" v-for="item in products" :key="item.id" @click="handleSelect(item.id)">
-				<image class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
+				<image lazy-load class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
 				<view class="goods-info">
 					<text class="goods-name">{{ item.name }}</text>
 					<text class="goods-price">¥{{ item.price }}</text>
@@ -46,13 +46,13 @@
 					// 错误提示已在 request 封装里统一处理
 				})
 			},
-			// 商品主图：后端 image 是 /image/upload/N.webp 相对路径，小程序把开头的 / 当包内路径，需补 BASE_URL；没有则回退本地占位图
+			// 商品主图：后端 image 是 /image/upload/N.webp 相对路径，小程序把开头的 / 当包内路径，需补 BASE_URL；没有则回退后端同命名商品图
 			imgUrl(item) {
 				const img = item.image
 				if (img) {
 					return img.indexOf('http') === 0 ? img : BASE_URL + img
 				}
-				return '/static/image/upload/' + item.id + '.webp'
+				return item.id ? BASE_URL + '/image/upload/' + item.id + '.webp' : ''
 			},
 			// 点击商品：只把 id 抛给页面，拉详情和弹预览由页面统一处理（和 HotPanel 一致）
 			handleSelect(id) {

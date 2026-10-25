@@ -64,7 +64,7 @@
 				<text class="contact-btn" @click="contactMerchant">联系商家</text>
 			</view>
 			<view class="goods-row" v-for="item in items" :key="item.productId">
-				<image class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
+				<image lazy-load class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
 				<view class="goods-info">
 					<text class="goods-name">{{ item.productName }}</text>
 					<text class="goods-spec">×{{ item.quantity }}</text>

@@ -26,17 +26,21 @@
 </template>
 
 <script>
+	import {
+		BASE_URL
+	} from '../utils/server-api.js'
+
 	export default {
 		name: 'CustomSwiper',
 		props: {
-			// 轮播图片路径列表，不传就用默认的 4 张
+			// 轮播图片路径列表，不传就用后端 /image/swiper 下的 4 张
 			list: {
 				type: Array,
 				default: () => [
-					'/static/image/swiper/1.webp',
-					'/static/image/swiper/2.webp',
-					'/static/image/swiper/3.webp',
-					'/static/image/swiper/4.webp'
+					BASE_URL + '/image/swiper/1.webp',
+					BASE_URL + '/image/swiper/2.webp',
+					BASE_URL + '/image/swiper/3.webp',
+					BASE_URL + '/image/swiper/4.webp'
 				]
 			},
 			// 轮播高度

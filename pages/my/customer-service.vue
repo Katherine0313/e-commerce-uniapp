@@ -25,7 +25,7 @@
 					<image
 						v-if="msg.role === 'bot'"
 						class="msg-avatar"
-						src="/static/zongjie.webp"
+						src="/static/zongjie.jpg"
 						mode="aspectFill"
 					></image>
 					<view class="bubble">

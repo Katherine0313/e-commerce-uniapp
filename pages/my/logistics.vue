@@ -30,7 +30,7 @@
 	import {
 		ensureLogin
 	} from '../../utils/auth.js'
-	import OrderCard from '../order/order-card.vue'
+	import OrderCard from '../../components/order-card/order-card.vue'
 
 	export default {
 		components: {

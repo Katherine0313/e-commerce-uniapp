@@ -8,7 +8,7 @@
 			}
 		},
 	"pages":[
-		// ===== 首页 / 分类 / 购物车（tabBar 页，index 必须放第一个作为启动页）=====
+		// ===== 主包：tabBar 页 + 我的子页（index 必须放第一个作为启动页）=====
 		{
 			"path":"pages/index/index",
 			"style": {
@@ -30,24 +30,6 @@
 				"navigationStyle": "custom"
 			}
 		},
-
-		// ===== 商品 / 搜索 =====
-		{
-			"path":"pages/goods/detail",
-			"style": {
-				"navigationBarTitleText": "商品详情",
-				"navigationBarTextStyle": "black",
-				"navigationBarBackgroundColor": "#ffffff"
-			}
-		},
-		{
-			"path":"pages/search/search",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-
-		// ===== 我的 =====
 		{
 			"path":"pages/my/my",
 			"style": {
@@ -101,106 +83,140 @@
 			"style": {
 				"navigationStyle": "custom"
 			}
-		},
-
-		// ===== 订单 =====
+		}
+	],
+	// ===== 分包：商品 / 搜索 / 订单 / 售后 =====
+	// root 是物理目录，path 是相对 root 的路径；页面完整路由不变（仍为 /pages/order/list 等）
+	"subPackages": [
 		{
-			"path":"pages/order/list",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/order/confirm",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/order/pay-success",
-			"style": {
-				"navigationStyle": "custom"
-			}
+			"root": "pages/goods",
+			"pages": [
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "商品详情",
+						"navigationBarTextStyle": "black",
+						"navigationBarBackgroundColor": "#ffffff"
+					}
+				}
+			]
 		},
 		{
-			"path":"pages/order/pending-pay",
-			"style": {
-				"navigationStyle": "custom"
-			}
+			"root": "pages/search",
+			"pages": [
+				{
+					"path": "search",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				}
+			]
 		},
 		{
-			"path":"pages/order/pending-ship",
-			"style": {
-				"navigationStyle": "custom"
-			}
+			"root": "pages/order",
+			"pages": [
+				{
+					"path": "list",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "confirm",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "pay-success",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "pending-pay",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "pending-ship",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "pending-receive",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "logistics",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "review",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				}
+			]
 		},
 		{
-			"path":"pages/order/pending-receive",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/order/logistics",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/order/review",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-
-		// ===== 售后 =====
-		{
-			"path":"pages/after-sales/apply",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/after-sales/only-refund",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/after-sales/return-refund",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/after-sales/exchange",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/after-sales/only-refund-detail",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/after-sales/return-refund-detail",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/after-sales/exchange-detail",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/after-sales/return-tracking",
-			"style": {
-				"navigationStyle": "custom"
-			}
+			"root": "pages/after-sales",
+			"pages": [
+				{
+					"path": "apply",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "only-refund",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "return-refund",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "exchange",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "only-refund-detail",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "return-refund-detail",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "exchange-detail",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "return-tracking",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				}
+			]
 		}
 	],
 	"tabBar": {

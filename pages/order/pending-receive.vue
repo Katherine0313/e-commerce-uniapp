@@ -34,7 +34,7 @@
 			<!-- 商品卡片 -->
 			<view class="goods-card">
 				<view class="goods-row" v-for="item in order.items" :key="item.productId">
-					<image class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
+					<image lazy-load class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
 					<view class="goods-info">
 						<view class="goods-name">{{ item.productName }}</view>
 						<view class="price-count">

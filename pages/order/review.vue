@@ -6,7 +6,7 @@
 		<view class="coupon-tip">参与晒单最多可得 <text class="coupon-amount">1.00 元</text> 优惠券</view>
 
 		<view class="goods-card" v-if="product">
-			<image class="goods-img" :src="goodsImgUrl(product.image, product.productId)" mode="aspectFill"></image>
+			<image lazy-load class="goods-img" :src="goodsImgUrl(product.image, product.productId)" mode="aspectFill"></image>
 			<view class="goods-info">
 				<text class="goods-name">{{ product.productName }}</text>
 				<view class="goods-bottom">
@@ -54,7 +54,7 @@
 		<view class="upload-block">
 			<view class="upload-grid">
 				<view class="upload-item" v-for="(img, idx) in imageList" :key="'img' + idx">
-					<image class="upload-thumb" :src="mediaUrl(img)" mode="aspectFill"></image>
+					<image lazy-load class="upload-thumb" :src="mediaUrl(img)" mode="aspectFill"></image>
 					<view class="upload-del" @click="removeImage(idx)">×</view>
 				</view>
 				<view v-if="videoUrl" class="upload-item">

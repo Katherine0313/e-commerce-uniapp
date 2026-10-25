@@ -52,8 +52,16 @@
     "mp-weixin" : {
         "appid" : "wxa18a22c8c5c1fa12",
         "setting" : {
-            "urlCheck" : false
+            "urlCheck" : false,
+            "es6" : true,
+            "postcss" : true,
+            "minified" : true
         },
+        "optimization" : {
+            "subPackages" : true
+        },
+        // 组件按需注入：对应微信代码质量面板的「启用组件按需注入」
+        "lazyCodeLoading" : "requiredComponents",
         "usingComponents" : true
     },
     "mp-alipay" : {

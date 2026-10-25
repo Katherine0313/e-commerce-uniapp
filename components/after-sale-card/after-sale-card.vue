@@ -10,7 +10,7 @@
 		</view>
 		<!-- 商品明细 -->
 		<view class="goods-item" v-for="item in afterSale.items" :key="item.productId">
-			<image class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
+			<image lazy-load class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
 			<view class="goods-info">
 				<text class="goods-name">{{ item.productName }}</text>
 				<text class="goods-qty">×{{ item.quantity }}</text>

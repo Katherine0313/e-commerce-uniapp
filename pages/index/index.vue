@@ -34,10 +34,13 @@
 	import CategoryPanel from './component/category-panel.vue'
 	// 热门推荐
 	import HotPanel from './component/hot-panel.vue'
+	import {
+		BASE_URL
+	} from '../../utils/server-api.js'
 	// 分享卡片统一文案：胶囊菜单的「转发」「分享到朋友圈」「收藏」共用
 	const SHARE_TITLE = '杰米多多小店｜全新正品3C数码'
-	// 分享封面：商品通用数码图，已按微信分享卡片 5:4 裁切（jpg，兼容性最好）
-	const SHARE_IMAGE = '/static/image/share-3c.jpg'
+	// 分享封面：放后端 /image/share/，不要把图片打进小程序主包
+	const SHARE_IMAGE = BASE_URL + '/image/share/share-3c.jpg'
 
 	export default {
 		components: {

@@ -28,7 +28,7 @@
 		<!-- 商品列表 -->
 		<view class="card">
 			<view class="goods-item" v-for="(item, idx) in items" :key="idx">
-				<image class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
+				<image lazy-load class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
 				<view class="goods-info">
 					<text class="goods-name">{{ item.name }}</text>
 					<view class="goods-price-row">
@@ -271,13 +271,13 @@
 			formatRegion(region) {
 				return (region || '').replace(/\s+/g, '')
 			},
-			// 商品图：后端 image 是 /image/upload/N.webp 相对路径，需补 BASE_URL；没有则回退本地占位图
+			// 商品图：后端 image 是 /image/upload/N.webp 相对路径，需补 BASE_URL；没有则回退后端同命名商品图
 			imgUrl(item) {
 				const img = item.image
 				if (img) {
 					return img.indexOf('http') === 0 ? img : BASE_URL + img
 				}
-				return '/static/image/upload/' + item.productId + '.webp'
+				return item.productId ? BASE_URL + '/image/upload/' + item.productId + '.webp' : ''
 			},
 			// 金额统一两位小数展示
 			fmt(n) {

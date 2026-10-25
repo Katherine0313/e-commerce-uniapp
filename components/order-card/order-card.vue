@@ -14,7 +14,7 @@
 
 		<!-- 商品明细：一个订单可能多件，逐件展示 -->
 		<view class="goods-item" v-for="item in order.items" :key="item.productId">
-			<image class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
+			<image lazy-load class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
 			<view class="goods-info">
 				<text class="goods-name">{{ item.productName }}</text>
 				<text class="goods-price">¥{{ fmtMoney(item.salesPrice) }}</text>

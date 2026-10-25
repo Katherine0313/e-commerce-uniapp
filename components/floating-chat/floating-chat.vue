@@ -10,7 +10,7 @@
 			@touchend.stop="onTouchEnd"
 			@touchcancel.stop="onTouchCancel"
 		>
-			<image class="float-avatar" src="/static/zongjie.webp" mode="aspectFill"></image>
+			<image class="float-avatar" src="/static/zongjie.jpg" mode="aspectFill"></image>
 			<view class="float-badge">AI</view>
 		</view>
 
@@ -23,7 +23,7 @@
 		>
 			<view class="chat-panel" :style="panelStyle" @click.stop>
 				<view class="chat-head">
-					<image class="head-avatar" src="/static/zongjie.webp" mode="aspectFill"></image>
+					<image class="head-avatar" src="/static/zongjie.jpg" mode="aspectFill"></image>
 					<view class="head-info">
 						<text class="head-title">杰米多多 AI</text>
 						<text class="head-sub">智能助手 · 随时为你解答</text>
@@ -45,7 +45,7 @@
 							<image
 								v-if="msg.role === 'bot'"
 								class="msg-avatar"
-								src="/static/zongjie.webp"
+								src="/static/zongjie.jpg"
 								mode="aspectFill"
 							></image>
 							<view class="bubble">
