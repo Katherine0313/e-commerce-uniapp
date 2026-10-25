@@ -34,9 +34,9 @@
 			</OrderCard>
 		</view>
 
-		<!-- 空态 -->
+		<!-- 空态：从订阅消息带 orderNo 进来时，订单可能已支付/已取消 -->
 		<view v-else-if="loaded" class="empty">
-			<text class="empty-text">暂无待付款订单</text>
+			<text class="empty-text">{{ orderNo ? '该订单已支付或已取消' : '暂无待付款订单' }}</text>
 		</view>
 	</view>
 </template>
@@ -68,8 +68,13 @@
 				orders: [], // 待付款订单（status=1）
 				loaded: false, // 是否完成首次加载
 				now: Date.now(), // 当前时间戳，每秒刷新驱动所有倒计时
-				operating: false // 付款/取消处理中，防连点重复提交
+				operating: false, // 付款/取消处理中，防连点重复提交
+				orderNo: '' // 订阅消息带过来的订单号，非空时只显示这一单
 			}
+		},
+		onLoad(options) {
+			// 订阅消息跳转：pages/order/pending-pay?orderNo=xxx
+			this.orderNo = options.orderNo || ''
 		},
 		onShow() {
 			this.loadOrders()
@@ -91,6 +96,8 @@
 						list = list || []
 						this.orders = list
 							.filter(o => Number(o.orderStatus) === 1)
+							// 订阅消息带 orderNo 时只保留这一单，方便用户直达
+							.filter(o => !this.orderNo || o.orderNo === this.orderNo)
 							.map(o => {
 								o._expireTime = parseOrderTime(o.createdAt) + PAY_TIMEOUT_MS
 								return o

@@ -119,6 +119,9 @@
 	import {
 		useCartStore
 	} from '../../store/cart.js'
+	import {
+		requestUnpaidSubscribe
+	} from '../../utils/subscribe.js'
 	import PayPopup from './pay-popup.vue'
 
 	export default {
@@ -187,8 +190,8 @@
 			onAddressSaved() {
 				this.loadAddress()
 			},
-			// 提交订单：下单成功后弹出模拟支付弹窗，用户在弹窗里点「我已支付」才真正支付
-			handlePay() {
+			// 提交订单：先唤起一次性订阅授权，再下单，最后弹模拟支付
+			async handlePay() {
 				if (this.paying) {
 					return
 				}
@@ -203,6 +206,11 @@
 					return
 				}
 				this.paying = true
+
+				// 微信规则：requestSubscribeMessage 必须由用户点击触发，
+				// 所以放在本方法最前面、任何网络请求之前；用户拒绝也继续下单，只是无法收到提醒
+				const subscribeUnpaid = await requestUnpaidSubscribe()
+
 				const orderData = {
 					consignee: this.address.consignee,
 					phone: this.address.phone,
@@ -210,6 +218,8 @@
 					detailAddress: this.address.detailAddress,
 					remark: this.remark.trim(),
 					idempotencyKey: this.idempotencyKey,
+					// 把授权结果随下单一起保存到 orders.is_subscribe_unpaid
+					subscribeUnpaid: subscribeUnpaid,
 					// 购物车 insuranceDetail 是数组，下单接口要字符串，这里序列化一下
 					items: this.items.map(i => ({
 						productId: i.productId,
