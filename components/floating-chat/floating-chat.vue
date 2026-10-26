@@ -34,6 +34,9 @@
 					</view>
 				</view>
 
+				<!-- 审核要求：AI 生成内容需要在页面显著位置说明 -->
+				<view class="ai-notice">本服务内容由人工智能生成，仅供参考</view>
+
 				<scroll-view class="chat-scroll" scroll-y :scroll-top="scrollTop">
 					<view class="msg-list">
 						<view
@@ -503,10 +506,23 @@
 	}
 
 	.ai-tag {
-		display: block;
+		display: inline-block;
 		margin-top: 8rpx;
+		padding: 2rpx 10rpx;
+		border-radius: 6rpx;
+		background: #FFF3E8;
 		font-size: 20rpx;
-		color: #999999;
+		color: #B25B00;
+	}
+
+	/* 页面级 AI 生成提示条：审核要求显著说明 */
+	.ai-notice {
+		flex-shrink: 0;
+		padding: 10rpx 24rpx;
+		background: #FFF3E8;
+		color: #B25B00;
+		font-size: 22rpx;
+		text-align: center;
 	}
 
 	.bubble-actions {

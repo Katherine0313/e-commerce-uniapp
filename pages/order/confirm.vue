@@ -93,7 +93,7 @@
 		</view>
 		<!-- 模拟微信支付弹窗（组件封装）：6 位密码框 + 数字键盘，输满 6 位自动支付 -->
 		<PayPopup :visible="showPayPopup" :amount="pendingOrder ? pendingOrder.payAmount : 0"
-			@close="closePay" @confirm="confirmPay" />
+			:loading="paying" @close="closePay" @confirm="confirmPay" />
 
 	</view>
 </template>
@@ -121,7 +121,7 @@
 	} from '../../store/cart.js'
 	import {
 		requestUnpaidSubscribe
-	} from '../../utils/subscribe.js'
+	} from './subscribe.js'
 	import PayPopup from './pay-popup.vue'
 
 	export default {

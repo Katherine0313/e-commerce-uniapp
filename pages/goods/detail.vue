@@ -132,6 +132,32 @@
 			// 已登录才查收藏态；未登录点收藏时会静默登录
 			this.loadFavorite(id)
 		},
+		// 胶囊菜单「转发给朋友」：定义了它，胶囊里的「转发」自动可用
+		// 详情未加载完时退回默认文案，避免分享出空标题
+		onShareAppMessage() {
+			return {
+				title: this.product.name || '杰米多多小店｜全新正品3C数码',
+				imageUrl: this.cover,
+				// 带上商品 id，好友点开直接进同一个商品
+				path: '/pages/goods/detail?id=' + this.product.id
+			}
+		},
+		// 胶囊菜单「分享到朋友圈」
+		onShareTimeline() {
+			return {
+				title: this.product.name || '杰米多多小店｜全新正品3C数码',
+				imageUrl: this.cover,
+				query: 'id=' + this.product.id
+			}
+		},
+		// 胶囊菜单「收藏」
+		onAddToFavorites() {
+			return {
+				title: this.product.name || '杰米多多小店｜全新正品3C数码',
+				imageUrl: this.cover,
+				query: 'id=' + this.product.id
+			}
+		},
 		computed: {
 			// 购物车角标件数：读全局 cart store，加购后自动同步到详情页底部购物车 icon
 			cartCount() {

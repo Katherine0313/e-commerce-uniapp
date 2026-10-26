@@ -9,6 +9,9 @@ import {
 import {
 	chatStream
 } from '../api/agent.js'
+import {
+	ensureLogin
+} from '../utils/auth.js'
 
 let msgId = 0
 
@@ -103,36 +106,46 @@ export const useAiChatStore = defineStore('aiChat', {
 			const botMsg = this.messages[this.messages.length - 1]
 			let fullText = ''
 
-			chatStream({
-				message: content,
-				sessionId: this.sessionId,
-				onChunk: (chunk) => {
-					if (botMsg.typing) {
-						botMsg.typing = false
+			// 对话接口要求登录令牌：先确保已静默登录，避免冷启动时偶发 401
+			ensureLogin().then(() => {
+				chatStream({
+					message: content,
+					sessionId: this.sessionId,
+					onChunk: (chunk) => {
+						if (botMsg.typing) {
+							botMsg.typing = false
+						}
+						fullText += chunk
+						botMsg.text = fullText
+					},
+					onDone: () => {
+						this.sending = false
+						if (!fullText.trim()) {
+							Object.assign(botMsg, {
+								...fallback,
+								typing: false
+							})
+						}
+					},
+					onError: () => {
+						this.sending = false
+						if (!fullText.trim()) {
+							Object.assign(botMsg, {
+								...fallback,
+								typing: false
+							})
+						} else {
+							botMsg.typing = false
+						}
 					}
-					fullText += chunk
-					botMsg.text = fullText
-				},
-				onDone: () => {
-					this.sending = false
-					if (!fullText.trim()) {
-						Object.assign(botMsg, {
-							...fallback,
-							typing: false
-						})
-					}
-				},
-				onError: () => {
-					this.sending = false
-					if (!fullText.trim()) {
-						Object.assign(botMsg, {
-							...fallback,
-							typing: false
-						})
-					} else {
-						botMsg.typing = false
-					}
-				}
+				})
+			}).catch(() => {
+				// 用户手动退出登录：不走接口，直接用本地规则回复
+				this.sending = false
+				Object.assign(botMsg, {
+					...fallback,
+					typing: false
+				})
 			})
 			return true
 		}
