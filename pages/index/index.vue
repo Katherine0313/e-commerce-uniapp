@@ -34,14 +34,14 @@
 	import CategoryPanel from './component/category-panel.vue'
 	// 热门推荐
 	import HotPanel from './component/hot-panel.vue'
-	import {
-		BASE_URL
-	} from '../../utils/server-api.js'
 	import { getHome } from '../../api/home.js'
 	// 分享卡片统一文案：胶囊菜单的「转发」「分享到朋友圈」「收藏」共用
 	const SHARE_TITLE = '杰米多多小店｜全新正品3C数码'
-	// 分享封面：放后端 /image/share/，不要把图片打进小程序主包
-	const SHARE_IMAGE = BASE_URL + '/image/share/share-3c.jpg'
+	// 分享封面：用代码包内本地 JPG（微信分享图只支持 JPG/PNG），不受开发环境 127.0.0.1 / https 限制
+	// 转发给朋友卡片按 5:4 展示
+	const SHARE_IMAGE = '/static/share/share-ipad-5x4.jpg'
+	// 朋友圈 / 收藏按 1:1 展示，用正方形图避免被裁
+	const SHARE_IMAGE_SQUARE = '/static/share/share-ipad-1x1.jpg'
 
 	export default {
 		components: {
@@ -76,7 +76,7 @@
 		onShareTimeline() {
 			return {
 				title: SHARE_TITLE,
-				imageUrl: SHARE_IMAGE,
+				imageUrl: SHARE_IMAGE_SQUARE,
 				// 无额外查询参数；页面路径由微信自动取当前页
 				query: ''
 			}
@@ -85,7 +85,7 @@
 		onAddToFavorites() {
 			return {
 				title: SHARE_TITLE,
-				imageUrl: SHARE_IMAGE,
+				imageUrl: SHARE_IMAGE_SQUARE,
 				// 收藏后再次打开时的页面参数（首页无需携带）
 				query: ''
 			}
