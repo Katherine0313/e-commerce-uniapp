@@ -25,8 +25,8 @@
 			</view>
 		</view>
 
-		<!-- VIP 会员卡（占位）：权益、开通流程都还没做，先占住位置，点击走「功能开发中」提示 -->
-		<view class="vip-card" @click="handleNav('')">
+		<!-- VIP 会员卡：权益、开通流程还没做，审核期间由功能开关隐藏；上线后把 utils/features.js 的 vip 改成 true -->
+		<view class="vip-card" v-if="features.vip" @click="handleNav('')">
 			<uni-icons type="vip-filled" size="22" color="#7A5410"></uni-icons>
 			<view class="vip-meta">
 				<text class="vip-title">杰米电商VIP会员</text>
@@ -57,9 +57,9 @@
 			</view>
 		</view>
 
-		<!-- 优惠券 / 积分 / 专属客服（占位）：数字先写死 0，等后端有对应字段再接真值 -->
+		<!-- 优惠券 / 积分 / 专属客服：前两个未开通、url 为空，不渲染；专属客服进客服页 -->
 		<view class="card stat-card">
-			<view class="stat-item" v-for="item in statList" :key="item.text" @click="handleNav(item.url)">
+			<view class="stat-item" v-for="item in visibleStats" :key="item.text" @click="handleNav(item.url)">
 				<!-- 有数字的显示数字；专属客服没有数字，用图标顶上同一位置 -->
 				<view class="stat-body">
 					<text v-if="item.value !== undefined" class="stat-num">{{ item.value }}</text>
@@ -106,11 +106,15 @@
 	import {
 		listAfterSales
 	} from '../../api/after-sale.js'
+	import {
+		FEATURES
+	} from '../../utils/features.js'
 
 	export default {
 		data() {
 			return {
 				store: useUserStore(), // 用户登录态 + 用户信息，统一走 Pinia
+				features: FEATURES, // 未开通功能开关，见 utils/features.js
 				// 订单状态入口。图标两套写法：
 				//   fontIcon —— static/myvue-icon 里的 iconfont 类名，有值就优先用它
 				//   icon     —— fontIcon 为空时的兜底，用 uni-icons 的内置图标名
@@ -158,7 +162,7 @@
 						badge: 0
 					}
 				],
-				// 优惠券 / 积分 / 专属客服（占位）：前两个数字先写死 0，后端有对应字段后再换成接口值
+				// 优惠券 / 积分 / 专属客服：前两个未开通，url 为空所以不渲染（见 visibleStats）
 				// 专属客服没有数字，不给 value，模板会用 icon 顶在数字的位置上
 				statList: [{
 						text: '优惠券',
@@ -217,6 +221,10 @@
 			// 手动退出后 token 被清掉，头像区切换成「点击登录」形态
 			isLogin() {
 				return this.store.isLogin
+			},
+			// 只渲染已开通的入口：url 为空说明页面还没做，先隐藏；补上 url 后自动显示
+			visibleStats() {
+				return this.statList.filter(item => item.url)
 			}
 		},
 		onShow() {

@@ -6,27 +6,22 @@ import {
 	matchHumanIntent,
 	DEFAULT_REPLY
 } from '../utils/auto-reply.js'
-import {
-	chatStream
-} from '../api/agent.js'
-import {
-	ensureLogin
-} from '../utils/auth.js'
 
 let msgId = 0
 
 const greeting = () => [{
 	id: ++msgId,
 	role: 'bot',
-	text: '你好，我是杰米多多 AI，有什么可以帮你？'
+	text: '你好，我是客服助手，有什么可以帮你？'
 }]
 
 const newSessionId = () =>
 	'float-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10)
 
 /**
- * 全局 AI 对话状态：悬浮球和「专属客服」页共用，
- * 放在 Pinia 里，切换页面不会丢消息；sessionId 让后端 Redis 串起多轮上下文。
+ * 全局客服对话状态：悬浮球和「专属客服」页共用，
+ * 放在 Pinia 里，切换页面不会丢消息。
+ * 回复只查本地固定知识库（utils/auto-reply.js），不调用大模型。
  */
 export const useAiChatStore = defineStore('aiChat', {
 	state: () => ({
@@ -63,22 +58,21 @@ export const useAiChatStore = defineStore('aiChat', {
 			this.sending = false
 		},
 		/**
-		 * 发送一条消息。人工客服本地拦截；其余走大模型流式；
-		 * AI 失败/超时/空回复时用本地规则兜底。
+		 * 发送一条消息：只查本地固定知识库（规则表），不调用大模型。
+		 * 命中「人工客服」意图时展示微信原生客服按钮，未命中走兜底话术。
 		 */
 		send(text) {
 			const content = String(text || '').trim()
 			if (!content || this.sending) {
 				return false
 			}
-			this.ensureSession()
 			this.messages.push({
 				id: ++msgId,
 				role: 'user',
 				text: content
 			})
 
-			// 人工客服不能交给大模型：要展示微信原生客服按钮
+			// 人工客服要展示微信原生客服按钮，不能走规则表
 			const human = matchHumanIntent(content)
 			if (human) {
 				this.messages.push({
@@ -89,63 +83,17 @@ export const useAiChatStore = defineStore('aiChat', {
 				return true
 			}
 
-			const fallback = matchAutoReply(content) || {
+			// 固定知识库查询：命中规则返回答案，未命中引导人工客服
+			const reply = matchAutoReply(content) || {
 				...DEFAULT_REPLY
 			}
-			this.sending = true
 			this.messages.push({
 				id: ++msgId,
 				role: 'bot',
-				text: '',
-				typing: true,
-				ai: true,
-				contact: false,
-				feedback: false
-			})
-			// 取 Pinia 里的响应式引用，流式追加才能触发视图更新
-			const botMsg = this.messages[this.messages.length - 1]
-			let fullText = ''
-
-			// 对话接口要求登录令牌：先确保已静默登录，避免冷启动时偶发 401
-			ensureLogin().then(() => {
-				chatStream({
-					message: content,
-					sessionId: this.sessionId,
-					onChunk: (chunk) => {
-						if (botMsg.typing) {
-							botMsg.typing = false
-						}
-						fullText += chunk
-						botMsg.text = fullText
-					},
-					onDone: () => {
-						this.sending = false
-						if (!fullText.trim()) {
-							Object.assign(botMsg, {
-								...fallback,
-								typing: false
-							})
-						}
-					},
-					onError: () => {
-						this.sending = false
-						if (!fullText.trim()) {
-							Object.assign(botMsg, {
-								...fallback,
-								typing: false
-							})
-						} else {
-							botMsg.typing = false
-						}
-					}
-				})
-			}).catch(() => {
-				// 用户手动退出登录：不走接口，直接用本地规则回复
-				this.sending = false
-				Object.assign(botMsg, {
-					...fallback,
-					typing: false
-				})
+				text: reply.text,
+				contact: !!reply.contact,
+				feedback: !!reply.feedback,
+				ai: true // 展示「自动答复」标识
 			})
 			return true
 		}

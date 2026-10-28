@@ -3,7 +3,8 @@
 	<view class="page">
 		<CustomNavbar title="填写评价" :show-back="true" />
 
-		<view class="coupon-tip">参与晒单最多可得 <text class="coupon-amount">1.00 元</text> 优惠券</view>
+		<!-- 优惠券未开通，先隐藏这条承诺；上线后把 utils/features.js 的 coupon 改成 true -->
+		<view class="coupon-tip" v-if="features.coupon">参与晒单最多可得 <text class="coupon-amount">1.00 元</text> 优惠券</view>
 
 		<view class="goods-card" v-if="product">
 			<image lazy-load class="goods-img" :src="goodsImgUrl(product.image, product.productId)" mode="aspectFill"></image>
@@ -91,10 +92,14 @@
 	import {
 		BASE_URL
 	} from '../../utils/server-api.js'
+	import {
+		FEATURES
+	} from '../../utils/features.js'
 
 	export default {
 		data() {
 			return {
+				features: FEATURES, // 未开通功能开关
 				orderId: null,
 				product: null,
 				rating: 5,

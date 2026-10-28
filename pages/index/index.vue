@@ -36,7 +36,7 @@
 	import HotPanel from './component/hot-panel.vue'
 	import { getHome } from '../../api/home.js'
 	// 分享卡片统一文案：胶囊菜单的「转发」「分享到朋友圈」「收藏」共用
-	const SHARE_TITLE = '杰米多多小店｜全新正品3C数码'
+	const SHARE_TITLE = '杰米多多小店｜正品3C数码'
 	// 分享封面：用代码包内本地 JPG（微信分享图只支持 JPG/PNG），不受开发环境 127.0.0.1 / https 限制
 	// 转发给朋友卡片按 5:4 展示
 	const SHARE_IMAGE = '/static/share/share-ipad-5x4.jpg'

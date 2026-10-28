@@ -29,7 +29,7 @@
 
 		<!-- 信息入口 -->
 		<view class="card">
-			<view class="link-item" v-for="item in links" :key="item.text" @click="handleLink(item)">
+			<view class="link-item" v-for="item in visibleLinks" :key="item.text" @click="handleLink(item)">
 				<uni-icons :type="item.icon" size="40rpx" color="#666666"></uni-icons>
 				<text class="link-text">{{ item.text }}</text>
 				<text v-if="item.extra" class="link-extra">{{ item.extra }}</text>
@@ -46,6 +46,10 @@
 </template>
 
 <script>
+	import {
+		FEATURES
+	} from '../../utils/features.js'
+
 	// 与 manifest.json 的 versionName 保持一致；改版本时两处一起改
 	const APP_VERSION = '1.0.0'
 
@@ -70,7 +74,7 @@
 						desc: '隐私数据保护'
 					}
 				],
-				// 信息入口：协议/反馈/客服页面后续补，先统一走占位提示
+				// 信息入口：协议页还没做，由功能开关隐藏；联系我们直接进已有的客服页
 				links: [{
 						icon: 'info',
 						text: '版本信息',
@@ -80,19 +84,28 @@
 					{
 						icon: 'list',
 						text: '用户协议',
-						action: 'agreement'
+						action: 'agreement',
+						enabled: FEATURES.agreement
 					},
 					{
 						icon: 'locked',
 						text: '隐私政策',
-						action: 'privacy'
+						action: 'privacy',
+						enabled: FEATURES.privacy
 					},
 					{
 						icon: 'phone',
 						text: '联系我们',
-						action: 'contact'
+						action: 'contact',
+						url: '/pages/my/customer-service'
 					}
 				]
+			}
+		},
+		computed: {
+			// 只显示已开通的入口：enabled 明确为 false 的过滤掉
+			visibleLinks() {
+				return this.links.filter(item => item.enabled !== false)
 			}
 		},
 		methods: {
@@ -104,10 +117,16 @@
 					})
 					return
 				}
+				// 有 url 的直接跳转（联系我们 → 客服页）
+				if (item.url) {
+					uni.navigateTo({
+						url: item.url
+					})
+					return
+				}
 				const tips = {
 					agreement: '用户协议开发中',
-					privacy: '隐私政策开发中',
-					contact: '客服接入中'
+					privacy: '隐私政策开发中'
 				}
 				uni.showToast({
 					title: tips[item.action] || '功能开发中',

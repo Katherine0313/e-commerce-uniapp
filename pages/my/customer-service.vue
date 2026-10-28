@@ -5,14 +5,14 @@
 		<!-- 顶部说明 + 人工客服入口：open-type="contact" 拉起微信原生客服会话 -->
 		<view class="service-bar">
 			<view class="service-info">
-				<text class="service-title">智能客服</text>
-				<text class="service-tip">常见问题自动回复，人工客服请点右侧按钮</text>
+				<text class="service-title">客服助手</text>
+				<text class="service-tip">固定知识库自动答复，人工客服请点右侧按钮</text>
 			</view>
 			<button class="contact-btn" open-type="contact" hover-class="none">联系人工客服</button>
 		</view>
 
-		<!-- 审核要求：AI 生成内容需要在页面显著位置说明 -->
-		<view class="ai-notice">本服务内容由人工智能生成，仅供参考</view>
+		<!-- 页面显著位置说明：自动答复内容仅供参考 -->
+		<view class="ai-notice">本服务为常见问题自动答复，仅供参考，未解决请联系人工客服</view>
 
 		<!-- 消息列表 -->
 		<scroll-view class="msg-scroll" scroll-y :scroll-top="scrollTop">
@@ -24,7 +24,7 @@
 					class="msg-row"
 					:class="msg.role"
 				>
-					<!-- 大模型头像：机器人消息左侧 -->
+					<!-- 客服头像：机器人消息左侧 -->
 					<image
 						v-if="msg.role === 'bot'"
 						class="msg-avatar"
@@ -32,10 +32,10 @@
 						mode="aspectFill"
 					></image>
 					<view class="bubble">
-						<text v-if="msg.typing" class="bubble-text typing-text">正在思考…</text>
+						<text v-if="msg.typing" class="bubble-text typing-text">正在查询…</text>
 						<text v-else class="bubble-text">{{ msg.text }}</text>
-						<!-- AI 生成的回复明确标注，避免用户误以为是真人 -->
-						<text v-if="msg.ai && !msg.typing" class="ai-tag">AI 生成</text>
+						<!-- 自动答复明确标注，避免用户误以为是真人 -->
+						<text v-if="msg.ai && !msg.typing" class="ai-tag">自动答复</text>
 						<view v-if="msg.contact || msg.feedback" class="bubble-actions">
 							<button
 								v-if="msg.contact"
@@ -243,7 +243,7 @@
 		justify-content: flex-end;
 	}
 
-	/* 大模型头像 */
+	/* 客服头像 */
 	.msg-avatar {
 		flex-shrink: 0;
 		width: 64rpx;
@@ -290,12 +290,12 @@
 		color: #ffffff;
 	}
 
-	/* 等待大模型首字时显示的占位文案 */
+	/* 等待回复时的占位文案 */
 	.typing-text {
 		color: #999999;
 	}
 
-	/* AI 生成标识 */
+	/* 自动答复标识 */
 	.ai-tag {
 		display: inline-block;
 		margin-top: 8rpx;
@@ -306,7 +306,7 @@
 		color: #B25B00;
 	}
 
-	/* 页面级 AI 生成提示条：审核要求显著说明 */
+	/* 页面级自动答复提示条 */
 	.ai-notice {
 		flex-shrink: 0;
 		padding: 10rpx 24rpx;

@@ -11,7 +11,7 @@
 			@touchcancel.stop="onTouchCancel"
 		>
 			<image class="float-avatar" src="/static/zongjie.jpg" mode="aspectFill"></image>
-			<view class="float-badge">AI</view>
+			<view class="float-badge">客服</view>
 		</view>
 
 		<!-- 聊天面板：底部浮层，点遮罩关闭 -->
@@ -25,8 +25,8 @@
 				<view class="chat-head">
 					<image class="head-avatar" src="/static/zongjie.jpg" mode="aspectFill"></image>
 					<view class="head-info">
-						<text class="head-title">杰米多多 AI</text>
-						<text class="head-sub">智能助手 · 随时为你解答</text>
+						<text class="head-title">客服助手</text>
+						<text class="head-sub">常见咨询 · 固定知识库答复</text>
 					</view>
 					<view class="head-actions">
 						<text class="head-action" @click="resetChat">新对话</text>
@@ -34,8 +34,8 @@
 					</view>
 				</view>
 
-				<!-- 审核要求：AI 生成内容需要在页面显著位置说明 -->
-				<view class="ai-notice">本服务内容由人工智能生成，仅供参考</view>
+				<!-- 页面显著位置说明：自动答复内容仅供参考 -->
+				<view class="ai-notice">本服务为常见问题自动答复，仅供参考，未解决请联系人工客服</view>
 
 				<scroll-view class="chat-scroll" scroll-y :scroll-top="scrollTop">
 					<view class="msg-list">
@@ -52,9 +52,9 @@
 								mode="aspectFill"
 							></image>
 							<view class="bubble">
-								<text v-if="msg.typing" class="bubble-text typing-text">正在思考…</text>
+								<text v-if="msg.typing" class="bubble-text typing-text">正在查询…</text>
 								<text v-else class="bubble-text">{{ msg.text }}</text>
-								<text v-if="msg.ai && !msg.typing" class="ai-tag">AI 生成</text>
+								<text v-if="msg.ai && !msg.typing" class="ai-tag">自动答复</text>
 								<view v-if="msg.contact || msg.feedback" class="bubble-actions">
 									<button
 										v-if="msg.contact"
@@ -515,13 +515,13 @@
 		color: #B25B00;
 	}
 
-	/* 页面级 AI 生成提示条：审核要求显著说明 */
+	/* 页面级自动答复提示条 */
 	.ai-notice {
 		flex-shrink: 0;
 		padding: 10rpx 24rpx;
 		background: #FFF3E8;
 		color: #B25B00;
-		font-size: 22rpx;
+		font-size: 24rpx;
 		text-align: center;
 	}
 
