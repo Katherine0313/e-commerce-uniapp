@@ -64,6 +64,17 @@
 				</view>
 			</view>
 
+			<!-- 商品参数：specs 有序数组，为空时整块不显示 -->
+			<view class="specs-section" v-if="specsList.length">
+				<view class="specs-title">商品参数</view>
+				<view class="specs-table">
+					<view class="spec-row" v-for="(item, index) in specsList" :key="index">
+						<text class="spec-name">{{ item.name }}</text>
+						<text class="spec-value">{{ item.value }}</text>
+					</view>
+				</view>
+			</view>
+
 			<!-- 图文详情：body 富文本，rich-text 渲染；img 相对路径已在 bodyHtml 里补全 -->
 			<view class="body-section">
 				<view class="body-title">
@@ -167,6 +178,12 @@
 			cover() {
 				const img = this.product.image
 				return img ? (img.indexOf('http') === 0 ? img : BASE_URL + img) : ''
+			},
+			// 商品参数：后端 specs 是有序数组 [{name,value}]，空值过滤掉
+			specsList() {
+				return Array.isArray(this.product.specs)
+					? this.product.specs.filter((item) => item && item.name && item.value != null && item.value !== '')
+					: []
 			},
 			// 图文详情富文本：body 里 img 的 src 是相对路径 /image/body/xxx，rich-text 不会自动补域名，
 			// 这里统一补成完整 URL，并把空 style 换成 width:100%，否则图片按原始尺寸撑破容器
@@ -480,6 +497,43 @@
 	}
 
 	/* ===== 图文详情 ===== */
+	/* ===== 商品参数 ===== */
+	.specs-section {
+		margin: 20rpx 24rpx 0;
+		padding: 24rpx;
+		background: #ffffff;
+		border-radius: 16rpx;
+	}
+	.specs-title {
+		font-size: 30rpx;
+		font-weight: bold;
+		color: #333333;
+		margin-bottom: 8rpx;
+	}
+	.spec-row {
+		display: flex;
+		align-items: flex-start;
+		padding: 14rpx 0;
+		border-bottom: 1rpx solid #f0f0f0;
+	}
+	.spec-row:last-child {
+		border-bottom: none;
+	}
+	.spec-name {
+		width: 180rpx;
+		flex-shrink: 0;
+		font-size: 26rpx;
+		color: #999999;
+		line-height: 1.6;
+	}
+	.spec-value {
+		flex: 1;
+		font-size: 26rpx;
+		color: #333333;
+		line-height: 1.6;
+		word-break: break-all;
+	}
+
 	.body-section {
 		display: flex;
 		flex-direction: column;
