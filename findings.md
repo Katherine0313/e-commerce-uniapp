@@ -13,13 +13,12 @@
 
 ### 后端微服务架构（2026-09-30 拆分，本次对接确认）
 
-后端 `e-commerce-boot` 已拆成 Maven 多模块 8 服务（1 网关 + 7 业务 + common），端口规划：
+后端 `e-commerce-boot` 已拆成 Maven 多模块 7 服务（1 网关 + 6 业务 + common），shop-service 已于 2026-10-29 随多租户下线删除。端口规划：
 
 | 服务 | 端口 | 职责 |
 |------|------|------|
 | gateway | 8080 | API 网关，`/api/**` → `lb://user-service` |
 | auth-service | 9001 | 管理员登录（占位） |
-| shop-service | 9002 | 多租户沙箱（占位） |
 | product-service | 9003 | 商品（占位） |
 | order-service | 9004 | 订单（占位） |
 | aftersale-service | 9005 | 售后（占位） |

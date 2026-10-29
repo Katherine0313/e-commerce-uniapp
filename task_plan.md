@@ -219,11 +219,10 @@
 - [✓] 支付方式大小写统一：`confirm.vue` payList code `'wechat'` → `'WeChat'`（对齐 `PayTypeEnum`）
 - **状态：** complete（物流轨迹为假数据，真实物流 API 未接）
 
-### 阶段 25：多租户沙箱 C 端 shopId 支持（2026-10-20）
-- [✓] `utils/server-api.js` 加 `SHOP_ID` 常量（默认 1 = 模板店，测沙箱店改成对应 shopId）
-- [✓] `api/login.js` 的 `wxLogin(code, shopId)` 加 shopId 参数
-- [✓] `utils/auth.js` 的 `ensureLogin` 登录传 `SHOP_ID`（后端签进 user 令牌，按店铺隔离下单/购物车/地址）
-- **状态：** complete（扫码进店/分享链接带 shopId 暂不做，当前 SHOP_ID 写死常量）
+### 阶段 25：多租户沙箱 C 端 shopId 支持（2026-10-20）——已废弃
+- [✓] 原实现：`SHOP_ID` 常量、`wxLogin(code, shopId)`、登录传 shopId
+- [✓] **2026-10-29 已移除**：多租户下线，登录只传 `code`
+- **状态：** canceled（单店模式）
 
 ### 阶段 26：个人信息页 + 商品收藏（2026-10-23）
 - [✓] 「我的」页用户卡片右上角齿轮 → `/pages/my/personal-info`

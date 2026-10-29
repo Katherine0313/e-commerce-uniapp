@@ -4,11 +4,11 @@ import { getToken } from '../utils/token.js'
 // ===== 登录 / 用户接口 =====
 // 这些接口需要登录态，登录流程走 utils/auth.js 的 ensureLogin。
 
-// 微信登录：用 code 换 token 和用户信息（shopId 指定所属店铺，多租户沙箱隔离）
-export function wxLogin(code, shopId){
+// 微信登录：用 code 换 token 和用户信息（单店模式）
+export function wxLogin(code){
 	return request('/api/wxlogin', {
 		method: 'POST',
-		data: { code, shopId }
+		data: { code }
 	})
 }
 

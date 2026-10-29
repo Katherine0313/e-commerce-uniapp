@@ -1,6 +1,5 @@
 import { useUserStore } from '../store/user.js'
 import { wxLogin } from '../api/login.js'
-import { SHOP_ID } from '../utils/server-api.js'
 
 // 手动退出登录标记：存在时 ensureLogin 不再自动静默登录，直到用户主动点「微信登录」
 const MANUAL_LOGOUT_KEY = 'manualLogout'
@@ -34,7 +33,7 @@ export async function ensureLogin(options = {}){
 	if(!loginPromise){
 		loginPromise = (async () => {
 			const { code } = await uni.login({ provider: 'weixin' })
-			const res = await wxLogin(code, SHOP_ID)
+			const res = await wxLogin(code)
 			store.setToken(res.token)
 			store.setUserInfo({ id: res.id, name: res.name, avatar: res.avatar })
 			// 重新登录成功，清掉手动退出标记，恢复自动登录

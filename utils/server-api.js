@@ -3,7 +3,7 @@ import { getToken, clearToken } from "./token.js"
 // 后端 API 网关地址：前端所有请求统一走网关，不直连各微服务端口。
 // 网关按 /api/** 前缀路由到下游服务，各微服务的端口对前端透明，无需（也不应）为每个模块单独配地址。
 // 后端微服务端口规划（仅维护参考，前端只需记住网关 8080）：
-//   gateway 8080 / auth 9001 / shop 9002 / product 9003 / order 9004
+//   gateway 8080 / auth 9001 / product 9003 / order 9004
 //   aftersale 9005 / user 9006 / file 9007
 // 环境判断：
 //   HBuilderX「运行」→ development → 本机网关
@@ -12,9 +12,6 @@ import { getToken, clearToken } from "./token.js"
 const DEV_BASE_URL = 'http://127.0.0.1:8080'   // 本地开发：本机 SpringBoot 网关
 const PROD_BASE_URL = 'https://api.jiemids.com' // 打包上线：线上 API 域名
 export const BASE_URL = process.env.NODE_ENV === 'development' ? DEV_BASE_URL : PROD_BASE_URL
-
-// 当前店铺 ID（多租户沙箱）：模板店=1，测沙箱店时改成对应 shopId（登录时签进 token，后端按店铺隔离）
-export const SHOP_ID = 1
 
 // 通用请求封装：自动带 token，成功返回 data，失败统一弹提示
 export function request(url, options = {}){

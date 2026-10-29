@@ -1,5 +1,16 @@
 # 进度日志
 
+## 会话 27：2026-10-29（多租户下线：登录不再传 shopId）
+
+### 当前状态
+后端多租户已彻底下线，小程序登录只传 `code`。
+
+### 已执行操作
+- `utils/server-api.js` 删除 `SHOP_ID` 常量与 shop 端口说明
+- `api/login.js` `wxLogin(code)`，请求体只 `{ code }`
+- `utils/auth.js` 登录不再传 `SHOP_ID`
+- 旧版本小程序继续多传 `shopId` 由后端 `@JsonIgnoreProperties(ignoreUnknown = true)` 忽略
+
 ## 会话 26：2026-10-29（首页下拉刷新换一批商品）
 
 ### 当前状态
