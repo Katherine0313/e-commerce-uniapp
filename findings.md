@@ -295,8 +295,13 @@
 - **「看不到动画」根因**：`onRefresh` 重拉的「分类 + 猜你喜欢」都走本地网关 `127.0.0.1:8080` 秒回，
   `refreshing` 在 `true` 后几十毫秒就被置回 `false`，转圈没渲染出来就复位。修复：`Promise.all` 内联
   `setTimeout` 延时，保证动画至少展示一段时间。
-- **现状**：下拉刷新只重拉「分类 `getCategories` + 猜你喜欢 `getRecommend`」；「轮播图」「热门推荐」仍写死/
-  本地占位，不参与刷新，所以刷新前后数据基本不变、看不出效果。
+- **现状（2026-10-29 更新）**：下拉刷新改为「随机换一批」：`api/product.js` 的 `getRandomProducts(limit, excludeIds)`
+  调后端 `GET /api/products/random`（`ORDER BY RAND() LIMIT`，`excludeIds` 排除当前列表，避免和上一批大量重复）。
+  首屏仍走 `/api/home` 个性化推荐；刷新**只替换「热门推荐」`HotPanel` 的 8 个商品位**，「猜你喜欢」「轮播图」不动。
+- **为什么不能直接重拉 `/api/products/recommend`**：推荐结果有 60 秒 Redis 缓存（按 `用户 + limit`），游客还走
+  「销量前 10」兜底，60 秒内刷新拿到的必然是同一批；随机接口特意绕开该缓存。
+- **HotPanel 商品位**：栏目名（爆款推荐/人气热卖/…）写死，商品默认 8 个 id 写死；页面传 `:list` 时按顺序替换商品，
+  不足回退默认 id。`HotPanel.currentIds()` 给 `onRefresh` 排除当前批次用。
 - **后端待提供（等 Python 推荐服务写好再继续）**：
   - 轮播图 Banner 接口 `GET /api/banners` → `Result<List<BannerVO{id,image,link,sort}>>`；
   - 热门推荐接口 `GET /api/products/hot` → `Result<List<HotSlotVO{title,product}>>`（或商品加 `is_hot` 标记、

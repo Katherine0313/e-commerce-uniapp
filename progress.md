@@ -1,5 +1,24 @@
 # 进度日志
 
+## 会话 26：2026-10-29（首页下拉刷新换一批商品）
+
+### 当前状态
+下拉刷新只换「热门推荐」`HotPanel` 的 8 个商品位，每次随机一批且排除当前展示的；「猜你喜欢」等其余模块不动。
+
+### 已执行操作
+- 后端（product-service）：`ProductMapper.listRandomOnSale`（`ORDER BY RAND() LIMIT`，`id NOT IN excludeIds`）、
+  `ProductService.listRandomProducts`、`ProductController` 新增 `GET /api/products/random?limit=&excludeIds=`。
+  免登录白名单已由 `/api/products/**` 覆盖，无需改网关。
+- 前端：`api/product.js` 新增 `getRandomProducts(limit, excludeIds)`；`hot-panel.vue` 支持 `list` 入参（不足回退默认 8 个 id）
+  并暴露 `currentIds()`；`pages/index/index.vue` 的 `onRefresh` 只替换 `hotList`，保留 600ms 最短转圈。
+
+### 改动的文件
+| 文件 | 改动 |
+|---|---|
+| `api/product.js` | 新增 `getRandomProducts` |
+| `pages/index/component/hot-panel.vue` | 商品位支持外部 `list`，暴露 `currentIds()` |
+| `pages/index/index.vue` | 下拉刷新只换热门推荐 |
+
 ## 会话 25：2026-10-23（个人信息页 + 商品收藏）
 
 ### 当前状态

@@ -129,9 +129,10 @@
 - [✓] 修复：`onRefresh` 的 `Promise.all` 内联 `setTimeout` 延时，保证动画至少展示一段时间
 - [✓] 整合代码：去掉 `minDelay` 中间变量，延时 Promise 直接内联
 - [✓] 确认用 `scroll-view` 的 `refresher-enabled` 而非原生 `onPullDownRefresh`（自定义 fixed 导航栏会盖住原生转圈）
+- [✓] 下拉刷新「换一批」：后端新增 `GET /api/products/random`（随机 + 排除当前列表），前端 `onRefresh` 只换 `HotPanel` 的 8 个商品位（猜你喜欢不动）
 - [ ] 接「轮播图 Banner 接口」进刷新（等后端 `GET /api/banners`）
 - [ ] 接「热门推荐接口」进刷新（等后端 `GET /api/products/hot`）
-- **状态：** in_progress（动画已修，接后端数据待 Python 推荐服务 + 后端接口）
+- **状态：** in_progress（刷新换一批已完成；轮播图/热门推荐仍等后端接口）
 
 ### 阶段 16：分类页右侧商品网格
 - [✓] 分类页 `category.vue` 左侧分类后端化：`mounted` 调 `getCategories()`，按 `parentId` 拆一/二级，一级分类记下 `subIds`（二级分类 id）

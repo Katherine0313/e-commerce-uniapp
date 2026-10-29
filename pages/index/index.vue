@@ -16,8 +16,8 @@
 
 				<!-- 前台分类面板：手机 / 笔记本 / 平板 / 相机 / 手表 / 耳机 -->
 				<CategoryPanel ref="categoryPanel" :list="categories" @select="handleCategorySelect" />
-				<!-- 热门推荐：点商品图跳商品详情页 -->
-				<HotPanel @select="handleProductSelect" />
+				<!-- 热门推荐：点商品图跳商品详情页；下拉刷新会换这一批商品 -->
+				<HotPanel ref="hotPanel" :list="hotList" @select="handleProductSelect" />
 
 				<!-- 猜你喜欢：全局注册，点商品图复用 handleProductSelect 跳详情 -->
 				<Guess ref="guess" :list="recommend" @select="handleProductSelect" />
@@ -35,6 +35,7 @@
 	// 热门推荐
 	import HotPanel from './component/hot-panel.vue'
 	import { getHome } from '../../api/home.js'
+	import { getRandomProducts } from '../../api/product.js'
 	// 分享卡片统一文案：胶囊菜单的「转发」「分享到朋友圈」「收藏」共用
 	const SHARE_TITLE = '杰米多多小店｜正品3C数码'
 	// 分享封面：用代码包内本地 JPG（微信分享图只支持 JPG/PNG），不受开发环境 127.0.0.1 / https 限制
@@ -54,7 +55,9 @@
 				navHeight: 0, // 导航栏总高度（px），由 CustomNavbar 算好后抛上来
 				// 聚合接口数据：null 表示还没回来（子组件显示骨架），[] 表示已加载但为空
 				categories: null,
-				recommend: null
+				recommend: null,
+				// 热门推荐下拉刷新换的一批商品；null 时 HotPanel 用自带的默认 8 个 id
+				hotList: null
 			}
 		},
 		computed: {
@@ -114,11 +117,16 @@
 			goSearch() {
 				uni.navigateTo({ url: '/pages/search/search' })
 			},
-			// 下拉刷新：重拉首页聚合数据，并至少转圈 600ms 再收起，避免动画一闪而过
+			// 下拉刷新：只换「热门推荐」的 8 个商品位，并至少转圈 600ms 再收起，避免动画一闪而过
 			onRefresh() {
 				this.refreshing = true
+				// 当前展示的 8 个 id 传给后端排除，保证换出来的一批和现在不重复
+				const excludeIds = this.$refs.hotPanel ? this.$refs.hotPanel.currentIds() : []
 				Promise.all([
-					this.loadHome(),
+					getRandomProducts(8, excludeIds).then((list) => {
+						// 只有拿到新数据才替换，请求失败保留原列表
+						if (list && list.length) this.hotList = list
+					}).catch(() => {}),
 					new Promise((resolve) => setTimeout(resolve, 600))
 				]).then(() => {
 					this.refreshing = false

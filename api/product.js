@@ -24,6 +24,16 @@ export function getRecommend(limit){
 	return request('/api/products/recommend?limit=' + (limit || 10), { method: 'GET' })
 }
 
+// 随机取一批商品，对应 GET /api/products/random（首页下拉刷新「换一批」用）
+// excludeIds：当前已展示的商品 id，后端排除它们，避免刷新后和上一批大量重复
+export function getRandomProducts(limit, excludeIds){
+	let query = 'limit=' + (limit || 10)
+	if (excludeIds && excludeIds.length) {
+		query += '&excludeIds=' + excludeIds.join(',')
+	}
+	return request('/api/products/random?' + query, { method: 'GET' })
+}
+
 // 按关键词搜索商品，对应 GET /api/products?keyword=x（免登录）
 export function searchProducts(keyword){
 	return request('/api/products?keyword=' + encodeURIComponent(keyword), { method: 'GET' })

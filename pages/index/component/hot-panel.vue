@@ -21,24 +21,44 @@
 		BASE_URL
 	} from '../../../utils/server-api.js'
 
+	// 栏目名固定写死；商品位默认展示的 id（下拉刷新前）
+	const TITLES = [
+		[
+			{ left: '爆款推荐', right: '人气热卖' },
+			{ left: '特惠推荐', right: '精选数码' }
+		],
+		[
+			{ left: '好物精选', right: '新品首发' },
+			{ left: '前沿潮品', right: '数码优选' }
+		]
+	]
+	const DEFAULT_IDS = [1, 7, 16, 32, 26, 12, 22, 21]
+
 	export default {
 		name: 'HotPanel',
-		data() {
-			return {
-				// 每行两个色块，每个色块左右各放一个商品位：title 是栏目名，id 是商品 id
-				rows: [
-					[
-						{ left: { title: '爆款推荐', id: 1 }, right: { title: '人气热卖', id: 7 } },
-						{ left: { title: '特惠推荐', id: 16 }, right: { title: '精选数码', id: 32 } }
-					],
-					[
-						{ left: { title: '好物精选', id: 26 }, right: { title: '新品首发', id: 12 } },
-						{ left: { title: '前沿潮品', id: 22 }, right: { title: '数码优选', id: 21 } }
-					]
-				]
+		props: {
+			// 外部传入的商品列表（下拉刷新换的一批）；undefined/空 时用默认 8 个 id
+			list: { type: Array, default: undefined }
+		},
+		computed: {
+			// 每行两个色块，每个色块左右各放一个商品位：title 是栏目名，id 是商品 id
+			rows() {
+				return TITLES.map((row, ri) => row.map((block, bi) => ({
+					left: { title: block.left, id: this.idAt((ri * 2 + bi) * 2) },
+					right: { title: block.right, id: this.idAt((ri * 2 + bi) * 2 + 1) }
+				})))
 			}
 		},
 		methods: {
+			// 第 n 个商品位的 id：优先用外部传入的商品，不足或未传时回退默认 id
+			idAt(n) {
+				const item = this.list && this.list[n]
+				return item && item.id ? item.id : DEFAULT_IDS[n]
+			},
+			// 当前展示的 8 个商品 id，页面下拉刷新时拿去排除，避免换出来和现在重复
+			currentIds() {
+				return [0, 1, 2, 3, 4, 5, 6, 7].map((i) => this.idAt(i))
+			},
 			// 商品图：按商品 id 走后端同命名商品图（/image/upload/{id}.webp）
 			imgUrl(id) {
 				return BASE_URL + '/image/upload/' + id + '.webp'
