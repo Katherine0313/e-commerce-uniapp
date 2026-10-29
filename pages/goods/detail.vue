@@ -12,7 +12,7 @@
 					<text class="price">¥{{ product.price }}</text>
 					<text v-if="product.marketPrice" class="market-price">¥{{ product.marketPrice }}</text>
 				</view>
-				<text class="name">{{ product.name }}</text>
+				<text class="name">{{ product.title }}</text>
 				<text v-if="product.subTitle" class="sub-title">{{ product.subTitle }}</text>
 			</view>
 

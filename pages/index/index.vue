@@ -15,7 +15,7 @@
 				<CustomSwiper />
 
 				<!-- 前台分类面板：手机 / 笔记本 / 平板 / 相机 / 手表 / 耳机 -->
-				<CategoryPanel ref="categoryPanel" :list="categories" @select="handleCategorySelect" />
+				<CategoryPanel ref="categoryPanel" :list="categories" :limit="6" @select="handleCategorySelect" />
 				<!-- 热门推荐：点商品图跳商品详情页；下拉刷新会换这一批商品 -->
 				<HotPanel ref="hotPanel" :list="hotList" @select="handleProductSelect" />
 

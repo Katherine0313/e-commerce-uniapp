@@ -25,19 +25,6 @@
 				<view class="swiper-wrap">
 					<CustomSwiper height="200rpx" />
 				</view>
-				<!-- 二级分类：一级下所有子分类横向切换，「全部」为不筛选 -->
-				<scroll-view v-if="activeSubCategories.length" class="sub-tabs" scroll-x>
-					<view class="sub-tab" :class="{ active: !activeSubId }" @click="handleSelectSub(null)">全部</view>
-					<view
-						v-for="sub in activeSubCategories"
-						:key="sub.id"
-						class="sub-tab"
-						:class="{ active: activeSubId === sub.id }"
-						@click="handleSelectSub(sub.id)"
-					>
-						{{ sub.name }}
-					</view>
-				</scroll-view>
 				<!-- 商品网格：每行两个，卡片是 图片 + 名称 + 价格 + 购物车图标 -->
 				<view class="goods-grid">
 					<view class="goods-card" v-for="item in currentProducts" :key="item.id" @click="handleProductClick(item)">
@@ -69,7 +56,6 @@
 		data() {
 			return {
 				activeIndex: 0, // 当前选中一级分类下标，右侧商品跟着它联动
-				activeSubId: null, // 当前选中的二级分类 id；null 表示该一级下全部商品
 				navHeight: 0, // 导航栏总高度（px），由 CustomNavbar 抛上来
 				// 一级父分类：来自后端 GET /api/categories（树形，children 是二级分类）
 				categories: [],
@@ -85,11 +71,6 @@
 			// 分类主体高度 = 整屏 - 导航栏占位高度，必须是确定值
 			bodyHeight() {
 				return 'calc(100vh - ' + this.navHeight + 'px)'
-			},
-			// 当前一级分类下的二级分类
-			activeSubCategories() {
-				const cat = this.categories[this.activeIndex]
-				return cat ? (cat.children || []) : []
 			}
 		},
 		mounted() {
@@ -104,13 +85,12 @@
 			// 拉分类：后端返回树形列表，每个元素就是一级父分类，children 是它的二级分类
 			fetchCategories() {
 				getCategories().then((list) => {
-					// 一级父分类：children 记下它的二级分类 id，用于过滤商品
+					// 一级父分类：只展示/筛选一级，二级分类由用户后续自行扩展
 					this.categories = (list || []).map((item) => {
 						return {
 							id: item.id,
 							name: item.name,
-							icon: this.imgUrl(item),
-							children: (item.children || []).map((sub) => ({ id: sub.id, name: sub.name }))
+							icon: this.imgUrl(item)
 						}
 					})
 					// 若从首页分类面板带过来选中分类，定位到对应下标
@@ -121,15 +101,14 @@
 					// 错误提示已在 request 封装里统一处理
 				})
 			},
-			// 按当前选中的一级/二级分类懒加载商品
+			// 按当前选中的一级分类懒加载其名下全部商品（后端一级过滤包含所有二级）
 			loadProducts() {
 				const cat = this.categories[this.activeIndex]
 				if (!cat) {
 					this.currentProducts = []
 					return
 				}
-				// 二级分类优先；未选二级时取一级下全部商品（后端支持一级 id）
-				const filterId = this.activeSubId || cat.id
+				const filterId = cat.id
 				// 命中缓存直接显示，切回已看过的分类不再等接口
 				const cached = this.productCache[filterId]
 				if (cached && Date.now() < cached.expireAt) {
@@ -163,7 +142,6 @@
 				const idx = this.categories.findIndex((c) => c.id === selectedId)
 				if (idx !== -1) {
 					this.activeIndex = idx
-					this.activeSubId = null
 					// 用完即清，避免下次直接进分类页还停在旧分类
 					uni.removeStorageSync('selectedCategoryId')
 				}
@@ -176,15 +154,9 @@
 			goSearch() {
 				uni.navigateTo({ url: '/pages/search/search' })
 			},
-			// 点左侧一级分类：切换选中，回到「全部」并懒加载
+			// 点左侧一级分类：切换选中并懒加载该一级下全部商品
 			handleSelect(index) {
 				this.activeIndex = index
-				this.activeSubId = null
-				this.loadProducts()
-			},
-			// 点二级分类：按二级 id 过滤，null 表示该一级下全部
-			handleSelectSub(subId) {
-				this.activeSubId = subId
 				this.loadProducts()
 			},
 			// 点击商品：跳商品详情页（独立 page，不再弹加购弹窗）
@@ -250,26 +222,6 @@
 	/* 右侧顶部轮播图容器：左右留边，让轮播图不贴边 */
 	.swiper-wrap {
 		padding: 20rpx 20rpx 0;
-	}
-
-	/* 二级分类横向切换 */
-	.sub-tabs {
-		white-space: nowrap;
-		padding: 20rpx 16rpx 4rpx;
-	}
-	.sub-tab {
-		display: inline-block;
-		padding: 10rpx 24rpx;
-		margin-right: 12rpx;
-		font-size: 24rpx;
-		color: #666666;
-		background: #f5f5f5;
-		border-radius: 999rpx;
-	}
-	.sub-tab.active {
-		color: #ffffff;
-		background: #FF6700;
-		font-weight: bold;
 	}
 
 	/* 商品网格：每行两个，卡片内部 图片 + 名称 + 价格 + 购物车图标 */

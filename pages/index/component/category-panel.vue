@@ -28,7 +28,9 @@
 		name: 'CategoryPanel',
 		props: {
 			// 首页聚合接口传入的一级分类：undefined=没传（自请求），null=加载中，数组=已加载
-			list: { type: Array, default: undefined }
+			list: { type: Array, default: undefined },
+			// 最多展示几个（首页 3 列 × 2 行 = 6）；0 表示不限制
+			limit: { type: Number, default: 0 }
 		},
 		data() {
 			return {
@@ -38,9 +40,10 @@
 			}
 		},
 		computed: {
-			// 外部传入优先，否则用自请求数据
+			// 外部传入优先，否则用自请求数据；limit>0 时只展示前 N 个
 			categories() {
-				return this.list !== undefined ? (this.list || []) : this.internalCategories
+				const source = this.list !== undefined ? (this.list || []) : this.internalCategories
+				return this.limit > 0 ? source.slice(0, this.limit) : source
 			},
 			// 没数据且仍在加载时显示骨架
 			showSkeleton() {
