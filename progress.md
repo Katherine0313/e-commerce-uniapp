@@ -1,5 +1,17 @@
 # 进度日志
 
+## 会话 28：2026-10-29（热门推荐优先取推荐分类）
+
+### 当前状态
+首页「热门推荐」8 个商品位改为：优先取 `categories.recommend=1` 的分类（含父分类推荐）下的商品，不够 8 个时用随机上架商品补足；首屏和下拉刷新共用该逻辑。
+
+### 已执行操作
+- 后端 product-service 新增 `GET /api/products/hot?limit=8&excludeIds=`：`ProductMapper.listRandomOnSaleByRecommendedCategory` + `ProductService.listHotProducts`（推荐分类优先，不足随机补，排除当前批次）
+- 小程序 `api/product.js` 新增 `getHotProducts`；`pages/index/index.vue` 首屏 `loadHot()`、下拉刷新改调该接口
+
+### 验证
+- `hot?limit=8` 返回 8 个推荐分类商品；`limit=30` 返回 24 推荐 + 6 随机；带 `excludeIds` 无重复
+
 ## 会话 27：2026-10-29（多租户下线：登录不再传 shopId）
 
 ### 当前状态

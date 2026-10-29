@@ -35,7 +35,7 @@
 	// 热门推荐
 	import HotPanel from './component/hot-panel.vue'
 	import { getHome } from '../../api/home.js'
-	import { getRandomProducts } from '../../api/product.js'
+	import { getHotProducts } from '../../api/product.js'
 	// 分享卡片统一文案：胶囊菜单的「转发」「分享到朋友圈」「收藏」共用
 	const SHARE_TITLE = '杰米多多小店｜正品3C数码'
 	// 分享封面：用代码包内本地 JPG（微信分享图只支持 JPG/PNG），不受开发环境 127.0.0.1 / https 限制
@@ -96,6 +96,8 @@
 		onLoad() {
 			// 页面创建即发请求，比等子组件 mounted 再各发一次更早，也只发一个请求
 			this.loadHome()
+			// 热门推荐：推荐分类优先，不够随机补足（首屏与下拉刷新共用同一接口）
+			this.loadHot()
 		},
 		methods: {
 			// 拉首页聚合数据（分类 + 猜你喜欢），返回 Promise 供下拉刷新等待
@@ -117,13 +119,19 @@
 			goSearch() {
 				uni.navigateTo({ url: '/pages/search/search' })
 			},
+			// 热门推荐：推荐分类优先，不够随机补足
+			loadHot() {
+				return getHotProducts(8).then((list) => {
+					if (list && list.length) this.hotList = list
+				}).catch(() => {})
+			},
 			// 下拉刷新：只换「热门推荐」的 8 个商品位，并至少转圈 600ms 再收起，避免动画一闪而过
 			onRefresh() {
 				this.refreshing = true
 				// 当前展示的 8 个 id 传给后端排除，保证换出来的一批和现在不重复
 				const excludeIds = this.$refs.hotPanel ? this.$refs.hotPanel.currentIds() : []
 				Promise.all([
-					getRandomProducts(8, excludeIds).then((list) => {
+					getHotProducts(8, excludeIds).then((list) => {
 						// 只有拿到新数据才替换，请求失败保留原列表
 						if (list && list.length) this.hotList = list
 					}).catch(() => {}),

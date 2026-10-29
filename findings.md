@@ -294,9 +294,10 @@
 - **「看不到动画」根因**：`onRefresh` 重拉的「分类 + 猜你喜欢」都走本地网关 `127.0.0.1:8080` 秒回，
   `refreshing` 在 `true` 后几十毫秒就被置回 `false`，转圈没渲染出来就复位。修复：`Promise.all` 内联
   `setTimeout` 延时，保证动画至少展示一段时间。
-- **现状（2026-10-29 更新）**：下拉刷新改为「随机换一批」：`api/product.js` 的 `getRandomProducts(limit, excludeIds)`
-  调后端 `GET /api/products/random`（`ORDER BY RAND() LIMIT`，`excludeIds` 排除当前列表，避免和上一批大量重复）。
-  首屏仍走 `/api/home` 个性化推荐；刷新**只替换「热门推荐」`HotPanel` 的 8 个商品位**，「猜你喜欢」「轮播图」不动。
+- **现状（2026-10-29 更新）**：热门推荐优先取「推荐分类」商品：`api/product.js` 的 `getHotProducts(limit, excludeIds)`
+  调后端 `GET /api/products/hot`（`categories.recommend=1` 或其父分类推荐的商品优先，不足 `limit` 用随机上架商品补足，
+  `excludeIds` 排除当前列表）。首屏 `loadHot()` 与下拉刷新共用该接口，刷新**只替换「热门推荐」`HotPanel` 的 8 个商品位**，
+  「猜你喜欢」「轮播图」不动。
 - **为什么不能直接重拉 `/api/products/recommend`**：推荐结果有 60 秒 Redis 缓存（按 `用户 + limit`），游客还走
   「销量前 10」兜底，60 秒内刷新拿到的必然是同一批；随机接口特意绕开该缓存。
 - **HotPanel 商品位**：栏目名（爆款推荐/人气热卖/…）写死，商品默认 8 个 id 写死；页面传 `:list` 时按顺序替换商品，

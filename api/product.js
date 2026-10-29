@@ -34,6 +34,16 @@ export function getRandomProducts(limit, excludeIds){
 	return request('/api/products/random?' + query, { method: 'GET' })
 }
 
+// 热门推荐商品，对应 GET /api/products/hot（推荐分类优先，不够随机补足）
+// excludeIds：当前已展示的商品 id，下拉刷新换一批时排除
+export function getHotProducts(limit, excludeIds){
+	let query = 'limit=' + (limit || 8)
+	if (excludeIds && excludeIds.length) {
+		query += '&excludeIds=' + excludeIds.join(',')
+	}
+	return request('/api/products/hot?' + query, { method: 'GET' })
+}
+
 // 按关键词搜索商品，对应 GET /api/products?keyword=x（免登录）
 export function searchProducts(keyword){
 	return request('/api/products?keyword=' + encodeURIComponent(keyword), { method: 'GET' })
