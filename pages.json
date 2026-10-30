@@ -61,6 +61,24 @@
 			}
 		},
 		{
+			"path":"pages/my/coupons",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/coupon-center",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path":"pages/my/member",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path":"pages/my/about-us",
 			"style": {
 				"navigationStyle": "custom"

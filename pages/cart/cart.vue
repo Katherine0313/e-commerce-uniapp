@@ -32,7 +32,11 @@
 					<!-- 商品信息 -->
 					<view class="item-info">
 						<text class="item-name">{{ item.name }}</text>
-						<text class="item-price">单价 ¥{{ fmt(item.price) }}</text>
+						<view class="item-price-row">
+							<text class="item-price">单价 ¥{{ fmt(item.price) }}</text>
+							<text v-if="item.originalPrice" class="item-origin">¥{{ fmt(item.originalPrice) }}</text>
+							<text v-if="item.promotionTag" class="item-tag">{{ item.promotionTag }}</text>
+						</view>
 						<!-- 增值保障：每件费用，有值才显示 -->
 						<text v-if="num(item.insuranceFee) > 0" class="item-insurance">增值保障 ¥{{ fmt(item.insuranceFee) }}</text>
 						<view class="item-bottom">
@@ -341,10 +345,33 @@
 		white-space: nowrap;
 	}
 
-	.item-price {
+	.item-price-row {
+		display: flex;
+		align-items: baseline;
 		margin-top: 8rpx;
+	}
+
+	.item-price {
 		font-size: 24rpx;
 		color: #999999;
+	}
+
+	/* 活动前原价：划线展示 */
+	.item-origin {
+		margin-left: 10rpx;
+		font-size: 22rpx;
+		color: #bbbbbb;
+		text-decoration: line-through;
+	}
+
+	/* 促销标签 */
+	.item-tag {
+		margin-left: 10rpx;
+		padding: 0 10rpx;
+		font-size: 20rpx;
+		color: #FF6700;
+		border: 1rpx solid #FF6700;
+		border-radius: 6rpx;
 	}
 
 	.item-insurance {

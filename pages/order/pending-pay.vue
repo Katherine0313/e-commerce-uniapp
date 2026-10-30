@@ -13,6 +13,16 @@
 				:show-copy="true"
 			>
 				<template #foot>
+					<!-- 优惠合计（促销 + 券） -->
+					<view v-if="Number(order.discountAmount) > 0" class="pay-row">
+						<text class="pay-label">优惠合计：</text>
+						<text class="pay-discount">-¥{{ fmtMoney(order.discountAmount) }}</text>
+					</view>
+					<view v-if="Number(order.couponAmount) > 0" class="pay-row">
+						<text class="pay-label">其中优惠券：</text>
+						<text class="pay-discount">-¥{{ fmtMoney(order.couponAmount) }}</text>
+					</view>
+
 					<!-- 实付金额 -->
 					<view class="pay-row">
 						<text class="pay-label">实付款：</text>
@@ -201,6 +211,12 @@
 		font-size: 34rpx;
 		font-weight: bold;
 		color: #FF4E2A;
+	}
+
+	/* 活动优惠：品牌橙 */
+	.pay-discount {
+		font-size: 28rpx;
+		color: #FF6700;
 	}
 
 	/* ═══ 底部按钮区 ═══ */

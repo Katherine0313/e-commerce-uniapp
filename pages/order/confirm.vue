@@ -33,6 +33,8 @@
 					<text class="goods-name">{{ item.name }}</text>
 					<view class="goods-price-row">
 						<text class="goods-price">¥{{ fmt(item.price) }}</text>
+						<text v-if="item.originalPrice" class="goods-origin">¥{{ fmt(item.originalPrice) }}</text>
+						<text v-if="item.promotionTag" class="goods-tag">{{ item.promotionTag }}</text>
 						<text class="goods-qty">×{{ item.quantity }}</text>
 					</view>
 					<text v-if="num(item.insuranceFee) > 0" class="goods-insurance">增值保障
@@ -58,11 +60,59 @@
 			</view>
 		</view>
 
-		<!-- 金额汇总 -->
+		<!-- 金额汇总：商品总价 → 促销优惠 → 优惠券 → 应付金额 -->
 		<view class="card">
 			<view class="detail-row">
 				<text class="detail-label">商品总价</text>
-				<text class="detail-val total">¥{{ fmt(totalAmount) }}</text>
+				<text class="detail-val">¥{{ fmt(originalTotal) }}</text>
+			</view>
+			<view v-if="promotionDiscount > 0" class="detail-row">
+				<text class="detail-label">促销优惠</text>
+				<text class="detail-val discount">-¥{{ fmt(promotionDiscount) }}</text>
+			</view>
+			<view class="detail-row" @click="openCoupon">
+				<text class="detail-label">优惠券</text>
+				<view class="coupon-entry">
+					<text v-if="couponDiscount > 0" class="detail-val discount">-¥{{ fmt(couponDiscount) }}</text>
+					<text v-else-if="availableCoupons.length" class="coupon-tip">{{ usableCouponCount }} 张可用</text>
+					<text v-else class="coupon-tip">暂无可用</text>
+					<uni-icons type="right" size="14" color="#999999"></uni-icons>
+				</view>
+			</view>
+			<view class="detail-row">
+				<text class="detail-label">应付金额</text>
+				<text class="detail-val total">¥{{ fmt(payableAmount) }}</text>
+			</view>
+		</view>
+
+		<!-- 优惠券选择弹层 -->
+		<view v-if="couponVisible" class="coupon-mask" @click="couponVisible = false">
+			<view class="coupon-sheet" @click.stop>
+				<view class="coupon-sheet-head">
+					<text class="coupon-sheet-title">选择优惠券</text>
+					<text class="coupon-sheet-close" @click="couponVisible = false">×</text>
+				</view>
+				<scroll-view scroll-y class="coupon-sheet-body">
+					<view class="coupon-option" :class="{ active: !selectedCouponId }" @click="selectCoupon(null)">
+						<text class="coupon-option-name">不使用优惠券</text>
+						<uni-icons v-if="!selectedCouponId" type="checkmarkempty" size="20" color="#FF6700"></uni-icons>
+					</view>
+					<view v-for="c in availableCoupons" :key="c.userCouponId" class="coupon-option"
+					      :class="{ active: selectedCouponId === c.userCouponId, disabled: !c.usable }"
+					      @click="c.usable && selectCoupon(c)">
+						<view class="coupon-option-info">
+							<text class="coupon-option-name">{{ c.name }}</text>
+							<text class="coupon-option-reason">
+								{{ c.usable ? '可减 ¥' + fmt(c.discountAmount) : c.reason }}
+							</text>
+						</view>
+						<uni-icons v-if="selectedCouponId === c.userCouponId" type="checkmarkempty" size="20"
+						           color="#FF6700"></uni-icons>
+					</view>
+					<view v-if="!availableCoupons.length" class="coupon-empty">
+						<text>暂无可用优惠券</text>
+					</view>
+				</scroll-view>
 			</view>
 		</view>
 
@@ -85,7 +135,7 @@
 		<view class="bottom-bar">
 			<view class="total">
 				<text class="total-label">合计：</text>
-				<text class="total-price">¥{{ fmt(totalAmount) }}</text>
+				<text class="total-price">¥{{ fmt(payableAmount) }}</text>
 			</view>
 			<view class="pay-btn" :class="{ disabled: paying }" @click="handlePay">
 				{{ paying ? '提交中...' : '提交订单' }}
@@ -102,11 +152,15 @@
 	import {
 		createOrder,
 		payOrder,
+		quoteOrder,
 		genIdempotencyKey
 	} from '../../api/order.js'
 	import {
 		clearCart
 	} from '../../api/cart.js'
+	import {
+		getAvailableCoupons
+	} from '../../api/coupon.js'
 	import {
 		listAddress
 	} from '../../api/address.js'
@@ -145,13 +199,42 @@
 					color: '#07C160'
 				}],
 				showPayPopup: false, // 模拟支付弹窗显隐
-				pendingOrder: null // 下单成功后待支付的订单（弹窗里展示金额，用它调 payOrder）
+				pendingOrder: null, // 下单成功后待支付的订单（弹窗里展示金额，用它调 payOrder）
+				quote: null, // 后端实时报价（促销 + 券），仅用于展示；下单时后端会重新计算
+				availableCoupons: [], // 当前订单可用券
+				selectedCouponId: null, // 选中的用户券 id
+				selectedCoupon: null, // 选中的券对象
+				couponVisible: false // 选券弹层
 			}
 		},
 		computed: {
-			// 合计金额 = 各商品小计之和，与后端 payAmount 一致
+			// 合计金额 = 各商品小计之和（购物车价已含直减，不含满减），报价未返回时兜底用
 			totalAmount() {
 				return this.items.reduce((sum, i) => sum + this.num(i.subTotal), 0)
+			},
+			// 增值保障总额：保险不参与促销
+			insuranceTotal() {
+				return this.items.reduce((sum, i) => sum + this.num(i.insuranceFee) * this.num(i.quantity), 0)
+			},
+			// 活动前金额 = 报价原价 + 保险
+			originalTotal() {
+				return this.quote ? this.num(this.quote.originalAmount) + this.insuranceTotal : this.totalAmount
+			},
+			// 促销优惠（直减 + 满减，不含保险）
+			promotionDiscount() {
+				return this.quote ? this.num(this.quote.promotionDiscount) : 0
+			},
+			// 优惠券优惠（不含保险）
+			couponDiscount() {
+				return this.quote ? this.num(this.quote.couponDiscount) : 0
+			},
+			// 可用券数量
+			usableCouponCount() {
+				return this.availableCoupons.filter(c => c.usable).length
+			},
+			// 应付金额 = 报价应付 + 保险
+			payableAmount() {
+				return this.quote ? this.num(this.quote.payAmount) + this.insuranceTotal : this.totalAmount
 			}
 		},
 		onLoad() {
@@ -166,6 +249,7 @@
 				})
 			}
 			this.loadAddress()
+			this.initCouponQuote()
 		},
 		methods: {
 			// 拉地址列表，取默认地址展示；无默认取第一条
@@ -176,6 +260,56 @@
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
 				})
+			},
+			// 初始化：拉可用券，自动选最优，再按选中券报价；失败退回不用券报价
+			initCouponQuote() {
+				if (!this.items.length) return
+				ensureLogin()
+					.then(() => getAvailableCoupons(this.quoteItems()))
+					.then((list) => {
+						this.availableCoupons = list || []
+						const best = (list || []).find(c => c.usable)
+						if (best) {
+							this.selectedCouponId = best.userCouponId
+							this.selectedCoupon = best
+						}
+					})
+					.catch(() => {})
+					.then(() => this.loadQuote())
+			},
+			// 拉实时报价：促销 + 券，展示商品总价/优惠/应付
+			loadQuote() {
+				if (!this.items.length) return
+				const couponId = this.selectedCouponId
+				ensureLogin()
+					.then(() => quoteOrder(this.quoteItems(), couponId))
+					.then((quote) => {
+						this.quote = quote || null
+					})
+					.catch(() => {
+						// 券刚好失效/被占用：清掉选择后按不用券重新报价
+						if (couponId) {
+							this.selectedCouponId = null
+							this.selectedCoupon = null
+							this.loadQuote()
+						}
+					})
+			},
+			// 报价/下单统一入参
+			quoteItems() {
+				return this.items.map(i => ({
+					productId: i.productId,
+					quantity: i.quantity
+				}))
+			},
+			openCoupon() {
+				this.couponVisible = true
+			},
+			selectCoupon(coupon) {
+				this.selectedCouponId = coupon ? coupon.userCouponId : null
+				this.selectedCoupon = coupon || null
+				this.couponVisible = false
+				this.loadQuote()
 			},
 			// 选中地址
 			onAddressSelect(address) {
@@ -218,6 +352,7 @@
 					detailAddress: this.address.detailAddress,
 					remark: this.remark.trim(),
 					idempotencyKey: this.idempotencyKey,
+					couponId: this.selectedCouponId,
 					// 把授权结果随下单一起保存到 orders.is_subscribe_unpaid
 					subscribeUnpaid: subscribeUnpaid,
 					// 购物车 insuranceDetail 是数组，下单接口要字符串，这里序列化一下
@@ -431,6 +566,24 @@
 		color: #999999;
 	}
 
+	/* 活动前原价：划线展示 */
+	.goods-origin {
+		margin-left: 10rpx;
+		font-size: 22rpx;
+		color: #bbbbbb;
+		text-decoration: line-through;
+	}
+
+	/* 促销标签 */
+	.goods-tag {
+		margin-left: 10rpx;
+		padding: 0 10rpx;
+		font-size: 20rpx;
+		color: #FF6700;
+		border: 1rpx solid #FF6700;
+		border-radius: 6rpx;
+	}
+
 	.goods-qty {
 		margin-left: 16rpx;
 		font-size: 24rpx;
@@ -483,6 +636,103 @@
 		font-size: 30rpx;
 		font-weight: bold;
 		color: #FF4E2A;
+	}
+
+	/* 活动优惠：品牌橙，区分于应付金额的红色 */
+	.detail-val.discount {
+		color: #FF6700;
+	}
+
+	.coupon-entry {
+		display: flex;
+		align-items: center;
+		gap: 8rpx;
+	}
+
+	.coupon-tip {
+		font-size: 26rpx;
+		color: #FF6700;
+	}
+
+	/* ===== 选券弹层 ===== */
+	.coupon-mask {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 999;
+		display: flex;
+		align-items: flex-end;
+		background: rgba(0, 0, 0, 0.45);
+	}
+
+	.coupon-sheet {
+		width: 100%;
+		max-height: 70vh;
+		padding-bottom: 40rpx;
+		background: #ffffff;
+		border-radius: 24rpx 24rpx 0 0;
+	}
+
+	.coupon-sheet-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 28rpx 32rpx;
+		border-bottom: 1rpx solid #f2f2f2;
+	}
+
+	.coupon-sheet-title {
+		font-size: 30rpx;
+		font-weight: bold;
+		color: #333333;
+	}
+
+	.coupon-sheet-close {
+		font-size: 44rpx;
+		line-height: 1;
+		color: #999999;
+	}
+
+	.coupon-sheet-body {
+		height: 50vh;
+		padding: 10rpx 32rpx;
+	}
+
+	.coupon-option {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 26rpx 0;
+		border-bottom: 1rpx solid #f7f7f7;
+	}
+
+	.coupon-option.disabled {
+		opacity: 0.5;
+	}
+
+	.coupon-option-info {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.coupon-option-name {
+		font-size: 28rpx;
+		color: #333333;
+	}
+
+	.coupon-option-reason {
+		margin-top: 6rpx;
+		font-size: 22rpx;
+		color: #999999;
+	}
+
+	.coupon-empty {
+		padding: 60rpx 0;
+		text-align: center;
+		font-size: 26rpx;
+		color: #999999;
 	}
 
 	.detail-input {

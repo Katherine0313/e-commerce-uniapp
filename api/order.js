@@ -18,6 +18,16 @@ export function genIdempotencyKey() {
 	})
 }
 
+// 确认页报价，对应 POST /api/orders/quote。
+// 传 [{ productId, quantity }] + 可选 couponId，返回促销/券优惠与应付金额；
+// 只用于展示，提交订单时后端会按最新活动和券状态重新计算。
+export function quoteOrder(items, couponId) {
+	return request('/api/orders/quote', {
+		method: 'POST',
+		data: { items: items, couponId: couponId || null }
+	})
+}
+
 // 下单，对应 POST /api/orders。
 // data 字段：{ consignee, phone, region, detailAddress, remark, idempotencyKey,
 //   items: [{ productId, quantity, insuranceDetail(String), insuranceFee }] }

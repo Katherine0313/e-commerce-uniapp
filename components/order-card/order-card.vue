@@ -17,7 +17,12 @@
 			<image lazy-load class="goods-img" :src="goodsImgUrl(item.image, item.productId)" mode="aspectFill"></image>
 			<view class="goods-info">
 				<text class="goods-name">{{ item.productName }}</text>
-				<text class="goods-price">¥{{ fmtMoney(item.salesPrice) }}</text>
+				<view class="goods-price-row">
+					<text class="goods-price">¥{{ fmtMoney(item.salesPrice) }}</text>
+					<!-- 原价只在确实有优惠时展示，避免无活动订单出现两行相同价格 -->
+					<text v-if="item.originalPrice && +item.originalPrice > +item.salesPrice"
+					      class="goods-origin">¥{{ fmtMoney(item.originalPrice) }}</text>
+				</view>
 			</view>
 			<view class="goods-info-r">
 				<text class="goods-qty">×{{ item.quantity }}</text>
@@ -297,6 +302,20 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.goods-price-row {
+		display: flex;
+		align-items: baseline;
+		margin-top: 8rpx;
+	}
+
+	/* 活动前原价：划线展示 */
+	.goods-origin {
+		margin-left: 10rpx;
+		font-size: 22rpx;
+		color: #bbbbbb;
+		text-decoration: line-through;
 	}
 
 	.goods-price {

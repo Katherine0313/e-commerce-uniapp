@@ -43,6 +43,14 @@
 						</view>
 					</view>
 				</view>
+				<view v-if="Number(order.discountAmount) > 0" class="price-summary">
+					<text>优惠合计</text>
+					<text class="discount">-¥{{ fmtMoney(order.discountAmount) }}</text>
+				</view>
+				<view v-if="Number(order.couponAmount) > 0" class="price-summary">
+					<text>其中优惠券</text>
+					<text class="discount">-¥{{ fmtMoney(order.couponAmount) }}</text>
+				</view>
 				<view class="price-summary">
 					<text>共{{ totalCount }}件 实付款</text>
 					<text class="actual">¥{{ fmtMoney(order.payAmount) }}</text>
@@ -330,6 +338,11 @@
 
 	.actual {
 		color: #333333;
+	}
+
+	/* 活动优惠：品牌橙 */
+	.discount {
+		color: #FF6700;
 	}
 
 	/* ═══ 订单信息 ═══ */

@@ -13,8 +13,12 @@
 			<view class="goods-card" v-for="item in products" :key="item.id" @click="handleSelect(item.id)">
 				<image lazy-load class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
 				<view class="goods-info">
+					<text v-if="item.promotionTag" class="promo-tag">{{ item.promotionTag }}</text>
 					<text class="goods-name">{{ item.name }}</text>
-					<text class="goods-price">¥{{ item.price }}</text>
+					<view class="price-row">
+						<text class="goods-price">¥{{ item.price }}</text>
+						<text v-if="item.originalPrice" class="origin-price">¥{{ item.originalPrice }}</text>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -159,11 +163,37 @@
 		overflow: hidden;
 	}
 
+	/* 促销标签：活动商品在名称上方展示 */
+	.promo-tag {
+		align-self: flex-start;
+		margin-bottom: 6rpx;
+		padding: 0 12rpx;
+		height: 34rpx;
+		line-height: 34rpx;
+		font-size: 20rpx;
+		color: #ffffff;
+		background: #FF6700;
+		border-radius: 6rpx;
+	}
+
+	.price-row {
+		display: flex;
+		align-items: baseline;
+		margin-top: 12rpx;
+	}
+
 	/* 价格用品牌橙，和 tabBar 选中色、弹窗价格一致 */
 	.goods-price {
-		margin-top: 12rpx;
 		font-size: 32rpx;
 		font-weight: bold;
 		color: #FF6700;
+	}
+
+	/* 活动前原价：划线展示 */
+	.origin-price {
+		margin-left: 10rpx;
+		font-size: 22rpx;
+		color: #999999;
+		text-decoration: line-through;
 	}
 </style>

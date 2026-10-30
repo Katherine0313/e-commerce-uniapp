@@ -10,6 +10,8 @@
 			<view class="info-card">
 				<view class="price-row">
 					<text class="price">¥{{ product.price }}</text>
+					<text v-if="product.originalPrice" class="origin-price">¥{{ product.originalPrice }}</text>
+					<text v-if="product.promotionTag" class="promo-tag">{{ product.promotionTag }}</text>
 					<text v-if="product.marketPrice" class="market-price">¥{{ product.marketPrice }}</text>
 				</view>
 				<text class="name">{{ product.title }}</text>
@@ -392,6 +394,26 @@
 		font-size: 26rpx;
 		color: #999999;
 		text-decoration: line-through;
+	}
+
+	/* 活动前原价：划线展示 */
+	.origin-price {
+		margin-left: 16rpx;
+		font-size: 26rpx;
+		color: #999999;
+		text-decoration: line-through;
+	}
+
+	/* 促销标签：品牌橙小角标 */
+	.promo-tag {
+		margin-left: 16rpx;
+		padding: 0 12rpx;
+		height: 36rpx;
+		line-height: 36rpx;
+		font-size: 20rpx;
+		color: #ffffff;
+		background: #FF6700;
+		border-radius: 6rpx;
 	}
 
 	.name {

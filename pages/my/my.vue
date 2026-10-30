@@ -25,14 +25,18 @@
 			</view>
 		</view>
 
-		<!-- VIP 会员卡：权益、开通流程还没做，审核期间由功能开关隐藏；上线后把 utils/features.js 的 vip 改成 true -->
-		<view class="vip-card" v-if="features.vip" @click="handleNav('')">
+		<!-- 会员卡：展示当前等级 / 成长值，点进会员中心 -->
+		<view class="vip-card" v-if="features.vip" @click="handleNav('/pages/my/member')">
 			<uni-icons type="vip-filled" size="22" color="#7A5410"></uni-icons>
 			<view class="vip-meta">
-				<text class="vip-title">杰米电商VIP会员</text>
-				<text class="vip-tip">开通享专属折扣与包邮特权</text>
+				<text class="vip-title">{{ memberProfile ? memberProfile.levelName : '杰米电商会员' }}</text>
+				<text class="vip-tip" v-if="memberProfile">
+					成长值 {{ memberProfile.growthValue }}
+					<text v-if="memberProfile.nextLevelName"> · 距{{ memberProfile.nextLevelName }}还差 {{ memberProfile.growthToNext }}</text>
+				</text>
+				<text class="vip-tip" v-else>查看等级与专属权益</text>
 			</view>
-			<view class="vip-btn">立即开通</view>
+			<view class="vip-btn">会员中心</view>
 		</view>
 
 		<!-- 我的订单：5 个状态入口 -->
@@ -107,6 +111,12 @@
 		listAfterSales
 	} from '../../api/after-sale.js'
 	import {
+		getMyCoupons
+	} from '../../api/coupon.js'
+	import {
+		getMemberProfile
+	} from '../../api/member.js'
+	import {
 		FEATURES
 	} from '../../utils/features.js'
 
@@ -115,6 +125,7 @@
 			return {
 				store: useUserStore(), // 用户登录态 + 用户信息，统一走 Pinia
 				features: FEATURES, // 未开通功能开关，见 utils/features.js
+				memberProfile: null, // 会员档案（等级/成长值）
 				// 订单状态入口。图标两套写法：
 				//   fontIcon —— static/myvue-icon 里的 iconfont 类名，有值就优先用它
 				//   icon     —— fontIcon 为空时的兜底，用 uni-icons 的内置图标名
@@ -167,7 +178,7 @@
 				statList: [{
 						text: '优惠券',
 						value: 0,
-						url: ''
+						url: '/pages/my/coupons'
 					},
 					{
 						text: '积分',
@@ -233,6 +244,7 @@
 				.then(() => {
 					// 登录就绪后再拉角标数量 + 资料
 					this.loadBadges()
+					this.loadMemberProfile()
 					return getProfile()
 				})
 				.then((profile) => {
@@ -256,6 +268,20 @@
 				}).catch(() => {})
 				listAfterSales().then((list) => {
 					this.setBadge('退款/售后', (list || []).length)
+				}).catch(() => {})
+				// 可用券数量
+				getMyCoupons('AVAILABLE').then((list) => {
+					const item = this.statList.find(i => i.text === '优惠券')
+					if (item) {
+						item.value = (list || []).length
+					}
+				}).catch(() => {})
+			},
+			// 拉会员等级/成长值（失败静默，不影响页面）
+			loadMemberProfile() {
+				if (!this.features.vip) return
+				getMemberProfile().then((profile) => {
+					this.memberProfile = profile || null
 				}).catch(() => {})
 			},
 			// 回填某个入口的角标数量

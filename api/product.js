@@ -10,8 +10,20 @@ export function getProducts(){
 }
 
 // 按一级分类查商品，对应 GET /api/products?categoryId=x
+// 老接口不分页（后端兜底 LIMIT 200），仅兼容旧版本；新代码请用 getProductPage
 export function getProductsByCategory(categoryId){
 	return request('/api/products?categoryId=' + categoryId, { method: 'GET' })
+}
+
+// 商品分页列表，对应 GET /api/products/page
+// params：page / pageSize / categoryId / keyword / brand / minPrice / maxPrice / sort
+// 返回 { list, total, page, pageSize }
+export function getProductPage(params = {}){
+	const query = Object.keys(params)
+		.filter((key) => params[key] !== undefined && params[key] !== null && params[key] !== '')
+		.map((key) => key + '=' + encodeURIComponent(params[key]))
+		.join('&')
+	return request('/api/products/page' + (query ? '?' + query : ''), { method: 'GET' })
 }
 
 // 获取商品详情，对应 GET /api/products/{id}
@@ -45,6 +57,7 @@ export function getHotProducts(limit, excludeIds){
 }
 
 // 按关键词搜索商品，对应 GET /api/products?keyword=x（免登录）
+// 老接口不分页（后端兜底 LIMIT 200），仅兼容旧版本；新代码请用 getProductPage
 export function searchProducts(keyword){
 	return request('/api/products?keyword=' + encodeURIComponent(keyword), { method: 'GET' })
 }

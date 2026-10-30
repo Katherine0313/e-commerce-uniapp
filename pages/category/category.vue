@@ -19,8 +19,8 @@
 				</view>
 			</scroll-view>
 
-			<!-- 右侧商品：网格，随左侧选中联动 -->
-			<scroll-view class="main" scroll-y>
+			<!-- 右侧商品：网格，随左侧选中联动；滚到底部触发上拉加载下一页 -->
+			<scroll-view class="main" scroll-y @scrolltolower="loadMore">
 				<!-- 顶部轮播图：写死 4 张本地图，后续接后端 Banner 接口 -->
 				<view class="swiper-wrap">
 					<CustomSwiper height="200rpx" />
@@ -29,15 +29,24 @@
 				<view class="goods-grid">
 					<view class="goods-card" v-for="item in currentProducts" :key="item.id" @click="handleProductClick(item)">
 						<image lazy-load class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
+						<!-- 促销标签：压在商品图左上角 -->
+						<text v-if="item.promotionTag" class="promo-tag">{{ item.promotionTag }}</text>
 						<view class="goods-info">
 							<text class="goods-name">{{ item.name }}</text>
 							<view class="goods-bottom">
-								<text class="goods-price">¥{{ item.price }}</text>
+								<view class="price-wrap">
+									<text class="goods-price">¥{{ item.price }}</text>
+									<text v-if="item.originalPrice" class="origin-price">¥{{ item.originalPrice }}</text>
+								</view>
 								<text class="goods-cart iconfont icon-gouwuche1"></text>
 							</view>
 						</view>
 					</view>
 				</view>
+				<!-- 分页底部提示：加载中 / 没有更多 / 暂无商品 -->
+				<view v-if="loading" class="list-tip">加载中…</view>
+				<view v-else-if="currentProducts.length && !hasMore" class="list-tip">没有更多了</view>
+				<view v-else-if="!currentProducts.length && categories.length" class="list-tip">暂无商品</view>
 			</scroll-view>
 		</view>
 
@@ -49,8 +58,11 @@
 
 <script>
 	import { getCategories } from '../../api/categories.js'
-	import { getProductsByCategory } from '../../api/product.js'
+	import { getProductPage } from '../../api/product.js'
 	import { BASE_URL } from '../../utils/server-api.js'
+
+	// 分类页每页条数：两列网格，12 条正好 6 行
+	const PAGE_SIZE = 12
 
 	export default {
 		data() {
@@ -59,9 +71,14 @@
 				navHeight: 0, // 导航栏总高度（px），由 CustomNavbar 抛上来
 				// 一级父分类：来自后端 GET /api/categories（树形，children 是二级分类）
 				categories: [],
-				// 当前父类名下商品：按选中的一级分类懒加载（GET /api/products?categoryId=x）
+				// 当前父类名下商品：按选中的一级分类分页加载（GET /api/products/page）
 				currentProducts: [],
-				// 分类商品缓存：{ [categoryId]: { list, expireAt } }，切回已加载过的分类直接显示
+				// 分页状态：当前页 / 总条数 / 是否还有下一页 / 是否请求中
+				page: 1,
+				total: 0,
+				hasMore: false,
+				loading: false,
+				// 首屏缓存：{ [categoryId]: { list, total, expireAt } }，只缓存第一页，来回切分类先秒显再续拉
 				productCache: {},
 				// 请求序号：快速切分类时只应用最后一次请求的结果
 				loadSeq: 0,
@@ -77,9 +94,13 @@
 			this.fetchCategories()
 		},
 		onShow() {
-			// 从首页分类面板切回来时页面已加载，重新定位选中分类并加载其商品
+			// 从首页分类面板切回来时页面已加载，重新定位选中分类并加载其商品；
+			// 分类没变且已有数据时不重刷，避免从商品详情页返回时打断已翻到的分页列表
+			const prevIndex = this.activeIndex
 			this.applySelectedCategory()
-			this.loadProducts()
+			if (this.activeIndex !== prevIndex || !this.currentProducts.length) {
+				this.loadProducts()
+			}
 		},
 		methods: {
 			// 拉分类：后端返回树形列表，每个元素就是一级父分类，children 是它的二级分类
@@ -101,34 +122,66 @@
 					// 错误提示已在 request 封装里统一处理
 				})
 			},
-			// 按当前选中的一级分类懒加载其名下全部商品（后端一级过滤包含所有二级）
+			// 切换分类 / 首次进入：重置分页并加载第一页（命中首屏缓存则先显示）
 			loadProducts() {
 				const cat = this.categories[this.activeIndex]
 				if (!cat) {
-					this.currentProducts = []
+					this.resetList()
 					return
 				}
 				const filterId = cat.id
-				// 命中缓存直接显示，切回已看过的分类不再等接口
+				// 命中首屏缓存：直接显示第一页，后续靠上拉续拉；60 秒过期，库存/价格变更能较快反映
 				const cached = this.productCache[filterId]
 				if (cached && Date.now() < cached.expireAt) {
+					this.loadSeq++ // 作废进行中的旧请求
 					this.currentProducts = cached.list
+					this.total = cached.total
+					this.page = 1
+					this.hasMore = cached.list.length < cached.total
+					this.loading = false
 					return
 				}
-				const seq = ++this.loadSeq
-				getProductsByCategory(filterId).then((list) => {
-					// 只应用最后一次切换的结果，避免旧响应覆盖新分类
+				this.resetList()
+				this.fetchPage(filterId, 1, this.loadSeq, true)
+			},
+			// 滚动到底：按当前分类加载下一页
+			loadMore() {
+				const cat = this.categories[this.activeIndex]
+				if (!cat || this.loading || !this.hasMore) return
+				this.fetchPage(cat.id, this.page + 1, this.loadSeq, false)
+			},
+			// 拉一页商品：reset=true 覆盖列表，否则追加；seq 不一致说明期间切了分类，丢弃结果
+			fetchPage(categoryId, page, seq, reset) {
+				this.loading = true
+				getProductPage({ page: page, pageSize: PAGE_SIZE, categoryId: categoryId }).then((res) => {
 					if (seq !== this.loadSeq) return
-					const data = list || []
-					this.currentProducts = data
-					// 缓存 60 秒：库存/价格变更能较快反映，同时来回切分类是瞬时的
-					this.productCache[filterId] = {
-						list: data,
-						expireAt: Date.now() + 60 * 1000
+					const list = (res && res.list) || []
+					this.total = (res && res.total) || 0
+					this.page = page
+					this.currentProducts = reset ? list : this.currentProducts.concat(list)
+					this.hasMore = this.currentProducts.length < this.total
+					// 只缓存首屏：切回该分类时先展示第一页，再靠上拉续拉
+					if (reset) {
+						this.productCache[categoryId] = {
+							list: list,
+							total: this.total,
+							expireAt: Date.now() + 60 * 1000
+						}
 					}
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
+				}).then(() => {
+					if (seq === this.loadSeq) this.loading = false
 				})
+			},
+			// 清空分页状态，并换新的请求序号让旧响应失效
+			resetList() {
+				this.loadSeq++
+				this.currentProducts = []
+				this.page = 1
+				this.total = 0
+				this.hasMore = false
+				this.loading = false
 			},
 			// 分类图/商品图共用：后端 image 是相对路径，补 BASE_URL
 			imgUrl(item) {
@@ -154,8 +207,10 @@
 			goSearch() {
 				uni.navigateTo({ url: '/pages/search/search' })
 			},
-			// 点左侧一级分类：切换选中并懒加载该一级下全部商品
+			// 点左侧一级分类：切换选中并加载该一级下第一页商品
 			handleSelect(index) {
+				// 点已选中的分类不重复请求（列表为空时除外，比如上次加载失败）
+				if (index === this.activeIndex && this.currentProducts.length) return
 				this.activeIndex = index
 				this.loadProducts()
 			},
@@ -230,9 +285,16 @@
 		flex-wrap: wrap;
 		justify-content: space-between;
 		padding: 0 16rpx;
-		/* 给固定定位的底部导航栏留空间，最后一行不被压住 */
-		padding-bottom: 160rpx;
+		padding-bottom: 20rpx;
 		margin-top:30rpx;
+	}
+
+	/* 列表底部提示：加载中 / 没有更多；底部留出固定导航栏的高度 */
+	.list-tip {
+		padding: 20rpx 0 160rpx;
+		text-align: center;
+		font-size: 24rpx;
+		color: #999999;
 	}
 
 	.goods-card {
@@ -240,12 +302,39 @@
 		/* 固定高度 + 纵向排列：让不同名称长度的卡片等高，商品对齐 */
 		display: flex;
 		flex-direction: column;
+		position: relative;
 		width: calc(50% - 8rpx);
 		height: 440rpx;
 		margin-bottom: 20rpx;
 		background: #ffffff;
 		border-radius: 12rpx;
 		overflow: hidden;
+	}
+
+	/* 促销标签：商品图左上角角标 */
+	.promo-tag {
+		position: absolute;
+		top: 0;
+		left: 0;
+		z-index: 2;
+		padding: 2rpx 10rpx;
+		font-size: 20rpx;
+		color: #ffffff;
+		background: #FF6700;
+		border-radius: 0 0 8rpx 0;
+	}
+
+	.price-wrap {
+		display: flex;
+		flex-direction: column;
+	}
+
+	/* 活动前原价：划线展示 */
+	.origin-price {
+		font-size: 20rpx;
+		line-height: 1.1;
+		color: #999999;
+		text-decoration: line-through;
 	}
 
 	.goods-img {
