@@ -44,24 +44,14 @@
 				<QuantityStepper :value="quantity" :max="product.stock" @change="setQuantity" />
 			</view>
 
-			<!-- 增值保障：和后台 Mall.vue 的 insurance-section 一致，点卡片切换选中（橙边框 + 浅橙底） -->
-			<view class="insurance-section">
+			<!-- 增值保障：可选项由后端按商品属性返回（配件类、低价商品后端不返回，整块不显示） -->
+			<view class="insurance-section" v-if="insuranceOptions.length">
 				<text class="section-title">增值保障</text>
 				<view class="insurance-cards">
-					<view class="insurance-card" :class="{ active: selectedInsurance2 }"
-						@click="selectedInsurance2 = !selectedInsurance2">
-						<text class="insurance-name">一年意外保</text>
-						<text class="insurance-price">¥{{ insurance2 }}</text>
-					</view>
-					<view class="insurance-card" :class="{ active: selectedInsurance1 }"
-						@click="selectedInsurance1 = !selectedInsurance1">
-						<text class="insurance-name">全面保修</text>
-						<text class="insurance-price">¥{{ insurance1 }}</text>
-					</view>
-					<view class="insurance-card" :class="{ active: selectedBattery }" v-if="showBattery"
-						@click="selectedBattery = !selectedBattery">
-						<text class="insurance-name">电池无忧</text>
-						<text class="insurance-price">¥20</text>
+					<view class="insurance-card" v-for="opt in insuranceOptions" :key="opt.code"
+						:class="{ active: isInsuranceSelected(opt.code) }" @click="toggleInsurance(opt.code)">
+						<text class="insurance-name">{{ opt.name }}</text>
+						<text class="insurance-price">¥{{ opt.fee }}</text>
 					</view>
 				</view>
 			</view>
@@ -126,9 +116,7 @@
 			return {
 				product: {}, // 商品详情，onLoad 按 id 拉取
 				quantity: 1, // 购买数量，最少 1 件
-				selectedInsurance1: false, // 全面保修
-				selectedInsurance2: false, // 一年意外保
-				selectedBattery: false, // 电池无忧
+				selectedInsurance: [], // 已勾选的增值保障项 code（可选项由后端返回）
 				adding: false, // 正在请求加购接口，按钮置灰防重复点
 				favorited: false, // 是否已收藏（后端账号级数据）
 				favoriteLoading: false, // 收藏请求中，防重复点击
@@ -198,38 +186,36 @@
 					.replace(/style=""/g, 'style="width:100%;display:block;"')
 					.replace(/\/image\//g, BASE_URL + '/image/')
 			},
-			// 保障服务价格：售价的 1%（和后台 Mall.vue 计费口径一致）
-			insurance1() {
-				const price = Number(this.product.price) || 0
-				return price ? (price * 0.01).toFixed(2) : ''
-			},
-			// 保障服务价格：售价的 2%
-			insurance2() {
-				const price = Number(this.product.price) || 0
-				return price ? (price * 0.02).toFixed(2) : ''
+			// 可选增值保障项：后端按商品属性算出（配件类、低价商品返回空数组）
+			insuranceOptions() {
+				return Array.isArray(this.product.insuranceOptions) ? this.product.insuranceOptions : []
 			},
 			// 选中的增值保障明细（数组，随加购/下单一起交给后端）
 			insuranceDetail() {
-				const list = []
-				if (this.selectedInsurance1) list.push({ code: 'warranty', name: '全面保修', fee: Number(this.insurance1) })
-				if (this.selectedInsurance2) list.push({ code: 'accident', name: '一年意外保', fee: Number(this.insurance2) })
-				if (this.showBattery && this.selectedBattery) list.push({ code: 'battery', name: '电池无忧', fee: 20 })
-				return list
+				return this.insuranceOptions
+					.filter((opt) => this.isInsuranceSelected(opt.code))
+					.map((opt) => ({ code: opt.code, name: opt.name, fee: Number(opt.fee) }))
 			},
 			// 单件保障费合计
 			insuranceFee() {
-				let fee = 0
-				if (this.selectedInsurance1) fee += Number(this.insurance1)
-				if (this.selectedInsurance2) fee += Number(this.insurance2)
-				if (this.showBattery && this.selectedBattery) fee += 20
+				const fee = this.insuranceDetail.reduce((sum, opt) => sum + Number(opt.fee), 0)
 				return fee.toFixed(2)
-			},
-			// 电池无忧只对有电池的类别显示：耳机/音箱（401/402/403）不显示
-			showBattery() {
-				return ![401, 402, 403].includes(Number(this.product.categoryId))
 			}
 		},
 		methods: {
+			// 该保障项是否已勾选
+			isInsuranceSelected(code) {
+				return this.selectedInsurance.indexOf(code) > -1
+			},
+			// 点卡片切换勾选状态
+			toggleInsurance(code) {
+				const index = this.selectedInsurance.indexOf(code)
+				if (index > -1) {
+					this.selectedInsurance.splice(index, 1)
+				} else {
+					this.selectedInsurance.push(code)
+				}
+			},
 			// 拉商品详情
 			loadDetail(id) {
 				getProductDetail(id).then((res) => {

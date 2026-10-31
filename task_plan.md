@@ -19,9 +19,13 @@
 
 接下来：**售后**（前端售后 Tab / 申请退款·售后入口点击行为）；首页「轮播图 Banner / 热门推荐」接口等后端提供后再接进下拉刷新。
 
+2026-10-30 全面探索新增结论：**AI 客服的 SSE 链路端到端没接通**（前端 SSE 客户端零调用，实际跑 83 行本地规则表，
+后端 Python `recommender-python` 完全闲置），且 Python 端 `require_user()` 强制要求 user 令牌，
+与「游客可用客服」的旧设计冲突 → 阶段 27，第一步先定游客鉴权策略。
+
 ## 当前阶段
 
-阶段 26：个人信息页 + 商品收藏（完成）
+阶段 27：AI 客服接通后端 + 遗留清理（pending）
 
 ## 各阶段
 
@@ -231,6 +235,30 @@
 - [✓] 新增 `api/favorite.js`（列表/check/收藏/取消）
 - [✓] 新增 `pages/my/favorites.vue` + `pages.json` 注册：收藏列表/取消收藏/空态，下架商品打「已下架」；「我的」页「收藏与浏览」入口接通（名称保留，本期只做收藏）
 - **状态：** complete（浏览记录未做）
+
+### 阶段 27：AI 客服接通后端 + 遗留清理（2026-10-30 全面探索产出）
+
+> 探索发现：前端 `api/agent.js` 的 SSE 客户端写完了但**零调用**，实际跑的是 83 行本地规则表；
+> 后端 Python `recommender-python` 的 `/chat` 与 `/chat/stream` 完全闲置。
+
+- [ ] **先定游客鉴权策略（阻塞项）**：Python 端 `app/services/auth.py` 的 `require_user()` 强制要求
+  `type=user` 令牌，与 Java 版 `ai-agent-service` 时代的「免登录放行」契约已经变了。三选一：
+  - A. Python 端放宽为「有 token 就校验、没 token 放行匿名会话」（改后端）
+  - B. 前端游客先走本地规则、登录用户走后端 AI（只改前端，体验割裂）
+  - C. 前端统一要求先登录（改前端 + 页面文案）
+- [ ] **接通 SSE**：`store/ai-chat.js` 的 `send()` 改为调用 `api/agent.js` 的 `chatStream()`，
+  保留 `utils/auto-reply.js` 作为断流/超时的兜底话术
+- [ ] **确认部署形态**：网关 `/api/agent/**` → `${AI_SERVICE_URL}`（默认 `http://127.0.0.1:8000`），
+  生产环境需确认 `AI_SERVICE_URL` 指向真实 Python 服务地址，且 `JWT_SECRET` 与 Java 侧一致
+- [ ] **补回飞入购物车动画**：`components/fly-to-cart.vue` 已存在且已在 `main.js` 全局注册，但**全仓库无任何页面引用**，
+  阶段 17 的成果当前不存在。需在商品详情页/商品预览弹窗加购成功后调 `play()`
+- [ ] **401/403 分开处理**：`utils/server-api.js` 现在 `401 || 403` 都清 token。后端 403 是「无权访问」而非「登录过期」
+  （`JwtInterceptor` 身份类型不匹配），清 token 属于误伤 → 改成只在 401 清 token
+- [ ] **删死代码**：`getRandomProducts`（首页换一批实际用 `getHotProducts` + `excludeIds`）、`chatStream`（若确定不接后端 AI）
+- [ ] **重写 findings 的「AI 导购 Agent」章节**：现描述的是 Spring AI 版 `ai-agent-service`（9008 端口），
+  与当前实际的 Python `recommender-python` 不符
+- [ ] **`uploadAvatar` 兜底**：`JSON.parse(res.data)` 未判非 JSON 响应会静默失败；且未判断 token 是否存在（对应待办第 4/5 条）
+- **状态：** pending
 
 ## 关键问题
 

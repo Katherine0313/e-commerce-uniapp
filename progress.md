@@ -1,5 +1,41 @@
 # 进度日志
 
+## 会话 30：2026-10-30（小程序端全面探索：架构摸底 + 接口契约核对）
+
+### 当前状态
+- **阶段：** 新建「阶段 27：AI 客服接通后端 + 遗留清理」；阶段 26（个人信息页 + 商品收藏）已完成。
+- 工作区干净（`git status` 无改动），本次只产出文档，未改任何代码。
+
+### 已执行操作
+- 通读骨架 + 关键文件：`main.js` / `App.vue` / `pages.json` / `manifest.json` /
+  `utils/server-api.js` / `utils/auth.js` / `utils/token.js` / `utils/features.js` /
+  `store/user.js` / `store/cart.js` / `store/ai-chat.js` / `api/*.js` 全部 13 个 / `api/agent.js`。
+- 提取小程序端调用的全部接口路径，与后端各 Controller 的 `@*Mapping` 双向差集比对 →
+  **全部命中，小程序端是三个客户端里唯一把 C 端接口用全的** ✅
+- 交叉核对 Python AI 服务 `recommender-python`：`/chat`、`/chat/stream` 两个路由存在；
+  `app/services/auth.py` 的 `require_user()` 强制要求 `type=user` 令牌（与 Java 共用 `JWT_SECRET`，只校验不签发）。
+- 统计未被引用的 API 导出（5 个）与组件（`<FlyToCart>` 0 引用）。
+- 发现并记录 8 类问题（详见 findings.md「小程序端全面探索」章节）：
+  1. `api/agent.js` 的 `chatStream()` SSE 客户端写得很完整但**零调用** —— 实际跑 `utils/auto-reply.js`（83 行本地规则表），后端 Python AI 服务与网关 `/api/agent/**` 完全闲置
+  2. **游客用不了后端 AI**：Python `require_user()` 强制要令牌，与 Java 版 ai-agent-service 时代「免登录放行」的契约已变 → 接通前的阻塞项
+  3. `<FlyToCart>` 组件只在 `main.js` 注册、全仓库无引用 → 阶段 17 的飞入动画成果当前不存在
+  4. `server-api.js` 把 401 与 403 混为一谈（都清 token），后端 403 语义是「无权访问」不是「登录过期」，清 token 属误伤
+  5. 5 个未被引用的 API 导出：`getProducts` / `getProductsByCategory` / `searchProducts`（有意保留的兼容层）、`getRandomProducts`（换一批实际用 `getHotProducts`）、`chatStream`
+  6. `utils/auth.js` 的 `name: res.name` 恒为 undefined（与待办第 10 条一致，未改）
+  7. findings.md 的「AI 导购 Agent」章节描述的是 Spring AI 版 `ai-agent-service`（9008 端口），与当前实际的 Python 服务不符
+  8. `uploadAvatar` 的 `JSON.parse` 未兜底、未判 token 存在（与待办第 4/5 条重复）
+- 摸清架构要点：uni-app 无 `src/` 目录、根目录平铺；主包 15 页 + 4 分包（goods/search/order/after-sales）；
+  原生导航栏与 tabBar 全部关掉自绘；`utils/features.js` 功能开关隐藏未开通入口（规避审核判定「点击无响应」）。
+- 产出：`findings.md` 新增「小程序端全面探索（2026-10-30）」章节 + 三端横向对比表；
+  `task_plan.md` 新增阶段 27 并更新「下一步 / 当前阶段」；本文件新增本会话记录。
+
+### 验证
+- 未改代码，无需构建验证。
+- 接口核对方式：提取 `api/*.js` 中全部 `request(...)` 路径，与后端各 Controller 的 `@RequestMapping` + `@*Mapping` 双向差集比对；AI 服务侧另查 `recommender-python/app/api/agent.py` 的路由装饰器。
+
+### 待决策
+- AI 客服游客鉴权策略（阶段 27 第一项，三选一）：放宽 Python 鉴权 / 游客走本地规则 / 前端强制登录。
+
 ## 会话 29：2026-10-29（商品扩容前端：二级分类 + 参数表）
 
 ### 当前状态

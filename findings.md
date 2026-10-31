@@ -658,3 +658,71 @@
 10. `utils/auth.js:12` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 无 `name` 字段，只有
     `token` / `id` / `avatar`）。消费方都已兜住（`my.vue` 用 `|| '微信用户'`，`LoginPopup` 不展示昵称），
     按「不做健壮性改进」不动。
+
+## 小程序端全面探索（2026-10-30）
+
+### 技术栈与骨架
+
+- **uni-app（Vue 3，`createSSRApp`）+ uview-plus 3.8 + Pinia 4 + @dcloudio/uni-ui**。
+- **没有 `src/` 目录** —— 根目录直接就是 `pages/ api/ components/ store/ utils/`（与管理端、商城端的目录约定都不同）。
+- 规模：79 个源文件，38 个页面 `.vue`。
+- `main.js` 全局注册 9 个自定义组件：`CustomNavbar` / `CustomTabBar` / `CustomSwiper` / `Guess` /
+  `LoginPopup` / `FlyToCart` / `QuantityStepper` / `AddressPopup` / `FloatingChat`。
+- `pages.json`：**主包 15 页 + 4 个分包**（`pages/goods` / `pages/search` / `pages/order` / `pages/after-sales`）。
+- **原生导航栏和 tabBar 全部关掉自绘**：所有页面 `navigationStyle: "custom"` + `tabBar.custom: true`，
+  自绘 `CustomNavbar` / `CustomTabBar`（字体图标，避免矢量模糊）。品牌橙 `#FF6700`。
+- `manifest.json` 微信 appid `wxa18a22c8c5c1fa12`，与后端 `wechat.appid` 一致 ✅。
+- 有 `.editorconfig`，无 ESLint / Prettier / CI。
+
+### 请求层与登录
+
+- `utils/server-api.js`：`BASE_URL` 按 `process.env.NODE_ENV` 切
+  （dev `http://127.0.0.1:8080` 本机网关 / prod `https://api.jiemids.com`），所有请求统一走网关，不直连微服务端口 ✅
+- 请求自动带 `Authorization: Bearer`；响应**单层解包** `res.data.data` → 返回 data（与商城端一致，与管理端不同）
+- `utils/auth.js` `ensureLogin()`：`uni.login` 拿 code → `POST /api/wxlogin` 换 token，**全程无感不弹授权框**
+  - `loginPromise` 复用，避免并发重复登录
+  - `manualLogout` 标记：用户主动退出后不再自动静默登录
+- `utils/features.js` 功能开关：vip ✅ / coupon ✅ / points ❌ / agreement ❌ / privacy ❌
+  —— 未开通的**隐藏入口**，避免审核判定「点击无响应」，这是小程序特有的合规考量，做得好 ✅
+
+### 与后端的契约核对（逐条比对）
+
+- 小程序调用的接口**全部在���端存在** ✅：
+  - `/api/products/recommend` → `RecommendController`（`GET /api/products/recommend`）
+  - `/api/products/random` / `/hot` / `/page` → `ProductController`
+  - `/api/feedback` → `FeedbackController`（POST）
+  - `/api/agent/chat`、`/api/agent/chat/stream` → Python `recommender-python/app/api/agent.py`
+  - 购物车 / 订单 / 地址 / 收藏 / 会员 / 优惠券 / 售后 / 用户资料 全部齐
+- **小程序是三个客户端里唯一把 C 端接口用全的**（商城端 `ecommerce-mall` 目前只用了商品浏览几个接口，
+  管理端只管 admin 侧）。
+
+### 探索中发现的问题
+
+| # | 问题 | 影响 |
+|---|---|---|
+| 1 | **`api/agent.js` 的 SSE 流式客户端零调用**。`chatStream()` 写得很完整（分片缓冲、按 `\n\n` 边界切分避免中文截断、手写 UTF-8 解码、首字 15s 看门狗、低版本基础库降级到非流式），但全仓库**没有任何页面引用**。悬浮球和「专属客服」页实际都走 `store/ai-chat.js` + `utils/auto-reply.js`（**仅 83 行的本地规则表**） | 后端 Python AI 服务 + 网关 `/api/agent/**` 路由**完全闲置**，前端在用本地假客服。`chatStream` 是死代码 |
+| 2 | **游客用不了后端 AI**。`recommender-python/app/services/auth.py` 的 `require_user()` **强制要求 `type=user` 令牌**（与 Java 共用 `JWT_SECRET`，只校验不签发），无 token 直接 401。而本文件上文「AI 导购 Agent」章节写的是 Java 版 `ai-agent-service` 时代的设计——那时 `/api/agent` 是免登录放行的，后端改成 Python 后**契约已经变了** | 接通后端 AI 前必须先定游客策略（放宽 Python 鉴权 / 前端先强制登录 / 双通道）。这是接通前的前置阻塞项 |
+| 3 | **`<FlyToCart>` 组件完全没被使用**。只在 `main.js` 注册，全仓库无任何页面引用 | 阶段 17「加购链路贯通：服务保障 + 全局登录弹窗 + **飞入动画**」的成果在当前代码里已经不存在。飞入购物车动画实际缺失 |
+| 4 | **401 与 403 被混为一谈**。`utils/server-api.js` 里 `code === 401 || code === 403` 都会 `clearToken()` | 后端 403 的语义是「身份类型不匹配 / 无权访问」（`JwtInterceptor` 的 `requiredType != actualType`），**不是登录过期**。例如后台 admin 令牌误调 C 端接口会 403，此时清 token 属于误伤。应该只对 401 清 token，403 只提示 |
+| 5 | **5 个 API 导出未被引用**：`getProducts` / `getProductsByCategory` / `searchProducts`（老的不分页接口，注释已标注「仅兼容旧版本」）、`getRandomProducts`（首页「换一批」实际用的是 `getHotProducts` + `excludeIds`，不是 random）、`chatStream` | 前三个是有意保留的兼容层；后两个是纯死代码 |
+| 6 | `utils/auth.js` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 只有 `token`/`id`/`avatar`，没有 `name`） | 消费方已兜住（`my.vue` 用 `\|\| '微信用户'`），按「不做健壮性改进」不动（与待办第 10 条一致） |
+| 7 | 本文件上文「AI 导购 Agent」章节描述的是 **Spring AI 版 `ai-agent-service`（端口 9008）**，而当前后端实际是 **Python `recommender-python`**，网关路由也已从 `lb://ai-agent-service` 改成静态地址 `${AI_SERVICE_URL}` | 章节已过时，需要重写为 Python 版现状 |
+| 8 | `uploadAvatar` 的 `JSON.parse(res.data)` 未兜底、非 JSON 响应会静默失败；且未判断 token 是否存在 | 与待办第 4/5 条重复，仍未处理 |
+
+### 三个客户端的横向对比
+
+| 维度 | 小程序 `e-commerce-uniapp` | 管理端 `e-commerce` | 商城端 `ecommerce-mall` |
+|---|---|---|---|
+| 框架 | uni-app (Vue 3) | Vue 3 + stepin 框架包 | Vue 3 + Vite 裸搭 |
+| UI 库 | uview-plus + uni-ui | ant-design-vue 3 | Element Plus 2（全量） |
+| 请求解包 | 单层 `res.data.data` | 双层 `res.data.data` | 单层 `res.data` |
+| 登录方式 | 微信 `uni.login` **静默无感** | 账号 + 密码 + 图形验证码 | ❌ 尚无（后端缺 C 端登录接口） |
+| 接口覆盖 | **C 端全量** | admin 全量 | 仅商品浏览几个 |
+| 目录约定 | 根目录平铺（无 `src/`） | `src/` 标准 | `src/` 标准 |
+| AI 客服 | 本地规则表（后端 SSE 闲置） | 无 | 无 |
+| 成熟度 | **最高**（链路全通） | 高（脏配置多） | 最低（购物链路未通） |
+
+---
+
+*每执行2次查看/浏览器/搜索操作后更新此文件*
+*防止视觉信息丢失*
