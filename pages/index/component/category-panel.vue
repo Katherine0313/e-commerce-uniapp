@@ -11,9 +11,9 @@
 			<text class="category-name">{{ item.name }}</text>
 		</view>
 	</view>
-	<!-- 骨架屏：接口未返回时先占好 6 个格子的位置，避免数据回来时页面跳动 -->
+	<!-- 骨架屏：接口未返回时先占好 8 个格子的位置，避免数据回来时页面跳动 -->
 	<view class="category-panel" v-else>
-		<view class="category-item" v-for="n in 6" :key="n">
+		<view class="category-item" v-for="n in 8" :key="n">
 			<view class="category-icon skeleton-block"></view>
 			<view class="category-name skeleton-line"></view>
 		</view>
@@ -29,7 +29,7 @@
 		props: {
 			// 首页聚合接口传入的一级分类：undefined=没传（自请求），null=加载中，数组=已加载
 			list: { type: Array, default: undefined },
-			// 最多展示几个（首页 3 列 × 2 行 = 6）；0 表示不限制
+			// 最多展示几个（首页 4 列 × 2 行 = 8）；0 表示不限制
 			limit: { type: Number, default: 0 }
 		},
 		data() {
@@ -93,7 +93,7 @@
 	}
 
 	.category-item {
-		width: 33.33%;
+		width: 23.33%;
 		display: flex;
 		flex-direction: column;
 		align-items: center;

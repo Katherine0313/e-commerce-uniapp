@@ -396,7 +396,7 @@
 		padding: 0 12rpx;
 		height: 36rpx;
 		line-height: 36rpx;
-		font-size: 20rpx;
+		font-size: 24rpx;
 		color: #ffffff;
 		background: #FF6700;
 		border-radius: 6rpx;

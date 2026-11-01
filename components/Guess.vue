@@ -170,7 +170,7 @@
 		padding: 0 12rpx;
 		height: 34rpx;
 		line-height: 34rpx;
-		font-size: 20rpx;
+		font-size: 24rpx;
 		color: #ffffff;
 		background: #FF6700;
 		border-radius: 6rpx;

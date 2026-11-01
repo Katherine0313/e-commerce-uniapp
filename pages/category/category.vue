@@ -318,7 +318,7 @@
 		left: 0;
 		z-index: 2;
 		padding: 2rpx 10rpx;
-		font-size: 20rpx;
+		font-size: 24rpx;
 		color: #ffffff;
 		background: #FF6700;
 		border-radius: 0 0 8rpx 0;
