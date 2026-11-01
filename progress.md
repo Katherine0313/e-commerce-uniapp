@@ -1,5 +1,34 @@
 # 进度日志
 
+## 发布（小程序没有 npm 脚本，用 HBuilderX 编译）
+
+### 一条命令打包（推荐，比点菜单快）
+
+```bash
+/d/Software/tools/HbuilderX/cli.exe publish mp-weixin \
+  --project "D:/study/my-workspace/wechat-workspace/e-commerce-uniapp" --upload false
+```
+
+- 产物输出到 `unpackage/dist/build/mp-weixin`，**编译完会自动拉起微信开发者工具**
+- `--upload false` = 只打包不上传；上传仍需在开发者工具里点「上传」（CI 自动上传要 `--privatekey` 密钥文件）
+- 等价的 GUI 路径：HBuilderX → 发行 → 小程序-微信 → 输出到 `unpackage/dist/build/mp-weixin`
+- 打包前先确认 HBuilderX 已启动（CLI 靠它跑），项目已导入
+
+### 上传与提审
+
+```
+HBuilderX 编译 → unpackage/dist/build/mp-weixin
+  → 微信开发者工具「导入项目」选 unpackage/dist/build/mp-weixin
+  → 上传版本 → 提交审核
+```
+
+- ⚠️ **必须传 `build` 目录，不能传 `dev`**（2026-10-25 踩过：`unpackage/dist/dev` 里 `BASE_URL` 是 `http://127.0.0.1:8080`，真机白屏）
+- ⚠️ **改完源码一定要重新编译再传包**（2026-10-31 踩过：源码改了但没编译，线上包还是旧的 —— 表现为商品图旧、修复不生效；查产物时间戳 `unpackage/dist/build/mp-weixin` 即可确认）
+- `utils/server-api.js` 里 `DEV_BASE_URL` 只在 `NODE_ENV === 'development'` 时生效，发行版走 `PROD_BASE_URL = https://api.jiemids.com`
+- 编译报 `Device or resource busy`：微信开发者工具占用了 `unpackage/dist`，先关工具再删目录重编
+- 后端接口改动**必须先发后端**（`./deploy/release.sh <svc>`，auth-service 最后），再传小程序包
+- 提审需要：完整录屏 + 三个合法域名（request / uploadFile / downloadFile）都指向 `https://api.jiemids.com`
+
 ## 会话 30：2026-10-30（小程序端全面探索：架构摸底 + 接口契约核对）
 
 ### 当前状态

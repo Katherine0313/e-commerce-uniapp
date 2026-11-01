@@ -5,11 +5,11 @@
 			<view class="item" v-for="(block, bi) in row" :key="bi">
 				<view class="l">
 					<text class="title">{{ block.left.title }}</text>
-					<image lazy-load :src="imgUrl(block.left.id)" mode="aspectFill" @click="handleSelect(block.left.id)"></image>
+					<image lazy-load :src="imgUrl(block.left.id, block.left.image)" mode="aspectFill" @click="handleSelect(block.left.id)"></image>
 				</view>
 				<view class="r">
 					<text class="title">{{ block.right.title }}</text>
-					<image lazy-load :src="imgUrl(block.right.id)" mode="aspectFill" @click="handleSelect(block.right.id)"></image>
+					<image lazy-load :src="imgUrl(block.right.id, block.right.image)" mode="aspectFill" @click="handleSelect(block.right.id)"></image>
 				</view>
 			</view>
 		</view>
@@ -44,23 +44,34 @@
 			// 每行两个色块，每个色块左右各放一个商品位：title 是栏目名，id 是商品 id
 			rows() {
 				return TITLES.map((row, ri) => row.map((block, bi) => ({
-					left: { title: block.left, id: this.idAt((ri * 2 + bi) * 2) },
-					right: { title: block.right, id: this.idAt((ri * 2 + bi) * 2 + 1) }
+					left: { title: block.left, ...this.itemAt((ri * 2 + bi) * 2) },
+					right: { title: block.right, ...this.itemAt((ri * 2 + bi) * 2 + 1) }
 				})))
 			}
 		},
 		methods: {
 			// 第 n 个商品位的 id：优先用外部传入的商品，不足或未传时回退默认 id
 			idAt(n) {
+				return this.itemAt(n).id
+			},
+			// 第 n 个商品位的 id + 图片：图片取后端返回的 image（含 ?v= 版本号）
+			itemAt(n) {
 				const item = this.list && this.list[n]
-				return item && item.id ? item.id : DEFAULT_IDS[n]
+				return {
+					id: item && item.id ? item.id : DEFAULT_IDS[n],
+					image: item ? item.image : ''
+				}
 			},
 			// 当前展示的 8 个商品 id，页面下拉刷新时拿去排除，避免换出来和现在重复
 			currentIds() {
 				return [0, 1, 2, 3, 4, 5, 6, 7].map((i) => this.idAt(i))
 			},
-			// 商品图：按商品 id 走后端同命名商品图（/image/upload/{id}.webp）
-			imgUrl(id) {
+			// 商品图：优先用后端返回的 image（带 ?v= 版本号，用来绕开一年期缓存），
+			// 没有 image 才回退按 id 拼同命名商品图
+			imgUrl(id, image) {
+				if (image) {
+					return image.indexOf('http') === 0 ? image : BASE_URL + image
+				}
 				return BASE_URL + '/image/upload/' + id + '.webp'
 			},
 			// 点击商品图：只把 id 抛出去，拉详情和弹窗都由页面处理
