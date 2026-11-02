@@ -4,6 +4,6 @@ export const FEATURES = {
 	vip: true, // 会员：等级 + 成长值 + 会员专享券（2026-10-30 已实现）
 	coupon: true, // 优惠券：领券中心 / 我的券 / 下单选券（2026-10-30 已实现）
 	points: false, // 积分：无接口、无页面
-	agreement: false, // 用户协议页未实现
-	privacy: false // 隐私政策页未实现
+	agreement: true, // 用户协议：内容由后台文章维护（标题「用户协议」），走文章详情页
+	privacy: true // 隐私政策：内容由后台文章维护（标题「隐私政策」），走文章详情页
 }

@@ -21,9 +21,9 @@
 
 			<!-- 右侧商品：网格，随左侧选中联动；滚到底部触发上拉加载下一页 -->
 			<scroll-view class="main" scroll-y @scrolltolower="loadMore">
-				<!-- 顶部轮播图：写死 4 张本地图，后续接后端 Banner 接口 -->
+				<!-- 顶部轮播图：后台配置的 Banner（position=2），没配时用组件自带的默认图 -->
 				<view class="swiper-wrap">
-					<CustomSwiper height="200rpx" />
+					<CustomSwiper height="200rpx" :list="bannerList.length ? bannerList : undefined" @click="handleBannerClick" />
 				</view>
 				<!-- 商品网格：每行两个，卡片是 图片 + 名称 + 价格 + 购物车图标 -->
 				<view class="goods-grid">
@@ -59,6 +59,8 @@
 <script>
 	import { getCategories } from '../../api/categories.js'
 	import { getProductPage } from '../../api/product.js'
+	import { getBanners } from '../../api/banner.js'
+	import { toSwiperItems, handleBannerTap } from '../../utils/banner.js'
 	import { BASE_URL } from '../../utils/server-api.js'
 
 	// 分类页每页条数：两列网格，12 条正好 6 行
@@ -82,6 +84,8 @@
 				productCache: {},
 				// 请求序号：快速切分类时只应用最后一次请求的结果
 				loadSeq: 0,
+				// 分类页顶部轮播图：后台配置的 Banner（position=2），空数组时用组件默认图
+				bannerList: [],
 			}
 		},
 		computed: {
@@ -92,6 +96,8 @@
 		},
 		mounted() {
 			this.fetchCategories()
+			// 分类页顶部轮播图
+			this.loadBanners()
 		},
 		onShow() {
 			// 从首页分类面板切回来时页面已加载，重新定位选中分类并加载其商品；
@@ -121,6 +127,19 @@
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
 				})
+			},
+			// 拉分类页顶部轮播图：后台配置了 Banner 就用后台的，没配置保持组件默认图
+			loadBanners() {
+				return getBanners(2).then((list) => {
+					this.bannerList = toSwiperItems(list)
+				}).catch(() => {
+					// 报错已在 request 封装里统一提示，这里保留默认图
+					this.bannerList = []
+				})
+			},
+			// 点轮播图：统计点击量并按跳转类型跳页面
+			handleBannerClick(index, item) {
+				handleBannerTap(item)
 			},
 			// 切换分类 / 首次进入：重置分页并加载第一页（命中首屏缓存则先显示）
 			loadProducts() {

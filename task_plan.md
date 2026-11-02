@@ -260,6 +260,29 @@
 - [ ] **`uploadAvatar` 兜底**：`JSON.parse(res.data)` 未判非 JSON 响应会静默失败；且未判断 token 是否存在（对应待办第 4/5 条）
 - **状态：** pending
 
+### 阶段 28：商品详情页评价展示（2026-11-02，代码完成，后端已发版，小程序待人工上传）
+
+> 后端在 `e-commerce-boot`（order-service），方案见 `e-commerce-boot/review`（v3）。
+> 后端补了 C 端只读接口 `GET /api/reviews/product/{id}` + `/summary`（免登录）。
+
+- [x] 新增 `api/review.js`：`getProductReviews` / `getReviewSummary`
+- [x] 新增 `utils/review-media.js`：`parseReviewMedia`（JSON 解析，失败安全返回 `[]`）+ `reviewMediaUrl`（补 `BASE_URL`）
+- [x] `pages/goods/detail.vue` 加「商品评价」section，**插在「商品参数」之前**
+      —— 详情页三块顺序定为 **商品评价 → 商品参数 → 图文详情**
+- [x] 展示：评分条 + 平均分 + 好评率 + 评价列表（昵称 / 星级 / 标签 / 内容 / 晒图 / 商家回复 / 时间）
+- [x] 虚拟评价标「系统评价」灰标签、昵称「系统」；真实评价昵称由后端脱敏（手机号打码）
+- [x] **默认只展开前 3 条** + 「查看全部评价」按钮（接口一次拉 20 条），不用 `onReachBottom`
+- [x] 一条评价最多一个视频 → 单独一行 `<video controls>`，视频不进图片九宫格
+- [x] 评价接口失败 `.catch()` 兜住，不影响详情页其它内容
+- [x] SFC 解析 + 模板编译 + `node --check` 通过
+- [x] **发版 · 后端**（2026-11-02）：`./deploy/release.sh order-service` + `gateway`
+      → 镜像 `20261102-83aa72c-dirty`，容器 running；生产只读补验 `GET /api/reviews/product/7` 200、
+      VO 无 `orderId`/`orderNo`/`userId` ✅
+- [x] **发版 · 小程序构建**（2026-11-02）：HBuilderX 编译成功，12:55 导出 `unpackage/dist/build/mp-weixin`
+      （**必须传 build 不能传 dev**）；⚠️ **微信开发者工具自动拉起失败**（`cli.bat` 不在 PATH）
+- [ ] **【需人工】小程序上传**：把 `unpackage/dist/build/mp-weixin` 导入微信开发者工具并上传发布
+- [ ] 真机验证：评价区渲染、晒图预览、视频播放
+
 ## 关键问题
 
 1. **昵称要不要做？** ~~后端无更新昵称的接口，前端也没有 `nickname` 输入入口。~~

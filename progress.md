@@ -29,6 +29,39 @@ HBuilderX 编译 → unpackage/dist/build/mp-weixin
 - 后端接口改动**必须先发后端**（`./deploy/release.sh <svc>`，auth-service 最后），再传小程序包
 - 提审需要：完整录屏 + 三个合法域名（request / uploadFile / downloadFile）都指向 `https://api.jiemids.com`
 
+## 会话 31：2026-11-02（商品详情页评价区）
+
+### 当前状态
+- **阶段：** 阶段 28（商品详情页评价展示）代码完成，**后端已发版，小程序构建已出包，待人工上传**。
+- 后端在 `e-commerce-boot`（order-service），方案见 `e-commerce-boot/review`（v3）。
+
+### 已执行操作
+- 新增 `api/review.js`：`getProductReviews(productId, page, pageSize)` → `/api/reviews/product/{id}`，
+  `getReviewSummary(productId)` → `/api/reviews/product/{id}/summary`（后端新增，免登录）。
+- 新增 `utils/review-media.js`：`parseReviewMedia(images)` 解析媒体 JSON（失败安全返回 `[]`）、
+  `reviewMediaUrl(url, baseUrl)` 补 `BASE_URL`（小程序把 `/` 当包内路径）。
+- `pages/goods/detail.vue` 加「商品评价」section，**插在「商品参数」之前** ——
+  详情页三块顺序定为 **商品评价 → 商品参数 → 图文详情**。
+  内容：评分条（1~5 星分布）+ 平均分 + 好评率 + 评价列表（昵称 / 星级 / 标签 / 内容 / 晒图 / 商家回复）+ 时间。
+- 虚拟评价在 C 端标「系统评价」灰标签、昵称显示「系统」；真实评价昵称是后端脱敏过的（手机号打码成 `138****8000`）。
+- **默认只展开前 3 条** + 「查看全部评价」按钮（接口一次拉 20 条，展开不再请求）——
+  评价区排在详情页最前面，一上来铺 20 条会把图文详情顶没。
+  不用 `onReachBottom`（商品详情页已有其它滚动逻辑）。
+- 一条评价最多一个视频 → **单独一行 `<video controls>`**，视频不进图片九宫格（`<image>` 播不了 mp4）。
+- 评价接口失败用 `.catch()` 兜住，**评价挂了不影响详情页其它内容**。
+
+### 验证
+- `@vue/compiler-sfc` 解析 + 模板编译通过；JS `node --check` 通过。
+- **未真机验证**（需重新构建上传后验）。
+
+### 发版与生产验证（2026-11-02）
+- 后端：`./deploy/release.sh order-service` + `./deploy/release.sh gateway`（C 端路径要过网关）
+  → 镜像 `20261102-83aa72c-dirty`，容器 running。
+  生产只读补验：`GET /api/reviews/product/7` 免登录 200，响应体无 `orderId`/`orderNo`/`userId` ✅。
+- 小程序：HBuilderX 编译成功，12:55 导出 `unpackage/dist/build/mp-weixin`（**必须传 build 不能传 dev**）。
+- ⚠️ **微信开发者工具自动拉起失败**（`cli.bat` 不在 PATH），**需人工导入 `unpackage/dist/build/mp-weixin` 并上传发布**。
+- 真机验证（评价区渲染 / 晒图预览 / 视频播放）仍未做，等上传后验。
+
 ## 会话 30：2026-10-30（小程序端全面探索：架构摸底 + 接口契约核对）
 
 ### 当前状态

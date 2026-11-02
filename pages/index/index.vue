@@ -11,8 +11,8 @@
 			@refresherrefresh="onRefresh">
 			<!-- 内层容器只负责给固定定位的底部导航栏留出空间 -->
 			<view class="scroll-inner">
-				<!-- 首页轮播图 -->
-				<CustomSwiper />
+				<!-- 首页轮播图：后台配置的 Banner（position=1），没配时用组件自带的默认图 -->
+				<CustomSwiper :list="bannerList.length ? bannerList : undefined" @click="handleBannerClick" />
 
 				<!-- 前台分类面板：手机 / 电脑 / 平板 / 耳机音箱 / 手表 / 相机 / 数码配件 / 智能家居 -->
 				<CategoryPanel ref="categoryPanel" :list="categories" :limit="8" @select="handleCategorySelect" />
@@ -36,6 +36,8 @@
 	import HotPanel from './component/hot-panel.vue'
 	import { getHome } from '../../api/home.js'
 	import { getHotProducts } from '../../api/product.js'
+	import { getBanners } from '../../api/banner.js'
+	import { toSwiperItems, handleBannerTap } from '../../utils/banner.js'
 	// 分享卡片统一文案：胶囊菜单的「转发」「分享到朋友圈」「收藏」共用
 	const SHARE_TITLE = '杰米多多小店｜正品3C数码'
 	// 分享封面：用代码包内本地 JPG（微信分享图只支持 JPG/PNG），不受开发环境 127.0.0.1 / https 限制
@@ -57,7 +59,9 @@
 				categories: null,
 				recommend: null,
 				// 热门推荐下拉刷新换的一批商品；null 时 HotPanel 用自带的默认 8 个 id
-				hotList: null
+				hotList: null,
+				// 首页轮播图：后台配置的 Banner（position=1），空数组时用组件自带的默认图
+				bannerList: []
 			}
 		},
 		computed: {
@@ -98,6 +102,8 @@
 			this.loadHome()
 			// 热门推荐：推荐分类优先，不够随机补足（首屏与下拉刷新共用同一接口）
 			this.loadHot()
+			// 首页轮播图：后台配置的 Banner
+			this.loadBanners()
 		},
 		methods: {
 			// 拉首页聚合数据（分类 + 猜你喜欢），返回 Promise 供下拉刷新等待
@@ -114,6 +120,19 @@
 			// 接导航栏抛上来的高度，用于算滚动区高度
 			handleNavHeightChange(height) {
 				this.navHeight = height
+			},
+			// 拉首页轮播图：后台配置了 Banner 就用后台的，没配置保持组件默认图
+			loadBanners() {
+				return getBanners(1).then((list) => {
+					this.bannerList = toSwiperItems(list)
+				}).catch(() => {
+					// 报错已在 request 封装里统一提示，这里保留默认图
+					this.bannerList = []
+				})
+			},
+			// 点轮播图：统计点击量并按跳转类型跳页面
+			handleBannerClick(index, item) {
+				handleBannerTap(item)
 			},
 			// 点顶部搜索框：跳商品搜索页
 			goSearch() {

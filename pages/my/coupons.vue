@@ -56,6 +56,11 @@
 	import { getMyCoupons } from '../../api/coupon.js'
 	import { ensureLogin } from '../../utils/auth.js'
 
+	// 「可使用」页签收纳所有还没用掉的券：AVAILABLE（现在就能用）/ NOT_STARTED（未生效）/ LOCKED（使用中）
+	// 后端只会返回这几种状态；按状态各开一个页签会让后台发到手的券在某个状态下彻底看不见，
+	// 所以统一归到「可使用」页签，卡片上再标出「未生效」「使用中」
+	const USABLE_STATUS = ['AVAILABLE', 'NOT_STARTED', 'LOCKED']
+
 	export default {
 		data() {
 			return {
@@ -65,6 +70,7 @@
 					{ value: 'EXPIRED', label: '已过期' }
 				],
 				current: 'AVAILABLE',
+				allList: [],
 				list: [],
 				loading: false
 			}
@@ -81,20 +87,26 @@
 			load() {
 				this.loading = true
 				ensureLogin()
-					.then(() => getMyCoupons(this.current))
+					.then(() => getMyCoupons())
 					.then((list) => {
-						this.list = list || []
+						// 一次拉全量，页签在本地过滤：切页签不用重新请求
+						this.allList = list || []
+						this.list = this.filterByTab(this.current)
 					})
 					.catch(() => {})
 					.finally(() => {
 						this.loading = false
 					})
 			},
+			filterByTab(tab) {
+				if (tab === 'USED') return this.allList.filter(c => c.status === 'USED')
+				if (tab === 'EXPIRED') return this.allList.filter(c => c.status === 'EXPIRED')
+				return this.allList.filter(c => USABLE_STATUS.includes(c.status))
+			},
 			switchTab(value) {
 				if (this.current === value) return
 				this.current = value
-				this.list = []
-				this.load()
+				this.list = this.filterByTab(value)
 			},
 			goCenter() {
 				uni.navigateTo({ url: '/pages/my/coupon-center' })

@@ -13,7 +13,8 @@ export function claimCoupon(templateId) {
 	return request('/api/coupons/' + templateId + '/claim', { method: 'POST' })
 }
 
-// 我的优惠券，对应 GET /api/coupons/mine?status=AVAILABLE|USED|EXPIRED
+// 我的优惠券，对应 GET /api/coupons/mine?status=AVAILABLE|NOT_STARTED|LOCKED|USED|EXPIRED
+// 不传 status 返回该用户全部券（我的优惠券页、我的页数量都用这个口径，本地按状态分页签）
 export function getMyCoupons(status) {
 	return request('/api/coupons/mine' + (status ? '?status=' + status : ''), { method: 'GET' })
 }

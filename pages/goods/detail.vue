@@ -56,6 +56,59 @@
 				</view>
 			</view>
 
+			<!-- 商品评价：放在商品参数之前（先给结论：评分/好评率），默认只展示 3 条 -->
+			<view class="review-section" v-if="reviewTotal > 0">
+				<view class="review-head">
+					<text class="review-title">商品评价</text>
+					<text class="review-total">{{ reviewTotal }} 条</text>
+				</view>
+				<view class="review-summary">
+					<view class="review-score">
+						<text class="score-num">{{ reviewSummary.avgRating }}</text>
+						<text class="score-label">平均分</text>
+						<text class="score-good">{{ goodRateText }}</text>
+					</view>
+					<view class="score-bars">
+						<view class="score-bar" v-for="item in scoreBars" :key="item.star">
+							<text class="bar-label">{{ item.star }}星</text>
+							<view class="bar-track">
+								<view class="bar-fill" :style="{ width: item.percent + '%' }"></view>
+							</view>
+							<text class="bar-count">{{ item.count }}</text>
+						</view>
+					</view>
+				</view>
+				<view class="review-list">
+					<view class="review-item" v-for="item in visibleReviews" :key="item.id">
+						<view class="review-item-head">
+							<text class="review-user">{{ item.userName }}</text>
+							<text class="review-time">{{ item.createdAt }}</text>
+						</view>
+						<view class="review-stars">
+							<uni-icons v-for="i in 5" :key="i" :type="i <= item.rating ? 'star-filled' : 'star'"
+								size="13" :color="i <= item.rating ? '#FF4E2A' : '#e0e0e0'" />
+							<text class="review-tag" v-if="item.tag">{{ item.tag }}</text>
+							<text class="review-virtual" v-if="item.isVirtual === 1">系统评价</text>
+						</view>
+						<text class="review-content">{{ item.content }}</text>
+						<view class="review-media" v-if="item.media.length">
+							<image v-for="(m, idx) in item.media" :key="idx" class="review-media-item"
+								:src="m.url" mode="aspectFill" @click="previewMedia(item.media, idx)" />
+						</view>
+						<!-- 评价视频：一条评价最多一个视频，单独一行播放器 -->
+						<video v-if="item.videoUrl" class="review-video-player" :src="item.videoUrl"
+							:controls="true" :show-center-play-btn="true" object-fit="contain" />
+						<view class="review-reply" v-if="item.reply">
+							<text class="reply-label">商家回复：</text>
+							<text class="reply-text">{{ item.reply }}</text>
+						</view>
+					</view>
+				</view>
+				<view class="review-more" v-if="reviewTotal > 3" @click="toggleReviews">
+					{{ reviewExpanded ? '收起评价' : '查看全部评价' }}
+				</view>
+			</view>
+
 			<!-- 商品参数：specs 有序数组，为空时整块不显示 -->
 			<view class="specs-section" v-if="specsList.length">
 				<view class="specs-title">商品参数</view>
@@ -106,6 +159,8 @@
 	import { getProductDetail } from '../../api/product.js'
 	import { addToCart } from '../../api/cart.js'
 	import { checkFavorite, addFavorite, removeFavorite } from '../../api/favorite.js'
+	import { getProductReviews, getReviewSummary } from '../../api/review.js'
+	import { parseReviewMedia, reviewMediaUrl } from '../../utils/review-media.js'
 	import { ensureLogin } from '../../utils/auth.js'
 	import { useUserStore } from '../../store/user.js'
 	import { useCartStore } from '../../store/cart.js'
@@ -121,6 +176,18 @@
 				favorited: false, // 是否已收藏（后端账号级数据）
 				favoriteLoading: false, // 收藏请求中，防重复点击
 				showLoginPopup: false, // 登录弹窗显隐
+				reviewSummary: { // 评价统计：总数/平均分/好评率/星级分布
+					totalCount: 0,
+					avgRating: 0,
+					goodRate: 0,
+					fiveStar: 0,
+					fourStar: 0,
+					threeStar: 0,
+					twoStar: 0,
+					oneStar: 0
+				},
+				reviewList: [], // 评价列表（已加工：媒体补全域名、日期只留到天）
+				reviewExpanded: false, // 是否展开全部评价（默认只显示 3 条）
 				store: useUserStore() // 登录态，加购/购买前先判断
 			}
 		},
@@ -132,6 +199,8 @@
 			this.loadDetail(id)
 			// 已登录才查收藏态；未登录点收藏时会静默登录
 			this.loadFavorite(id)
+			// 商品评价（免登录只读）
+			this.loadReviews(id)
 		},
 		// 胶囊菜单「转发给朋友」：定义了它，胶囊里的「转发」自动可用
 		// 详情未加载完时退回默认文案，避免分享出空标题
@@ -200,6 +269,36 @@
 			insuranceFee() {
 				const fee = this.insuranceDetail.reduce((sum, opt) => sum + Number(opt.fee), 0)
 				return fee.toFixed(2)
+			},
+			// 评价总条数
+			reviewTotal() {
+				return this.reviewSummary.totalCount || 0
+			},
+			// 好评率文案：后端 goodRate 是 0~1 的比例
+			goodRateText() {
+				const rate = Math.round((this.reviewSummary.goodRate || 0) * 100)
+				return '好评率 ' + rate + '%'
+			},
+			// 星级分布条：每条星级的占比
+			scoreBars() {
+				const s = this.reviewSummary
+				const total = this.reviewTotal
+				const list = [
+					{ star: 5, count: s.fiveStar || 0 },
+					{ star: 4, count: s.fourStar || 0 },
+					{ star: 3, count: s.threeStar || 0 },
+					{ star: 2, count: s.twoStar || 0 },
+					{ star: 1, count: s.oneStar || 0 }
+				]
+				return list.map((it) => ({
+					star: it.star,
+					count: it.count,
+					percent: total ? Math.round((it.count / total) * 100) : 0
+				}))
+			},
+			// 默认只展示 3 条，展开后展示全部（接口一次取 20 条）
+			visibleReviews() {
+				return this.reviewExpanded ? this.reviewList : this.reviewList.slice(0, 3)
 			}
 		},
 		methods: {
@@ -222,6 +321,50 @@
 					this.product = res || {}
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
+				})
+			},
+			// 拉评价：列表 + 统计分开两个接口，失败都不影响详情页其他内容
+			loadReviews(id) {
+				getProductReviews(id, 1, 20).then((res) => {
+					this.reviewList = (res && res.list ? res.list : []).map((item) => {
+						const media = parseReviewMedia(item.images)
+						// 一条评价最多一个视频：图片进九宫格，视频单独用 <video> 播
+						const video = media.find((m) => m.type === 'video')
+						return {
+							id: item.id,
+							rating: item.rating,
+							tag: item.tag,
+							content: item.content,
+							userName: item.userName,
+							isVirtual: item.isVirtual,
+							reply: item.reply,
+							// 时间后端给的是 yyyy-MM-dd HH:mm:ss，详情页只展示到天
+							createdAt: item.createdAt ? item.createdAt.slice(0, 10) : '',
+							// 图片补上网关域名（小程序把相对路径当包内路径）
+							media: media
+								.filter((m) => m.type !== 'video')
+								.map((m) => ({ url: reviewMediaUrl(m.url, BASE_URL), type: m.type })),
+							videoUrl: video ? reviewMediaUrl(video.url, BASE_URL) : ''
+						}
+					})
+				}).catch(() => {
+					this.reviewList = []
+				})
+				getReviewSummary(id).then((res) => {
+					if (res) {
+						this.reviewSummary = res
+					}
+				}).catch(() => {})
+			},
+			// 展开 / 收起全部评价
+			toggleReviews() {
+				this.reviewExpanded = !this.reviewExpanded
+			},
+			// 点评价晒图放大预览
+			previewMedia(media, index) {
+				uni.previewImage({
+					urls: media.map((m) => m.url),
+					current: index
 				})
 			},
 			// 数量变化（+/- 或输入框提交）：直接更新本地数量，加购/下单时再提交
@@ -501,6 +644,178 @@
 		margin-top: 8rpx;
 		font-size: 26rpx;
 		font-weight: 700;
+		color: #FF6700;
+	}
+
+	/* ===== 商品评价 ===== */
+	.review-section {
+		margin: 20rpx 24rpx 0;
+		padding: 24rpx;
+		background: #ffffff;
+		border-radius: 16rpx;
+	}
+	.review-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+	}
+	.review-title {
+		font-size: 30rpx;
+		font-weight: bold;
+		color: #333333;
+	}
+	.review-total {
+		font-size: 24rpx;
+		color: #999999;
+	}
+	.review-summary {
+		display: flex;
+		align-items: center;
+		padding: 20rpx 0;
+		border-bottom: 1rpx solid #f0f0f0;
+	}
+	.review-score {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 160rpx;
+		flex-shrink: 0;
+	}
+	.score-num {
+		font-size: 52rpx;
+		font-weight: 700;
+		color: #FF4E2A;
+		line-height: 1.1;
+	}
+	.score-label {
+		font-size: 22rpx;
+		color: #999999;
+	}
+	.score-good {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #666666;
+	}
+	.score-bars {
+		flex: 1;
+		padding-left: 20rpx;
+	}
+	.score-bar {
+		display: flex;
+		align-items: center;
+		margin-bottom: 6rpx;
+	}
+	.bar-label {
+		width: 60rpx;
+		font-size: 20rpx;
+		color: #999999;
+		flex-shrink: 0;
+	}
+	.bar-track {
+		flex: 1;
+		height: 10rpx;
+		background: #f0f0f0;
+		border-radius: 5rpx;
+		overflow: hidden;
+	}
+	.bar-fill {
+		height: 100%;
+		background: #FF4E2A;
+	}
+	.bar-count {
+		width: 60rpx;
+		text-align: right;
+		font-size: 20rpx;
+		color: #999999;
+		flex-shrink: 0;
+	}
+	.review-item {
+		padding: 20rpx 0;
+		border-bottom: 1rpx solid #f0f0f0;
+	}
+	.review-item:last-child {
+		border-bottom: none;
+	}
+	.review-item-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	.review-user {
+		font-size: 26rpx;
+		font-weight: 600;
+		color: #333333;
+	}
+	.review-time {
+		font-size: 22rpx;
+		color: #bbbbbb;
+	}
+	.review-stars {
+		display: flex;
+		align-items: center;
+		margin-top: 6rpx;
+	}
+	.review-tag {
+		margin-left: 12rpx;
+		font-size: 22rpx;
+		color: #FF6700;
+	}
+	.review-virtual {
+		margin-left: 12rpx;
+		font-size: 20rpx;
+		color: #999999;
+		background: #f5f5f5;
+		border-radius: 6rpx;
+		padding: 2rpx 10rpx;
+	}
+	.review-content {
+		display: block;
+		margin-top: 8rpx;
+		font-size: 26rpx;
+		color: #555555;
+		line-height: 1.6;
+	}
+	.review-media {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		margin-top: 12rpx;
+	}
+	.review-media-item {
+		width: 140rpx;
+		height: 140rpx;
+		margin-right: 12rpx;
+		border-radius: 8rpx;
+		background: #f5f5f5;
+	}
+	/* 评价视频播放器：宽度撑满，高度按 16:9 */
+	.review-video-player {
+		width: 100%;
+		height: 420rpx;
+		margin-top: 12rpx;
+		border-radius: 8rpx;
+		background: #f5f5f5;
+	}
+	.review-reply {
+		margin-top: 12rpx;
+		padding: 12rpx 16rpx;
+		background: #fafafa;
+		border-radius: 8rpx;
+	}
+	.reply-label {
+		font-size: 24rpx;
+		color: #333333;
+		font-weight: 600;
+	}
+	.reply-text {
+		font-size: 24rpx;
+		color: #666666;
+		line-height: 1.6;
+	}
+	.review-more {
+		margin-top: 16rpx;
+		text-align: center;
+		font-size: 26rpx;
 		color: #FF6700;
 	}
 

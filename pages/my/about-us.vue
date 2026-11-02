@@ -74,7 +74,7 @@
 						desc: '隐私数据保护'
 					}
 				],
-				// 信息入口：协议页还没做，由功能开关隐藏；联系我们直接进已有的客服页
+				// 信息入口：协议/隐私政策内容由后台文章维护，联系我们直接进已有的客服页
 				links: [{
 						icon: 'info',
 						text: '版本信息',
@@ -85,12 +85,14 @@
 						icon: 'list',
 						text: '用户协议',
 						action: 'agreement',
+						articleTitle: '用户协议',
 						enabled: FEATURES.agreement
 					},
 					{
 						icon: 'locked',
 						text: '隐私政策',
 						action: 'privacy',
+						articleTitle: '隐私政策',
 						enabled: FEATURES.privacy
 					},
 					{
@@ -121,6 +123,13 @@
 				if (item.url) {
 					uni.navigateTo({
 						url: item.url
+					})
+					return
+				}
+				// 协议类内容在后台文章里，按标题进文章详情页
+				if (item.articleTitle) {
+					uni.navigateTo({
+						url: '/pages/article/detail?title=' + encodeURIComponent(item.articleTitle)
 					})
 					return
 				}

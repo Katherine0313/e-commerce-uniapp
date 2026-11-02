@@ -101,6 +101,13 @@
 			"style": {
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			// 文章详情：Banner 跳文章（带 id）、用户协议/隐私政策（带 title）
+			"path":"pages/article/detail",
+			"style": {
+				"navigationStyle": "custom"
+			}
 		}
 	],
 	// ===== 分包：商品 / 搜索 / 订单 / 售后 =====

@@ -269,11 +269,13 @@
 				listAfterSales().then((list) => {
 					this.setBadge('退款/售后', (list || []).length)
 				}).catch(() => {})
-				// 可用券数量
-				getMyCoupons('AVAILABLE').then((list) => {
+				// 优惠券数量：口径与「我的优惠券」的「可使用」页签一致（还没用掉的券）
+				// 含未生效 / 使用中，只数 AVAILABLE 会让后台刚发的券在数量上看不出来
+				getMyCoupons().then((list) => {
+					const usable = (list || []).filter(c => ['AVAILABLE', 'NOT_STARTED', 'LOCKED'].includes(c.status))
 					const item = this.statList.find(i => i.text === '优惠券')
 					if (item) {
-						item.value = (list || []).length
+						item.value = usable.length
 					}
 				}).catch(() => {})
 			},
