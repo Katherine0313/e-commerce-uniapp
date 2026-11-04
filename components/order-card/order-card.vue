@@ -155,10 +155,10 @@
 			isFinished() {
 				return Number(this.order.orderStatus) === 5
 			},
-			// 待发货（2 待确认 / 3 待发货）可申请售后
+			// 待发货（3）可申请售后
 			isRefundable() {
 				const s = Number(this.order.orderStatus)
-				return s === 2 || s === 3
+				return s === 3
 			},
 			// 已发货（4）可申请售后
 			isAfterSaleable() {

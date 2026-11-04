@@ -19,6 +19,9 @@
 			</view>
 		</view>
 
+		<!-- 处理进度（售后变更记录） -->
+		<after-sale-log-list :logs="logs" />
+
 		<!-- 模块2：退货方式（自行寄回点击打开回填物流弹窗；上门取件无需回填） -->
 		<view class="row-card" @click="handleReturnWayClick">
 			<text class="row-label">{{ returnWayText }}</text>
@@ -96,6 +99,7 @@
 <script>
 	import {
 		getAfterSale,
+		getAfterSaleLogs,
 		submitAfterSaleReturn
 	} from '../../api/after-sale.js'
 	import {
@@ -103,14 +107,19 @@
 		fmtMoney,
 		formatOrderTime
 	} from '../../utils/format.js'
+	import afterSaleLogList from '../../components/after-sale-log-list/after-sale-log-list.vue'
 
 	export default {
+		components: {
+			afterSaleLogList
+		},
 		data() {
 			return {
 				id: null,
 				detail: null,
 				items: [],
 				refundTotal: 0,
+				logs: [],
 				courier: '',
 				trackingNumber: '',
 				courierOptions: [
@@ -185,6 +194,10 @@
 					this.detail = detail
 					this.items = detail.items || []
 					this.refundTotal = this.items.reduce((sum, i) => sum + (Number(i.refundAmount) || 0), 0)
+				}).catch(() => {})
+				// 变更记录单独拉，失败不影响详情展示
+				getAfterSaleLogs(this.id).then((logs) => {
+					this.logs = logs || []
 				}).catch(() => {})
 			},
 			fmtTime(t) {

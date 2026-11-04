@@ -262,7 +262,7 @@
 				listOrders().then((list) => {
 					const orders = list || []
 					this.setBadge('待付款', orders.filter(o => Number(o.orderStatus) === 1).length)
-					this.setBadge('待发货', orders.filter(o => [2, 3].includes(Number(o.orderStatus))).length)
+					this.setBadge('待发货', orders.filter(o => Number(o.orderStatus) === 3).length)
 					this.setBadge('待收货', orders.filter(o => Number(o.orderStatus) === 4).length)
 					this.setBadge('待评价', orders.filter(o => Number(o.orderStatus) === 5 && !o.reviewed).length)
 				}).catch(() => {})

@@ -34,6 +34,11 @@ export function getAfterSale(id) {
 	return request('/api/after-sales/' + id, { method: 'GET' })
 }
 
+// 售后变更记录，对应 GET /api/after-sales/{id}/logs（买家端不返回商家内部备注）
+export function getAfterSaleLogs(id) {
+	return request('/api/after-sales/' + id + '/logs', { method: 'GET' })
+}
+
 // 回填退货物流（退货退款·自行寄回），对应 POST /api/after-sales/{id}/submit-return
 export function submitAfterSaleReturn(id, data) {
 	return request('/api/after-sales/' + id + '/submit-return', {

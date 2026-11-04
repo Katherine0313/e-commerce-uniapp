@@ -83,7 +83,7 @@
 	}
 	.btn-group {
 		position: fixed;
-		bottom: calc(40rpx + env(safe-area-inset-bottom));
+		bottom: calc(50rpx + env(safe-area-inset-bottom));
 		left: 40rpx;
 		right:40rpx;
 		display: flex;

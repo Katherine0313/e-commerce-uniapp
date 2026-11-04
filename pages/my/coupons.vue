@@ -3,11 +3,35 @@
 	<view class="page">
 		<CustomNavbar title="我的优惠券" :show-back="true" />
 
-		<!-- 领券入口 -->
-		<view class="center-entry" @click="goCenter">
-			<text class="center-entry-text">领券中心</text>
-			<text class="center-entry-tip">更多优惠等你领</text>
-			<uni-icons type="right" size="14" color="#FF6700"></uni-icons>
+		<!-- 可领取优惠券：直接展示领券中心内容，不用跳页 -->
+		<view v-if="centerList.length" class="center-section">
+			<text class="section-title">可领取优惠券</text>
+			<view v-for="item in centerList" :key="item.templateId" class="coupon-card">
+				<view class="coupon-left">
+					<view class="coupon-value" v-if="item.type === 'DISCOUNT'">
+						<text class="value-num">{{ (Number(item.discountRate) * 10).toFixed(1) }}</text>
+						<text class="value-unit">折</text>
+					</view>
+					<view class="coupon-value" v-else>
+						<text class="value-unit">¥</text>
+						<text class="value-num">{{ fmt(item.faceValue) }}</text>
+					</view>
+					<text class="coupon-threshold">{{ thresholdText(item) }}</text>
+				</view>
+				<view class="coupon-right">
+					<view class="coupon-name-row">
+						<text class="coupon-name">{{ item.name }}</text>
+						<text v-if="item.minMemberLevel > 0" class="member-tag">会员专享</text>
+					</view>
+					<text class="coupon-scope">{{ item.scopeTypeDesc }} · {{ item.targetGroupDesc }}</text>
+					<text class="coupon-time">{{ item.validityDesc }}</text>
+					<text class="coupon-desc" v-if="item.description">{{ item.description }}</text>
+				</view>
+				<view class="coupon-action">
+					<text class="claim-btn" @click="handleClaim(item)">立即领取</text>
+					<text class="remain">剩 {{ item.remainQuantity }} 张</text>
+				</view>
+			</view>
 		</view>
 
 		<!-- 状态页签 -->
@@ -47,13 +71,12 @@
 
 		<view v-else-if="!loading" class="empty">
 			<text class="empty-text">{{ emptyText }}</text>
-			<view class="empty-btn" @click="goCenter">去领券</view>
 		</view>
 	</view>
 </template>
 
 <script>
-	import { getMyCoupons } from '../../api/coupon.js'
+	import { claimCoupon, getCouponCenter, getMyCoupons } from '../../api/coupon.js'
 	import { ensureLogin } from '../../utils/auth.js'
 
 	// 「可使用」页签收纳所有还没用掉的券：AVAILABLE（现在就能用）/ NOT_STARTED（未生效）/ LOCKED（使用中）
@@ -72,7 +95,9 @@
 				current: 'AVAILABLE',
 				allList: [],
 				list: [],
-				loading: false
+				centerList: [],
+				loading: false,
+				claiming: false
 			}
 		},
 		computed: {
@@ -87,11 +112,13 @@
 			load() {
 				this.loading = true
 				ensureLogin()
-					.then(() => getMyCoupons())
-					.then((list) => {
+					.then(() => Promise.all([getMyCoupons(), getCouponCenter()]))
+					.then(([list, center]) => {
 						// 一次拉全量，页签在本地过滤：切页签不用重新请求
 						this.allList = list || []
 						this.list = this.filterByTab(this.current)
+						// 只展示还没领的券；已领取的会出现在「可使用」页签
+						this.centerList = (center || []).filter(c => !c.claimed)
 					})
 					.catch(() => {})
 					.finally(() => {
@@ -108,8 +135,19 @@
 				this.current = value
 				this.list = this.filterByTab(value)
 			},
-			goCenter() {
-				uni.navigateTo({ url: '/pages/my/coupon-center' })
+			handleClaim(item) {
+				if (this.claiming) return
+				this.claiming = true
+				claimCoupon(item.templateId)
+					.then(() => {
+						uni.showToast({ title: '领取成功', icon: 'success' })
+						// 领取后同时刷新「我的券」和可领列表
+						this.load()
+					})
+					.catch(() => {})
+					.finally(() => {
+						this.claiming = false
+					})
 			},
 			goUse() {
 				uni.switchTab({ url: '/pages/index/index' })
@@ -141,26 +179,16 @@
 		background: #f8f8f8;
 	}
 
-	.center-entry {
-		display: flex;
-		align-items: center;
-		margin: 20rpx 24rpx;
-		padding: 24rpx 28rpx;
-		background: #fff3e8;
-		border-radius: 16rpx;
+	.center-section {
+		padding: 20rpx 24rpx 0;
 	}
 
-	.center-entry-text {
-		font-size: 30rpx;
+	.section-title {
+		display: block;
+		margin-bottom: 16rpx;
+		font-size: 28rpx;
 		font-weight: bold;
-		color: #FF6700;
-	}
-
-	.center-entry-tip {
-		flex: 1;
-		margin-left: 16rpx;
-		font-size: 24rpx;
-		color: #b26b2c;
+		color: #333333;
 	}
 
 	.tabs {
@@ -237,10 +265,24 @@
 		padding: 0 20rpx;
 	}
 
+	.coupon-name-row {
+		display: flex;
+		align-items: center;
+	}
+
 	.coupon-name {
 		font-size: 30rpx;
 		font-weight: bold;
 		color: #333333;
+	}
+
+	.member-tag {
+		margin-left: 10rpx;
+		padding: 0 10rpx;
+		font-size: 20rpx;
+		color: #7A5410;
+		background: #F7E3B5;
+		border-radius: 6rpx;
 	}
 
 	.coupon-scope,
@@ -271,6 +313,27 @@
 		color: #999999;
 	}
 
+	.coupon-action {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 140rpx;
+	}
+
+	.claim-btn {
+		padding: 10rpx 22rpx;
+		font-size: 24rpx;
+		color: #ffffff;
+		background: #FF6700;
+		border-radius: 26rpx;
+	}
+
+	.remain {
+		margin-top: 10rpx;
+		font-size: 20rpx;
+		color: #bbbbbb;
+	}
+
 	.empty {
 		display: flex;
 		flex-direction: column;
@@ -281,14 +344,5 @@
 	.empty-text {
 		font-size: 28rpx;
 		color: #999999;
-	}
-
-	.empty-btn {
-		margin-top: 30rpx;
-		padding: 14rpx 48rpx;
-		font-size: 28rpx;
-		color: #ffffff;
-		background: #FF6700;
-		border-radius: 32rpx;
 	}
 </style>

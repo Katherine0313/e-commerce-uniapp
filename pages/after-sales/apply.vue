@@ -55,7 +55,7 @@
 				orderItemId: null,
 				items: [],
 				selectedType: '',
-				orderStatus: 0, // 订单状态（未发货 2/3 只能仅退款）
+				orderStatus: 0, // 订单状态（未发货 3 只能仅退款）
 				// 三种服务类型对应后端 after_sale_type：only_refund / return_refund / exchange
 				typeOptions: [{
 						code: 'only_refund',
@@ -79,9 +79,9 @@
 			}
 		},
 		computed: {
-			// 按订单状态过滤服务类型：未发货(2/3)只能仅退款，已发货(4)三种都可选
+			// 按订单状态过滤服务类型：未发货(3)只能仅退款，已发货(4)三种都可选
 			availableTypes() {
-				if (this.orderStatus === 2 || this.orderStatus === 3) {
+				if (this.orderStatus === 3) {
 					return this.typeOptions.filter(t => t.code === 'only_refund')
 				}
 				return this.typeOptions

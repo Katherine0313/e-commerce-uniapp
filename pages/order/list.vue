@@ -104,7 +104,7 @@
 				tabs: [
 					{ title: '全部', statuses: null },
 					{ title: '待付款', statuses: [1] },
-					{ title: '待发货', statuses: [2, 3] },
+					{ title: '待发货', statuses: [3] },
 					{ title: '待收货', statuses: [4] },
 					{ title: '评论', statuses: [5] },
 					{ title: '售后', afterSale: true }
@@ -175,7 +175,7 @@
 			// 点订单卡片：按状态跳对应详情页（待发货 → pending-ship；待收货 → pending-receive）
 			goDetail(order) {
 				const status = Number(order.orderStatus)
-				if (status === 2 || status === 3) {
+				if (status === 3) {
 					uni.navigateTo({ url: '/pages/order/pending-ship?id=' + order.id })
 				} else if (status === 4) {
 					uni.navigateTo({ url: '/pages/order/pending-receive?id=' + order.id })
@@ -241,7 +241,7 @@
 					this._timer = null
 				}
 			},
-			// 付款：待付款 → 待确认，成功后刷新
+			// 付款：待付款 → 待发货，成功后刷新
 			handlePay(order) {
 				if (this.operating) return
 				this.operating = true

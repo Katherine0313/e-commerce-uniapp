@@ -23,6 +23,9 @@
 			</view>
 		</view>
 
+		<!-- 处理进度（售后变更记录） -->
+		<after-sale-log-list :logs="logs" />
+
 		<!-- 模块2：退货物流行（仅退款保留，无物流也展示） -->
 		<view class="row-card">
 			<text class="row-label">{{ courierText }}</text>
@@ -97,21 +100,27 @@
 
 <script>
 	import {
-		getAfterSale
+		getAfterSale,
+		getAfterSaleLogs
 	} from '../../api/after-sale.js'
 	import {
 		goodsImgUrl,
 		fmtMoney,
 		formatOrderTime
 	} from '../../utils/format.js'
+	import afterSaleLogList from '../../components/after-sale-log-list/after-sale-log-list.vue'
 
 	export default {
+		components: {
+			afterSaleLogList
+		},
 		data() {
 			return {
 				id: null,
 				detail: null,
 				items: [],
-				refundTotal: 0
+				refundTotal: 0,
+				logs: []
 			}
 		},
 		computed: {
@@ -156,6 +165,10 @@
 					this.items = detail.items || []
 					// 申请金额 = 售后明细单品小计之和
 					this.refundTotal = this.items.reduce((sum, i) => sum + (Number(i.refundAmount) || 0), 0)
+				}).catch(() => {})
+				// 变更记录单独拉，失败不影响详情展示
+				getAfterSaleLogs(this.id).then((logs) => {
+					this.logs = logs || []
 				}).catch(() => {})
 			},
 			// 时间轴时间：后端 LocalDateTime 序列化串 → "MM-dd HH:mm"

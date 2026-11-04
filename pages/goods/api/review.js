@@ -1,4 +1,4 @@
-import { request } from '../utils/server-api.js'
+import { request } from '../../../utils/server-api.js'
 
 // ===== 商品评价（公开只读，免登录） =====
 // 商品详情页展示评价列表与星级统计。

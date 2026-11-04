@@ -55,7 +55,7 @@ export function getLogistics(id) {
 	return request('/api/orders/' + id + '/logistics', { method: 'GET' })
 }
 
-// 支付，对应 PUT /api/orders/{id}/pay；订单从待付款 → 待确认。
+// 支付，对应 PUT /api/orders/{id}/pay；订单从待付款 → 待发货。
 // 暂未接入微信支付，payType 仅被后端记录，传占位值即可（不传默认 WeChat，对齐 PayTypeEnum 的 code）。
 export function payOrder(id, payType) {
 	return request('/api/orders/' + id + '/pay', {

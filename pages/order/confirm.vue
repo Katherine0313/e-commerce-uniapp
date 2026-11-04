@@ -518,7 +518,7 @@
 	/* ═══ 通用卡片 ═══ */
 	.card {
 		margin: 20rpx 20rpx 0;
-		padding: 8rpx 24rpx;
+		padding: 8rpx 14rpx;
 		background: #ffffff;
 		border-radius: 16rpx;
 	}
@@ -527,7 +527,7 @@
 	.goods-item {
 		display: flex;
 		align-items: center;
-		padding: 24rpx 0;
+		padding: 24rpx 4rpx;
 	}
 
 	.goods-item+.goods-item {
@@ -544,7 +544,7 @@
 	.goods-info {
 		flex: 1;
 		min-width: 0;
-		margin-left: 20rpx;
+		margin-left:20rpx;
 	}
 
 	.goods-name {
