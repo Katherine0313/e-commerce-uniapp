@@ -48,6 +48,9 @@
 
 			<!-- 退出登录 -->
 			<view class="logout-card" @click="handleLogout">退出登录</view>
+
+			<!-- 注销账号：不可恢复，放在退出登录下面 -->
+			<view class="logout-card deactivate-card" @click="handleDeactivate">注销账号</view>
 		</block>
 	</view>
 </template>
@@ -55,7 +58,7 @@
 <script>
 	import { useUserStore } from '../../store/user.js'
 	import { ensureLogin, login, logout, isManualLogout } from '../../utils/auth.js'
-	import { getProfile, uploadAvatar, updateName, bindPhone } from '../../api/login.js'
+	import { getProfile, uploadAvatar, updateName, bindPhone, deactivateAccount } from '../../api/login.js'
 	import { parseOrderTime } from '../../utils/format.js'
 
 	export default {
@@ -132,6 +135,33 @@
 						uni.showToast({
 							title: '已退出登录',
 							icon: 'none'
+						})
+					}
+				})
+			},
+			// 注销账号：不可恢复，二次确认后调后端注销并清本地登录态
+			handleDeactivate() {
+				uni.showModal({
+					title: '注销账号',
+					content: '注销后账号将被永久删除，订单、收藏、会员权益等数据将无法找回，且不可恢复。确定注销吗？',
+					confirmColor: '#ff4d4f',
+					confirmText: '确定注销',
+					cancelText: '再想想',
+					success: (res) => {
+						if (!res.confirm) {
+							return
+						}
+						deactivateAccount().then(() => {
+							logout()
+							this.clearProfile()
+							uni.showToast({
+								title: '账号已注销',
+								icon: 'none'
+							})
+							// 回到「我的」页，此时已退出登录，页面会自动显示登录入口
+							uni.switchTab({ url: '/pages/my/my' })
+						}).catch(() => {
+							// 请求失败提示已在 request 封装里统一处理
 						})
 					}
 				})
@@ -295,6 +325,13 @@
 		color: #ff4d4f;
 		background: #ffffff;
 		border-radius: 16rpx;
+	}
+
+	/* 注销账号：比退出登录更危险，字色加深并加边框区分 */
+	.deactivate-card {
+		color: #d9363e;
+		border: 1rpx solid #ffccc7;
+		margin-bottom: 20rpx;
 	}
 
 	/* 一行资料：左侧标签，右侧内容，行间细分隔线 */

@@ -25,6 +25,14 @@ export function bindPhone(code){
 	})
 }
 
+// 注销账号：对应 POST /api/user/deactivate
+// 后端把账号软删（is_deleted=1）并清空购物车，同一事务；不可恢复
+export function deactivateAccount(){
+	return request('/api/user/deactivate', {
+		method: 'POST'
+	})
+}
+
 // 设置昵称：对应 POST /api/user/name，返回去除首尾空格后的昵称
 export function updateName(name){
 	return request('/api/user/name', {

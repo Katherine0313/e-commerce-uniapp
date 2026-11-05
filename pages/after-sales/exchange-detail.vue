@@ -58,15 +58,20 @@
 				<text class="info-label">换货金额</text>
 				<text class="info-value">¥{{ fmtMoney(refundTotal) }}</text>
 			</view>
+			<view class="info-line" v-if="detail && detail.shipTrackingNumber">
+				<text class="info-label">补发物流</text>
+				<text class="info-value">{{ detail.shipCourier || '—' }} {{ detail.shipTrackingNumber }}</text>
+			</view>
 			<view class="info-line">
 				<text class="info-label">换货原因</text>
 				<text class="info-value">{{ detail && detail.reasonDesc }}</text>
 			</view>
 		</view>
 
-		<!-- 底部：自行寄回且未回填物流时显示「回填物流」 -->
-		<view class="footer-bar" v-if="needTracking">
-			<view class="btn-primary" @click="openTracking">回填物流单号</view>
+		<!-- 底部：自行寄回未回填物流 / 上门取件待确认 -->
+		<view class="footer-bar" v-if="needPickup || needTracking">
+			<view v-if="needPickup" class="btn-primary" @click="confirmPickup">已上门取件</view>
+			<view v-else class="btn-primary" @click="openTracking">回填物流单号</view>
 		</view>
 
 		<!-- 回填物流弹窗 -->
@@ -100,7 +105,8 @@
 	import {
 		getAfterSale,
 		getAfterSaleLogs,
-		submitAfterSaleReturn
+		submitAfterSaleReturn,
+		pickupAfterSale
 	} from '../../api/after-sale.js'
 	import {
 		goodsImgUrl,
@@ -131,7 +137,8 @@
 					{ code: 'jitu', name: '极兔速递' },
 					{ code: 'debang', name: '德邦快递' },
 					{ code: 'youzhengguonei', name: '邮政国内' }
-				]
+				],
+				submitting: false
 			}
 		},
 		computed: {
@@ -171,6 +178,11 @@
 			needTracking() {
 				const d = this.detail
 				return d && d.status === 'returning' && d.returnWay === 'self' && !d.returnTrackingNumber
+			},
+			// 上门取件：退货中且尚未确认取件
+			needPickup() {
+				const d = this.detail
+				return d && d.status === 'returning' && d.returnWay === 'pickup' && !d.pickupAt
 			},
 			courierNames() {
 				return this.courierOptions.map(c => c.name)
@@ -224,6 +236,21 @@
 					return
 				}
 				this.openTracking()
+			},
+			// 确认上门取件：点一下即代表快递员已取走包裹
+			confirmPickup() {
+				if (this.submitting) return
+				this.submitting = true
+				uni.showLoading({ title: '确认中...' })
+				pickupAfterSale(this.id).then(() => {
+					uni.hideLoading()
+					this.submitting = false
+					uni.showToast({ title: '已确认上门取件', icon: 'none' })
+					this.loadDetail()
+				}).catch(() => {
+					uni.hideLoading()
+					this.submitting = false
+				})
 			},
 			openTracking() {
 				this.courier = ''

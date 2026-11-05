@@ -23,6 +23,7 @@
 					<view class="line" v-if="idx !== traces.length - 1"></view>
 				</view>
 				<view class="timeline-right">
+					<text class="trace-status" :class="{ active: idx === 0 }">{{ trace.status }}</text>
 					<text class="trace-desc" :class="{ active: idx === 0 }">{{ trace.desc }}</text>
 					<text class="trace-time">{{ trace.time }}</text>
 				</view>
@@ -177,8 +178,21 @@
 		padding: 0 0 40rpx 20rpx;
 	}
 
+	.trace-status {
+		display: block;
+		font-size: 26rpx;
+		color: #999999;
+		line-height: 1.4;
+	}
+
+	.trace-status.active {
+		color: #FF6700;
+		font-weight: bold;
+	}
+
 	.trace-desc {
 		display: block;
+		margin-top: 4rpx;
 		font-size: 28rpx;
 		color: #999999;
 		line-height: 1.5;

@@ -50,13 +50,25 @@
 			if (options && options.id) {
 				this.loadById(options.id)
 			} else if (options && options.title) {
-				this.navTitle = options.title
-				this.loadByTitle(options.title)
+				// 跳转方（关于页）已经 encodeURIComponent 过一次，而微信不会自动解码 onLoad 的 query，
+				// 这里先解一次；api 层再编码一次，net 上才是单次编码。
+				// 不解的话会变成 %25E9%259A%2590 这种双重编码，后端按标题精确匹配必然查不到。
+				const title = this.decodeTitle(options.title)
+				this.navTitle = title
+				this.loadByTitle(title)
 			} else {
 				this.loading = false
 			}
 		},
 		methods: {
+			// 解码页面参数里的标题：已是明文就原样返回，非法编码则兜底用原值
+			decodeTitle(raw) {
+				try {
+					return decodeURIComponent(raw)
+				} catch (e) {
+					return raw
+				}
+			},
 			loadById(id) {
 				getArticleDetail(id).then((data) => {
 					this.applyArticle(data)

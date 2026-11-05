@@ -46,3 +46,10 @@ export function submitAfterSaleReturn(id, data) {
 		data: data
 	})
 }
+
+// 买家确认上门取件，对应 POST /api/after-sales/{id}/pickup-complete
+export function pickupAfterSale(id) {
+	return request('/api/after-sales/' + id + '/pickup-complete', {
+		method: 'POST'
+	})
+}

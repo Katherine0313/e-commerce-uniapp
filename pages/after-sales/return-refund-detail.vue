@@ -10,8 +10,8 @@
 				<view class="arrow"></view>
 			</view>
 			<view class="status-amount-row" v-if="detail && detail.status === 'refunded'">
-				<text class="status-amount">¥{{ fmtMoney(refundTotal) }}</text>
-				<text class="status-bank">已退到建设银行储蓄卡6667</text>
+				<text class="status-amount">¥{{ fmtMoney(detail.refundAmount || refundTotal) }}</text>
+				<text class="status-bank">{{ detail.refundNo ? '退款单号 ' + detail.refundNo : '已原路退回（模拟）' }}</text>
 			</view>
 			<!-- 进度时间轴（横向，按状态动态） -->
 			<view class="timeline">
@@ -85,9 +85,10 @@
 			</view>
 		</view>
 
-		<!-- 底部：自行寄回且未回填物流时显示「回填物流单号」 -->
-		<view class="footer-bar" v-if="needTracking">
-			<view class="btn-primary" @click="goTracking">回填物流单号</view>
+		<!-- 底部：上门取件待确认 / 自行寄回待回填物流 -->
+		<view class="footer-bar" v-if="needPickup || needTracking">
+			<view v-if="needPickup" class="btn-primary" @click="confirmPickup">已上门取件</view>
+			<view v-else class="btn-primary" @click="goTracking">回填物流单号</view>
 		</view>
 	</view>
 </template>
@@ -95,7 +96,8 @@
 <script>
 	import {
 		getAfterSale,
-		getAfterSaleLogs
+		getAfterSaleLogs,
+		pickupAfterSale
 	} from '../../api/after-sale.js'
 	import {
 		goodsImgUrl,
@@ -114,7 +116,8 @@
 				detail: null,
 				items: [],
 				refundTotal: 0,
-				logs: []
+				logs: [],
+				submitting: false
 			}
 		},
 		computed: {
@@ -131,7 +134,7 @@
 				return [
 					{ title: '提交申请', time: d.createdAt, done: true },
 					{ title: '商家审核', time: d.reviewAt, done: !!d.reviewAt },
-					{ title: '用户退货', time: d.returnAt, done: !!d.returnAt },
+					{ title: '用户退货', time: d.pickupAt || d.returnAt, done: !!(d.pickupAt || d.returnAt) },
 					{ title: '退款到账', time: d.refundedAt, done: !!d.refundedAt }
 				]
 			},
@@ -154,6 +157,11 @@
 			needTracking() {
 				const d = this.detail
 				return d && d.status === 'returning' && d.returnWay === 'self' && !d.returnTrackingNumber
+			},
+			// 是否等待买家确认上门取件（上门取件 + 退货中 + 未确认）
+			needPickup() {
+				const d = this.detail
+				return d && d.status === 'returning' && d.returnWay === 'pickup' && !d.pickupAt
 			}
 		},
 		onLoad(options) {
@@ -199,6 +207,21 @@
 				if (this.needTracking) {
 					this.goTracking()
 				}
+			},
+			// 确认上门取件：点一下即代表快递员已取走包裹
+			confirmPickup() {
+				if (this.submitting) return
+				this.submitting = true
+				uni.showLoading({ title: '确认中...' })
+				pickupAfterSale(this.id).then(() => {
+					uni.hideLoading()
+					this.submitting = false
+					uni.showToast({ title: '已确认上门取件', icon: 'none' })
+					this.loadDetail()
+				}).catch(() => {
+					uni.hideLoading()
+					this.submitting = false
+				})
 			}
 		}
 	}
