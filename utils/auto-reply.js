@@ -1,8 +1,7 @@
 /**
- * 客服自动回复规则表。
- * 加规则 = 往 RULES 里加一条对象；按数组顺序匹配，第一条命中即返回。
- * 当前策略：大模型流式优先；规则表作为 AI 失败/超时时的兜底。
- * 例外：「人工客服」必须本地拦截（要拉起微信原生客服会话，不能交给模型）。
+ * 客服本地兜底规则表。
+ * 正常情况由后端知识库回答；这里只在接口失败/超时时兜底。
+ * 例外：「人工客服」必须本地拦截（要拉起微信原生客服会话，不能走网络）。
  */
 
 // 匹配前统一处理：去空白、转小写（中文不受影响）
@@ -19,7 +18,7 @@ const RULES = [
 	},
 	{
 		keywords: ['运费', '邮费', '包邮'],
-		reply: '单笔订单满 99 元包邮，偏远地区运费以结算页显示为准。'
+		reply: '全场包邮，不额外收取运费。'
 	},
 	{
 		keywords: ['订单', '物流', '快递', '到哪', '查单'],
@@ -33,20 +32,20 @@ const RULES = [
 		keywords: ['人工', '人工客服', '转人工', '真人'],
 		reply: '当前是常见问题自动答复，需要人工处理请点击下方「联系人工客服」。',
 		contact: true,
-		// 标记为特殊意图：页面必须本地拦截，不能交给大模型
+		// 标记为特殊意图：页面必须本地拦截，不能交给知识库
 		intent: 'human'
 	}
 ]
 
-// 没命中规则、且 AI 不可用时的兜底：引导人工客服 + 意见反馈
+// 没命中规则时的兜底：引导人工客服 + 意见反馈（与后端兜底话术保持一致）
 export const DEFAULT_REPLY = {
-	text: '这个问题我还没学会。你可以点击上方「联系人工客服」，或去「意见反馈」留言。',
+	text: '不好意思，这个我不太确定，您可以直接联系人工客服，他们会更快帮您解决。',
 	contact: true,
 	feedback: true
 }
 
 /**
- * 只匹配本地规则，未命中返回 null（交给大模型）。
+ * 只匹配本地规则，未命中返回 null（交给后端知识库）。
  * @returns {{ text: string, contact?: boolean, feedback?: boolean } | null}
  */
 export function matchAutoReply(input) {
@@ -68,7 +67,7 @@ export function matchAutoReply(input) {
 
 /**
  * 只匹配「人工客服」意图：命中返回规则，否则 null。
- * 页面用它做本地拦截，其余消息一律交给大模型。
+ * 页面用它做本地拦截，其余消息一律交给后端知识库。
  */
 export function matchHumanIntent(input) {
 	const rule = matchAutoReply(input)
@@ -76,7 +75,7 @@ export function matchHumanIntent(input) {
 }
 
 /**
- * 纯规则回复（规则未命中时返回兜底），保留给不需要大模型的场景。
+ * 纯规则回复（规则未命中时返回兜底），后端不可用时用。
  */
 export function getAutoReply(input) {
 	return matchAutoReply(input) || { ...DEFAULT_REPLY }

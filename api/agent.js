@@ -190,11 +190,32 @@ function chatOnce({ message, sessionId, onChunk, onDone, onError }) {
 				})
 				return
 			}
-			const reply = (res.data.data && res.data.data.reply) || ''
+			const data = res.data.data || {}
+			const reply = data.reply || ''
 			onChunk && onChunk(reply)
-			onDone && onDone(reply)
+			onDone && onDone(reply, data)
 		},
 		fail: (err) => onError && onError(err)
+	})
+}
+
+/**
+ * 非流式问答的 Promise 封装：客服页默认走这条。
+ * 返回 { reply, contact, matched }，失败时抛错由页面走本地兜底。
+ */
+export function askAgent({ message, sessionId }) {
+	return new Promise((resolve, reject) => {
+		chatOnce({
+			message,
+			sessionId,
+			onDone: (text, data) => resolve({
+				reply: text || '',
+				contact: !!(data && data.contact),
+				feedback: !!(data && data.feedback),
+				matched: !!(data && data.matched)
+			}),
+			onError: reject
+		})
 	})
 }
 

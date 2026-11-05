@@ -6,6 +6,9 @@ import {
 	matchHumanIntent,
 	DEFAULT_REPLY
 } from '../utils/auto-reply.js'
+import {
+	askAgent
+} from '../api/agent.js'
 
 let msgId = 0
 
@@ -21,7 +24,9 @@ const newSessionId = () =>
 /**
  * 全局客服对话状态：悬浮球和「专属客服」页共用，
  * 放在 Pinia 里，切换页面不会丢消息。
- * 回复只查本地固定知识库（utils/auto-reply.js），不调用大模型。
+ *
+ * 回答优先走后端知识库（/api/agent/chat），后端不可用时才用本地规则兜底；
+ * 「人工客服」在本地拦截，保证能立刻拉起微信原生客服会话。
  */
 export const useAiChatStore = defineStore('aiChat', {
 	state: () => ({
@@ -58,21 +63,23 @@ export const useAiChatStore = defineStore('aiChat', {
 			this.sending = false
 		},
 		/**
-		 * 发送一条消息：只查本地固定知识库（规则表），不调用大模型。
-		 * 命中「人工客服」意图时展示微信原生客服按钮，未命中走兜底话术。
+		 * 发送一条消息：先请求后端知识库，失败/超时才用本地规则兜底。
+		 * 命中「人工客服」意图时本地直接展示微信原生客服按钮。
 		 */
-		send(text) {
+		async send(text) {
 			const content = String(text || '').trim()
 			if (!content || this.sending) {
 				return false
 			}
+			this.ensureSession()
+			this.sending = true
 			this.messages.push({
 				id: ++msgId,
 				role: 'user',
 				text: content
 			})
 
-			// 人工客服要展示微信原生客服按钮，不能走规则表
+			// 人工客服要展示微信原生客服按钮，本地拦截，不走网络
 			const human = matchHumanIntent(content)
 			if (human) {
 				this.messages.push({
@@ -80,21 +87,39 @@ export const useAiChatStore = defineStore('aiChat', {
 					role: 'bot',
 					...human
 				})
+				this.sending = false
 				return true
 			}
 
-			// 固定知识库查询：命中规则返回答案，未命中引导人工客服
-			const reply = matchAutoReply(content) || {
-				...DEFAULT_REPLY
+			try {
+				const result = await askAgent({
+					message: content,
+					sessionId: this.sessionId
+				})
+				this.messages.push({
+					id: ++msgId,
+					role: 'bot',
+					text: result.reply || DEFAULT_REPLY.text,
+					contact: !!result.contact,
+					feedback: !!result.feedback,
+					ai: true // 展示「自动答复」标识
+				})
+			} catch (e) {
+				// 后端不可用：本地规则兜底，保证用户总能收到一句回复
+				const reply = matchAutoReply(content) || {
+					...DEFAULT_REPLY
+				}
+				this.messages.push({
+					id: ++msgId,
+					role: 'bot',
+					text: reply.text,
+					contact: !!reply.contact,
+					feedback: !!reply.feedback,
+					ai: true
+				})
+			} finally {
+				this.sending = false
 			}
-			this.messages.push({
-				id: ++msgId,
-				role: 'bot',
-				text: reply.text,
-				contact: !!reply.contact,
-				feedback: !!reply.feedback,
-				ai: true // 展示「自动答复」标识
-			})
 			return true
 		}
 	}
