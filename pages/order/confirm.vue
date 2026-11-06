@@ -22,25 +22,64 @@
 				</view>
 				<view class="addr-arrow"></view>
 			</block>
-			<view v-else class="address-empty">请选择收货地址</view>
+			<view v-else class="address-empty">
+				<view class="addr-empty-row">
+					<text class="addr-empty-title">填写收货地址</text>
+					<view class="addr-arrow"></view>
+				</view>
+				<view class="addr-empty-row addr-import" @click.stop="importWeChatAddress">
+					<text class="addr-empty-title">一键导入微信地址</text>
+					<uni-icons type="weixin" size="18" color="#07C160"></uni-icons>
+				</view>
+			</view>
 		</view>
 
-		<!-- 商品列表 -->
-		<view class="card">
-			<view class="goods-item" v-for="(item, idx) in items" :key="idx">
+		<!-- 商品列表：每件商品各自选规格、定数量，选完规格价格和库存即时切换 -->
+		<view class="card goods-card" v-for="(item, idx) in items" :key="idx">
+			<view class="goods-item">
 				<image lazy-load class="goods-img" :src="imgUrl(item)" mode="aspectFill"></image>
 				<view class="goods-info">
 					<text class="goods-name">{{ item.name }}</text>
 					<view class="goods-price-row">
-						<text class="goods-price">¥{{ fmt(item.price) }}</text>
-						<text v-if="item.originalPrice" class="goods-origin">¥{{ fmt(item.originalPrice) }}</text>
+						<text class="goods-price">{{ itemPriceText(item) }}</text>
+						<text v-if="itemOrigin(item)" class="goods-origin">¥{{ fmt(itemOrigin(item)) }}</text>
 						<text v-if="item.promotionTag" class="goods-tag">{{ item.promotionTag }}</text>
-						<text class="goods-qty">×{{ item.quantity }}</text>
 					</view>
-					<text v-if="num(item.insuranceFee) > 0" class="goods-insurance">增值保障
-						¥{{ fmt(item.insuranceFee) }}</text>
+					<text v-if="itemSpecText(item)" class="goods-selected">已选：{{ itemSpecText(item) }}</text>
 				</view>
-				<text class="goods-sub">¥{{ fmt(item.subTotal) }}</text>
+				<text class="goods-sub">¥{{ fmt(itemSubTotal(item)) }}</text>
+			</view>
+
+			<!-- 规格选择：每个维度独占一行，标签平铺；选中红框，无货置灰 -->
+			<view class="sku-block" v-if="hasSpecs(item)">
+				<view class="sku-row" v-for="g in item.skuSpecs" :key="g.name">
+					<text class="sku-label">{{ g.name }}</text>
+					<view class="sku-values">
+						<view v-for="v in g.values" :key="v" class="sku-tag"
+							:class="{ active: item.specJson[g.name] === v, disabled: !canPick(item, g.name, v) }"
+							@click="pickSpec(item, g.name, v)">{{ v }}</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 购买方式：一期固定官方标配 -->
+			<view class="sku-row opt-row">
+				<text class="sku-label">购买方式</text>
+				<view class="sku-values">
+					<view class="sku-tag active">官方标配</view>
+				</view>
+			</view>
+
+			<!-- 数量：上限取所选 SKU 库存 -->
+			<view class="sku-row opt-row">
+				<text class="sku-label">数量</text>
+				<QuantityStepper :value="item.quantity" :max="itemStock(item)" @change="setItemQuantity(item, $event)" />
+			</view>
+
+			<!-- 增值服务：详情页/购物车已选，确认页只展示 -->
+			<view class="sku-row opt-row">
+				<text class="sku-label">服务</text>
+				<text class="service-text">{{ itemServiceText(item) }}</text>
 			</view>
 		</view>
 
@@ -162,8 +201,18 @@
 		getAvailableCoupons
 	} from '../../api/coupon.js'
 	import {
-		listAddress
+		listAddress,
+		addAddress
 	} from '../../api/address.js'
+	import {
+		getProductDetail
+	} from '../../api/product.js'
+	import {
+		findSku,
+		isSpecComplete,
+		isValueSelectable,
+		specText
+	} from '../../utils/sku.js'
 	import {
 		ensureLogin
 	} from '../../utils/auth.js'
@@ -188,6 +237,7 @@
 				address: null, // 当前选中的收货地址
 				remark: '', // 买家留言
 				showAddress: false, // 地址弹窗显隐
+				importingAddress: false, // 正在导入微信地址，防重复点
 				paying: false, // 提交中，防重复点击
 				idempotencyKey: '', // 幂等键：进入页面生成一次，本页内重试复用
 				activePay: 0, // 当前选中的支付方式下标
@@ -210,7 +260,7 @@
 		computed: {
 			// 合计金额 = 各商品小计之和（购物车价已含直减，不含满减），报价未返回时兜底用
 			totalAmount() {
-				return this.items.reduce((sum, i) => sum + this.num(i.subTotal), 0)
+				return this.items.reduce((sum, i) => sum + this.itemSubTotal(i), 0)
 			},
 			// 增值保障总额：保险不参与促销
 			insuranceTotal() {
@@ -238,8 +288,8 @@
 			}
 		},
 		onLoad() {
-			// 从 store 读购物车去结算传入的选中商品
-			this.items = useCartStore().checkoutItems || []
+			// 从 store 读购物车去结算传入的选中商品；复制一份，规格选择只在本页生效
+			this.items = (useCartStore().checkoutItems || []).map(i => Object.assign({}, i, { specJson: {} }))
 			// 幂等键一次下单意图一个：进入页面生成，本页内失败重试复用同一个 key
 			this.idempotencyKey = genIdempotencyKey()
 			if (!this.items.length) {
@@ -249,6 +299,7 @@
 				})
 			}
 			this.loadAddress()
+			this.loadSkuInfo()
 			this.initCouponQuote()
 		},
 		methods: {
@@ -259,6 +310,178 @@
 					this.address = list.find(a => a.isDefault === 1) || list[0] || null
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
+				})
+			},
+			// ===== 商品规格：规格选择统一放在确认页 =====
+			// 拉每件商品详情取 skuSpecs / skus；后端未返回 SKU 时按单规格展示，不阻塞下单
+			loadSkuInfo() {
+				const ids = []
+				this.items.forEach((i) => {
+					if (i.productId != null && ids.indexOf(i.productId) === -1) {
+						ids.push(i.productId)
+					}
+				})
+				if (!ids.length) {
+					return
+				}
+				Promise.all(ids.map(id => getProductDetail(id).catch(() => null))).then((list) => {
+					const map = {}
+					list.forEach((p) => {
+						if (p && p.id != null) {
+							map[p.id] = p
+						}
+					})
+					this.items.forEach((item) => {
+						const p = map[item.productId]
+						if (!p) {
+							return
+						}
+						item.skuType = p.skuType
+						item.skuSpecs = Array.isArray(p.skuSpecs) ? p.skuSpecs : []
+						item.skus = Array.isArray(p.skus) ? p.skus : []
+						item.priceMin = p.priceMin != null ? p.priceMin : p.price
+						item.marketPrice = p.marketPrice
+						item.stock = p.stock
+						// 只有一个值的维度自动选中，省一次点击
+						item.skuSpecs.forEach((g) => {
+							if (Array.isArray(g.values) && g.values.length === 1) {
+								item.specJson[g.name] = g.values[0]
+							}
+						})
+					})
+				}).catch(() => {})
+			},
+			// 是否有可选规格（单规格商品不渲染选择区）
+			hasSpecs(item) {
+				return Array.isArray(item.skuSpecs) && item.skuSpecs.length > 0
+			},
+			// 已选中的 SKU（未选全时为 null）
+			selectedSku(item) {
+				if (!this.hasSpecs(item)) {
+					return null
+				}
+				return findSku(item.skus, item.specJson, item.skuSpecs)
+			},
+			// 当前单价：选全用 SKU 价，未选全用最低价，单规格用快照价
+			itemPrice(item) {
+				const sku = this.selectedSku(item)
+				if (sku) {
+					return this.num(sku.price)
+				}
+				if (this.hasSpecs(item) && item.priceMin != null) {
+					return this.num(item.priceMin)
+				}
+				return this.num(item.price)
+			},
+			// 价格文案：多规格未选全显示「¥xx 起」
+			itemPriceText(item) {
+				if (this.hasSpecs(item) && !this.selectedSku(item)) {
+					return '¥' + this.fmt(this.itemPrice(item)) + ' 起'
+				}
+				return '¥' + this.fmt(this.itemPrice(item))
+			},
+			// 划线价：优先选中的 SKU 市场价，其次活动前价 / 商品市场价
+			itemOrigin(item) {
+				const sku = this.selectedSku(item)
+				if (sku && sku.marketPrice != null) {
+					return this.num(sku.marketPrice)
+				}
+				return this.num(item.originalPrice) || this.num(item.marketPrice)
+			},
+			// 单品小计 = (单价 + 保障费) × 数量
+			itemSubTotal(item) {
+				return (this.itemPrice(item) + this.num(item.insuranceFee)) * this.num(item.quantity)
+			},
+			// 数量上限：选全用 SKU 库存，否则用商品汇总库存（null 表示不限制）
+			itemStock(item) {
+				const sku = this.selectedSku(item)
+				if (sku && sku.stock != null) {
+					return this.num(sku.stock)
+				}
+				return item.stock != null ? this.num(item.stock) : null
+			},
+			// 已选规格文案：选全后才展示，避免只选一半就显示「已选」
+			itemSpecText(item) {
+				if (!this.hasSpecs(item) || !isSpecComplete(item.specJson, item.skuSpecs)) {
+					return ''
+				}
+				return specText(item.specJson, item.skuSpecs)
+			},
+			// 候选值是否可点：当前值始终可点（允许改回），其余看有没有有货组合
+			canPick(item, groupName, value) {
+				if (item.specJson[groupName] === value) {
+					return true
+				}
+				return isValueSelectable(item.skus, item.specJson, groupName, value)
+			},
+			// 点规格值：C 端单选，直接切换
+			pickSpec(item, groupName, value) {
+				if (!this.canPick(item, groupName, value)) {
+					uni.showToast({
+						title: '该规格暂时无货',
+						icon: 'none'
+					})
+					return
+				}
+				item.specJson = Object.assign({}, item.specJson, { [groupName]: value })
+				// 换规格后库存可能变小，数量超了就收到上限
+				const max = this.itemStock(item)
+				if (max != null && item.quantity > max) {
+					item.quantity = Math.max(1, max)
+				}
+			},
+			// 数量变化：受库存上限约束
+			setItemQuantity(item, n) {
+				const max = this.itemStock(item)
+				if (max != null && n > max) {
+					uni.showToast({
+						title: '库存不足，最多 ' + max + ' 件',
+						icon: 'none'
+					})
+					return
+				}
+				item.quantity = n
+			},
+			// 服务行文案：已选保障展示名称和费用，没选给「可选增值服务」
+			itemServiceText(item) {
+				const detail = Array.isArray(item.insuranceDetail) ? item.insuranceDetail : []
+				if (detail.length) {
+					return detail.map(d => d.name).join('、') + '  ¥' + this.fmt(item.insuranceFee)
+				}
+				return '可选增值服务'
+			},
+			// 一键导入微信地址：调起微信地址簿，落库后回显
+			importWeChatAddress() {
+				if (this.importingAddress) {
+					return
+				}
+				if (typeof uni.chooseAddress !== 'function') {
+					uni.showToast({
+						title: '当前环境不支持导入',
+						icon: 'none'
+					})
+					return
+				}
+				this.importingAddress = true
+				uni.chooseAddress({
+					success: (res) => {
+						const region = [res.provinceName, res.cityName, res.countyName].filter(Boolean).join(' ')
+						addAddress({
+							consignee: res.userName,
+							phone: res.telNumber,
+							region: region,
+							detailAddress: res.detailInfo,
+							isDefault: 1
+						}).then(() => {
+							this.importingAddress = false
+							this.loadAddress()
+						}).catch(() => {
+							this.importingAddress = false
+						})
+					},
+					fail: () => {
+						this.importingAddress = false
+					}
 				})
 			},
 			// 初始化：拉可用券，自动选最优，再按选中券报价；失败退回不用券报价
@@ -295,12 +518,19 @@
 						}
 					})
 			},
-			// 报价/下单统一入参
+			// 报价/下单统一入参：选全规格时带上 skuId，后端按 SKU 价算
 			quoteItems() {
-				return this.items.map(i => ({
-					productId: i.productId,
-					quantity: i.quantity
-				}))
+				return this.items.map(i => {
+					const row = {
+						productId: i.productId,
+						quantity: i.quantity
+					}
+					const sku = this.selectedSku(i)
+					if (sku && sku.id != null) {
+						row.skuId = sku.id
+					}
+					return row
+				})
 			},
 			openCoupon() {
 				this.couponVisible = true
@@ -339,6 +569,16 @@
 					})
 					return
 				}
+				// 多规格商品必须选全才能提交，缺哪个维度就提示哪个
+				const missing = this.items.find(i => this.hasSpecs(i) && !isSpecComplete(i.specJson, i.skuSpecs))
+				if (missing) {
+					const need = missing.skuSpecs.filter(g => !missing.specJson[g.name]).map(g => g.name).join('、')
+					uni.showToast({
+						title: '请选择「' + missing.name + '」的' + need,
+						icon: 'none'
+					})
+					return
+				}
 				this.paying = true
 
 				// 微信规则：requestSubscribeMessage 必须由用户点击触发，
@@ -356,12 +596,21 @@
 					// 把授权结果随下单一起保存到 orders.is_subscribe_unpaid
 					subscribeUnpaid: subscribeUnpaid,
 					// 购物车 insuranceDetail 是数组，下单接口要字符串，这里序列化一下
-					items: this.items.map(i => ({
-						productId: i.productId,
-						quantity: i.quantity,
-						insuranceDetail: JSON.stringify(i.insuranceDetail || []),
-						insuranceFee: i.insuranceFee || 0
-					}))
+					// 选全规格时带 skuId + 规格快照，订单明细据此锁价和展示
+					items: this.items.map(i => {
+						const row = {
+							productId: i.productId,
+							quantity: i.quantity,
+							insuranceDetail: JSON.stringify(i.insuranceDetail || []),
+							insuranceFee: i.insuranceFee || 0
+						}
+						const sku = this.selectedSku(i)
+						if (sku && sku.id != null) {
+							row.skuId = sku.id
+							row.specJson = JSON.stringify(sku.specJson || {})
+						}
+						return row
+					})
 				}
 				createOrder(orderData)
 					.then((order) => {
@@ -499,10 +748,31 @@
 		color: #333333;
 	}
 
+	/* 无地址时两个入口：手动填写 / 一键导入微信地址 */
 	.address-empty {
 		flex: 1;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.addr-empty-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 18rpx 0;
+	}
+
+	.addr-empty-row + .addr-empty-row {
+		border-top: 1rpx solid #f5f5f5;
+	}
+
+	.addr-empty-title {
 		font-size: 28rpx;
-		color: #999999;
+		color: #333333;
+	}
+
+	.addr-import .addr-empty-title {
+		color: #FF6700;
 	}
 
 	.addr-arrow {
@@ -584,24 +854,89 @@
 		border-radius: 6rpx;
 	}
 
-	.goods-qty {
-		margin-left: 16rpx;
-		font-size: 24rpx;
-		color: #999999;
-	}
-
-	.goods-insurance {
-		margin-top: 6rpx;
-		font-size: 24rpx;
-		color: #999999;
-	}
-
 	.goods-sub {
 		flex-shrink: 0;
 		margin-left: 20rpx;
 		font-size: 28rpx;
 		font-weight: bold;
 		color: #333333;
+	}
+
+	/* ═══ 规格选择 ═══ */
+	.goods-card {
+		padding: 8rpx 20rpx 12rpx;
+	}
+
+	/* 已选规格文案 */
+	.goods-selected {
+		margin-top: 8rpx;
+		font-size: 22rpx;
+		color: #FF6700;
+	}
+
+	.sku-block {
+		padding-top: 4rpx;
+		border-top: 1rpx solid #f5f5f5;
+	}
+
+	.sku-row {
+		display: flex;
+		align-items: flex-start;
+		padding: 14rpx 0;
+	}
+
+	.sku-label {
+		flex-shrink: 0;
+		width: 130rpx;
+		font-size: 26rpx;
+		color: #666666;
+		line-height: 52rpx;
+	}
+
+	.sku-values {
+		flex: 1;
+		display: flex;
+		flex-wrap: wrap;
+		margin-bottom: -12rpx;
+	}
+
+	/* 规格标签：选中红框，无货置灰 */
+	.sku-tag {
+		min-width: 96rpx;
+		height: 52rpx;
+		line-height: 52rpx;
+		margin-right: 16rpx;
+		margin-bottom: 12rpx;
+		padding: 0 20rpx;
+		text-align: center;
+		font-size: 24rpx;
+		color: #333333;
+		background: #f5f6f8;
+		border: 2rpx solid transparent;
+		border-radius: 8rpx;
+		box-sizing: border-box;
+	}
+
+	.sku-tag.active {
+		color: #FF4E2A;
+		background: #FFF1ED;
+		border-color: #FF4E2A;
+	}
+
+	.sku-tag.disabled {
+		color: #cccccc;
+		background: #fafafa;
+	}
+
+	.opt-row {
+		align-items: center;
+		border-top: 1rpx solid #f5f5f5;
+	}
+
+	.service-text {
+		flex: 1;
+		font-size: 26rpx;
+		color: #999999;
 	}
 
 	/* ═══ 明细行 ═══ */
@@ -816,17 +1151,20 @@
 		color: #FF4E2A;
 	}
 
+	/* 主按钮：大红色，右侧撑满剩余宽度，视觉重心压在最下方 */
 	.pay-btn {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 220rpx;
-		height: 80rpx;
-		border-radius: 40rpx;
-		font-size: 30rpx;
+		flex-shrink: 0;
+		width: 340rpx;
+		height: 88rpx;
+		margin-left: 24rpx;
+		border-radius: 44rpx;
+		font-size: 32rpx;
 		font-weight: 600;
 		color: #ffffff;
-		background: linear-gradient(135deg, #FF4E2A, #FF7A00);
+		background: linear-gradient(135deg, #FF3B30, #FF4E2A);
 	}
 
 	.pay-btn.disabled {
