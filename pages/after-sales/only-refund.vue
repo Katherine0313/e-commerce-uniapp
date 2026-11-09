@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="申请售后" :show-back="true" />
 
 		<!-- 退款商品 -->

@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="我的优惠券" :show-back="true" />
 
 		<!-- 可领取优惠券：直接展示领券中心内容，不用跳页 -->

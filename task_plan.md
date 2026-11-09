@@ -20,7 +20,7 @@
 接下来：**售后**（前端售后 Tab / 申请退款·售后入口点击行为）；首页「轮播图 Banner / 热门推荐」接口等后端提供后再接进下拉刷新。
 
 2026-10-30 全面探索新增结论：**AI 客服的 SSE 链路端到端没接通**（前端 SSE 客户端零调用，实际跑 83 行本地规则表，
-后端 Python `recommender-python` 完全闲置），且 Python 端 `require_user()` 强制要求 user 令牌，
+后端 Python `ecommerce-python` 完全闲置），且 Python 端 `require_user()` 强制要求 user 令牌，
 与「游客可用客服」的旧设计冲突 → 阶段 27，第一步先定游客鉴权策略。
 
 ## 当前阶段
@@ -239,7 +239,7 @@
 ### 阶段 27：AI 客服接通后端 + 遗留清理（2026-10-30 全面探索产出）
 
 > 探索发现：前端 `api/agent.js` 的 SSE 客户端写完了但**零调用**，实际跑的是 83 行本地规则表；
-> 后端 Python `recommender-python` 的 `/chat` 与 `/chat/stream` 完全闲置。
+> 后端 Python `ecommerce-python` 的 `/chat` 与 `/chat/stream` 完全闲置。
 
 - [ ] **先定游客鉴权策略（阻塞项）**：Python 端 `app/services/auth.py` 的 `require_user()` 强制要求
   `type=user` 令牌，与 Java 版 `ai-agent-service` 时代的「免登录放行」契约已经变了。三选一：
@@ -256,7 +256,7 @@
   （`JwtInterceptor` 身份类型不匹配），清 token 属于误伤 → 改成只在 401 清 token
 - [ ] **删死代码**：`getRandomProducts`（首页换一批实际用 `getHotProducts` + `excludeIds`）、`chatStream`（若确定不接后端 AI）
 - [ ] **重写 findings 的「AI 导购 Agent」章节**：现描述的是 Spring AI 版 `ai-agent-service`（9008 端口），
-  与当前实际的 Python `recommender-python` 不符
+  与当前实际的 Python `ecommerce-python` 不符
 - [ ] **`uploadAvatar` 兜底**：`JSON.parse(res.data)` 未判非 JSON 响应会静默失败；且未判断 token 是否存在（对应待办第 4/5 条）
 - **状态：** pending
 

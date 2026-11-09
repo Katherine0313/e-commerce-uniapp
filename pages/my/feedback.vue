@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="意见反馈" :show-back="true" />
 
 		<!-- 反馈类型 -->

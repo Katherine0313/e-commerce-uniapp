@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="退货退款详情" :show-back="true" />
 
 		<!-- 模块1：状态头部 + 进度时间轴 -->

@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="填写评价" :show-back="true" />
 
 		<!-- 优惠券未开通，先隐藏这条承诺；上线后把 utils/features.js 的 coupon 改成 true -->

@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="个人信息" :show-back="true" />
 
 		<!-- 已退出登录：只保留重新登录入口 -->

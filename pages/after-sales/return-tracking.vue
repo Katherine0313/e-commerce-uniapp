@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="回填物流单号" :show-back="true" />
 
 		<!-- 快递公司 + 单号 -->

@@ -1,4 +1,4 @@
-import { BASE_URL } from '../utils/server-api.js'
+import { BASE_URL, request } from '../utils/server-api.js'
 import { getToken } from '../utils/token.js'
 
 /**
@@ -256,4 +256,28 @@ function utf8Decode(bytes) {
 		}
 	}
 	return out
+}
+
+const JSON_HEADER = { 'content-type': 'application/json' }
+
+/**
+ * 转人工：创建/复用商城 AI 会话并标记 human_mode。
+ * 之后在 human_mode 下重复调用本接口，会把 message 存为当前会话的用户消息。
+ */
+export function handoff(conversationId, message) {
+	return request('/api/mall/ai/handoff', {
+		method: 'POST',
+		header: JSON_HEADER,
+		data: { conversationId, message }
+	})
+}
+
+/** 查询单个会话状态（含 humanMode） */
+export function getConversation(id) {
+	return request(`/api/mall/ai/conversations/${id}`, { silent: true })
+}
+
+/** 查询会话消息列表 */
+export function getMessages(id) {
+	return request(`/api/mall/ai/conversations/${id}/messages`, { silent: true })
 }

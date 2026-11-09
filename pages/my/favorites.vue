@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="我的收藏" :show-back="true" />
 
 		<!-- 收藏列表：账号级数据，下架商品也保留并打「已下架」标记 -->

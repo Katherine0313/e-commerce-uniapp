@@ -74,7 +74,7 @@ HBuilderX 编译 → unpackage/dist/build/mp-weixin
   `store/user.js` / `store/cart.js` / `store/ai-chat.js` / `api/*.js` 全部 13 个 / `api/agent.js`。
 - 提取小程序端调用的全部接口路径，与后端各 Controller 的 `@*Mapping` 双向差集比对 →
   **全部命中，小程序端是三个客户端里唯一把 C 端接口用全的** ✅
-- 交叉核对 Python AI 服务 `recommender-python`：`/chat`、`/chat/stream` 两个路由存在；
+- 交叉核对 Python AI 服务 `ecommerce-python`：`/chat`、`/chat/stream` 两个路由存在；
   `app/services/auth.py` 的 `require_user()` 强制要求 `type=user` 令牌（与 Java 共用 `JWT_SECRET`，只校验不签发）。
 - 统计未被引用的 API 导出（5 个）与组件（`<FlyToCart>` 0 引用）。
 - 发现并记录 8 类问题（详见 findings.md「小程序端全面探索」章节）：
@@ -93,7 +93,7 @@ HBuilderX 编译 → unpackage/dist/build/mp-weixin
 
 ### 验证
 - 未改代码，无需构建验证。
-- 接口核对方式：提取 `api/*.js` 中全部 `request(...)` 路径，与后端各 Controller 的 `@RequestMapping` + `@*Mapping` 双向差集比对；AI 服务侧另查 `recommender-python/app/api/agent.py` 的路由装饰器。
+- 接口核对方式：提取 `api/*.js` 中全部 `request(...)` 路径，与后端各 Controller 的 `@RequestMapping` + `@*Mapping` 双向差集比对；AI 服务侧另查 `ecommerce-python/app/api/agent.py` 的路由装饰器。
 
 ### 待决策
 - AI 客服游客鉴权策略（阶段 27 第一项，三选一）：放宽 Python 鉴权 / 游客走本地规则 / 前端强制登录。

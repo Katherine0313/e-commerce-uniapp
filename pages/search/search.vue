@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="搜索" :show-back="true" />
 
 		<!-- 搜索栏：输入框自动聚焦，回车或点搜索触发 -->

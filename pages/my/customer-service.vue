@@ -1,14 +1,14 @@
 <template>
-	<view class="page">
+	<view class="page" :style="{ paddingBottom: keyboardHeight + 'px' }">
 		<CustomNavbar title="专属客服" :show-back="true" />
 
-		<!-- 顶部说明 + 人工客服入口：open-type="contact" 拉起微信原生客服会话 -->
+		<!-- 顶部说明 + 人工客服入口 -->
 		<view class="service-bar">
 			<view class="service-info">
-				<text class="service-title">客服助手</text>
-				<text class="service-tip">固定知识库自动答复，人工客服请点右侧按钮</text>
+				<text class="service-title">{{ store.humanMode ? '人工客服' : '客服助手' }}</text>
+				<text class="service-tip">{{ store.humanMode ? '人工客服接待中，请直接留言' : '固定知识库自动答复，人工客服请点右侧按钮' }}</text>
 			</view>
-			<button class="contact-btn" open-type="contact" hover-class="none">联系人工客服</button>
+			<button v-if="!store.humanMode" class="contact-btn" @click="handoffToHuman" hover-class="none">联系人工客服</button>
 		</view>
 
 		<!-- 页面显著位置说明：自动答复内容仅供参考 -->
@@ -36,11 +36,12 @@
 						<text v-else class="bubble-text">{{ msg.text }}</text>
 						<!-- 自动答复明确标注，避免用户误以为是真人 -->
 						<text v-if="msg.ai && !msg.typing" class="ai-tag">自动答复</text>
+						<text v-else-if="msg.human && !msg.typing" class="human-tag">人工客服</text>
 						<view v-if="msg.contact || msg.feedback" class="bubble-actions">
 							<button
 								v-if="msg.contact"
 								class="bubble-btn"
-								open-type="contact"
+								@click="handoffToHuman"
 								hover-class="none"
 							>联系人工客服</button>
 							<button
@@ -78,13 +79,16 @@
 			</view>
 		</scroll-view>
 
-		<!-- 输入框 -->
+		<!-- 输入框：adjust-position=false 阻止微信自动推页面，
+		     键盘高度靠 bindkeyboardheightchange 拿，避免输入框被顶到屏幕顶部 -->
 		<view class="input-bar">
 			<input
 				class="input"
 				v-model="inputText"
 				placeholder="请输入你想咨询的问题"
 				confirm-type="send"
+				:adjust-position="false"
+				@keyboardheightchange="onKeyboardHeightChange"
 				@confirm="send"
 			/>
 			<view class="send-btn" :class="{ disabled: !inputText.trim() || sending }" @click="send">发送</view>
@@ -109,6 +113,9 @@
 				inputText: '',
 				// scroll-view 用 scroll-top 持续贴底
 				scrollTop: 0,
+				// 键盘高度（px）：input 的 adjust-position=false 关掉了微信自动推页面，
+				// 改由 keyboardheightchange 事件拿，底部留出键盘高度
+				keyboardHeight: 0,
 				quickQuestions: ['什么时候发货', '怎么退换货', '运费怎么算', '查订单物流']
 			}
 		},
@@ -138,6 +145,10 @@
 			this.store.ensureSession()
 		},
 		methods: {
+			// 小程序端：input 的 keyboardheightchange 事件
+			onKeyboardHeightChange(e) {
+				this.keyboardHeight = (e && e.detail && e.detail.height) || 0
+			},
 			send() {
 				const text = this.inputText.trim()
 				if (!text || this.store.sending) {
@@ -158,6 +169,10 @@
 					this.scrollTop += 10000
 				})
 			},
+			handoffToHuman() {
+				if (this.store.sending) return
+				this.store.handoffToHuman('人工客服')
+			},
 			goFeedback() {
 				uni.navigateTo({
 					url: '/pages/my/feedback'
@@ -172,6 +187,8 @@
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
+		/* padding-bottom 用来给键盘让位，border-box 保证不撑出屏幕 */
+		box-sizing: border-box;
 		overflow: hidden;
 		background: #f8f8f8;
 	}
@@ -304,6 +321,16 @@
 		background: #FFF3E8;
 		font-size: 20rpx;
 		color: #B25B00;
+	}
+
+	.human-tag {
+		display: inline-block;
+		margin-top: 8rpx;
+		padding: 2rpx 10rpx;
+		border-radius: 6rpx;
+		background: #E6F7FF;
+		font-size: 20rpx;
+		color: #1677FF;
 	}
 
 	/* 页面级自动答复提示条 */

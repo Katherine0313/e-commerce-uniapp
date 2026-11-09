@@ -39,18 +39,21 @@ export function request(url, options = {}){
 			const backendMsg = res.data && (res.data.message || res.data.msg)
 			throw { statusCode: code, message: backendMsg || ('请求失败（' + code + '）') }
 		}
-		// 后端约定：{ success, data } 成功，{ success, message } 失败
-		if(res.data.success){
+		// 后端约定：Java 用 { success, data }，Python AI 用 { code:0, data }
+		const ok = res.data.success === true || res.data.code === 0
+		if(ok){
 			return res.data.data
 		}else{
 			throw res.data
 		}
 	}).catch((err) => {
-		// 统一错误提示，再抛给调用方
-		uni.showToast({
-			title: (err && (err.message || err.msg || err.errMsg)) || '请求失败，请重试',
-			icon: 'none'
-		})
+		// 统一错误提示，再抛给调用方；options.silent 时静默（如轮询）
+		if(!options.silent){
+			uni.showToast({
+				title: (err && (err.message || err.msg || err.errMsg)) || '请求失败，请重试',
+				icon: 'none'
+			})
+		}
 		throw err
 	})
 }

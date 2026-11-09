@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<!-- 自定义导航栏：二级页，带返回按钮 -->
 		<CustomNavbar title="提交订单" :show-back="true" />
 
@@ -212,7 +211,7 @@
 		isSpecComplete,
 		isValueSelectable,
 		specText
-	} from '../../utils/sku.js'
+	} from './utils/sku.js'
 	import {
 		ensureLogin
 	} from '../../utils/auth.js'

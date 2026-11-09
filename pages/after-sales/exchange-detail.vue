@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="换货详情" :show-back="true" />
 
 		<!-- 模块1：状态头部 + 进度时间轴（换货不退款，无金额） -->

@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="会员中心" :show-back="true" />
 
 		<!-- 会员卡 -->

@@ -246,7 +246,7 @@
 
 **后端方案（已定案，详见后端 findings「推荐服务（Python）方案」）**：
 
-- Python 推荐项目：`D:\study\my-workspace\wechat-workspace\recommender-python`（独立 Python 项目，
+- Python 推荐项目：`D:\study\my-workspace\wechat-workspace\ecommerce-python`（独立 Python 项目，
   后端 findings 记为 `recommend-service/`，FastAPI 端口 9009）。
 - 算法：Item-Item 商品共现（「买了又买」）+ 销量热门兜底；协同过滤暂不做（用户×商品矩阵太稀疏，仅 3 个用户有下单记录）。
 - 数据源：先读原 Node 的 SQLite `orders/order_items`（有效下单 22 条、在售商品 30 个、3 个用户），order-service 落地后切 MySQL（`datasource` 抽象层）。
@@ -602,7 +602,7 @@
 |------|---------|
 | 后端（Spring Boot） | `D:\study\my-workspace\wechat-workspace\e-commerce-boot` |
 | 前端（uni-app） | `D:\study\my-workspace\wechat-workspace\e-commerce-uniapp` |
-| 推荐服务（Python） | `D:\study\my-workspace\wechat-workspace\recommender-python` |
+| 推荐服务（Python） | `D:\study\my-workspace\wechat-workspace\ecommerce-python` |
 
 ### 关键文件
 
@@ -691,7 +691,7 @@
   - `/api/products/recommend` → `RecommendController`（`GET /api/products/recommend`）
   - `/api/products/random` / `/hot` / `/page` → `ProductController`
   - `/api/feedback` → `FeedbackController`（POST）
-  - `/api/agent/chat`、`/api/agent/chat/stream` → Python `recommender-python/app/api/agent.py`
+  - `/api/agent/chat`、`/api/agent/chat/stream` → Python `ecommerce-python/app/api/agent.py`
   - 购物车 / 订单 / 地址 / 收藏 / 会员 / 优惠券 / 售后 / 用户资料 全部齐
 - **小程序是三个客户端里唯一把 C 端接口用全的**（商城端 `ecommerce-mall` 目前只用了商品浏览几个接口，
   管理端只管 admin 侧）。
@@ -701,12 +701,12 @@
 | # | 问题 | 影响 |
 |---|---|---|
 | 1 | **`api/agent.js` 的 SSE 流式客户端零调用**。`chatStream()` 写得很完整（分片缓冲、按 `\n\n` 边界切分避免中文截断、手写 UTF-8 解码、首字 15s 看门狗、低版本基础库降级到非流式），但全仓库**没有任何页面引用**。悬浮球和「专属客服」页实际都走 `store/ai-chat.js` + `utils/auto-reply.js`（**仅 83 行的本地规则表**） | 后端 Python AI 服务 + 网关 `/api/agent/**` 路由**完全闲置**，前端在用本地假客服。`chatStream` 是死代码 |
-| 2 | **游客用不了后端 AI**。`recommender-python/app/services/auth.py` 的 `require_user()` **强制要求 `type=user` 令牌**（与 Java 共用 `JWT_SECRET`，只校验不签发），无 token 直接 401。而本文件上文「AI 导购 Agent」章节写的是 Java 版 `ai-agent-service` 时代的设计——那时 `/api/agent` 是免登录放行的，后端改成 Python 后**契约已经变了** | 接通后端 AI 前必须先定游客策略（放宽 Python 鉴权 / 前端先强制登录 / 双通道）。这是接通前的前置阻塞项 |
+| 2 | **游客用不了后端 AI**。`ecommerce-python/app/services/auth.py` 的 `require_user()` **强制要求 `type=user` 令牌**（与 Java 共用 `JWT_SECRET`，只校验不签发），无 token 直接 401。而本文件上文「AI 导购 Agent」章节写的是 Java 版 `ai-agent-service` 时代的设计——那时 `/api/agent` 是免登录放行的，后端改成 Python 后**契约已经变了** | 接通后端 AI 前必须先定游客策略（放宽 Python 鉴权 / 前端先强制登录 / 双通道）。这是接通前的前置阻塞项 |
 | 3 | **`<FlyToCart>` 组件完全没被使用**。只在 `main.js` 注册，全仓库无任何页面引用 | 阶段 17「加购链路贯通：服务保障 + 全局登录弹窗 + **飞入动画**」的成果在当前代码里已经不存在。飞入购物车动画实际缺失 |
 | 4 | **401 与 403 被混为一谈**。`utils/server-api.js` 里 `code === 401 || code === 403` 都会 `clearToken()` | 后端 403 的语义是「身份类型不匹配 / 无权访问」（`JwtInterceptor` 的 `requiredType != actualType`），**不是登录过期**。例如后台 admin 令牌误调 C 端接口会 403，此时清 token 属于误伤。应该只对 401 清 token，403 只提示 |
 | 5 | **5 个 API 导出未被引用**：`getProducts` / `getProductsByCategory` / `searchProducts`（老的不分页接口，注释已标注「仅兼容旧版本」）、`getRandomProducts`（首页「换一批」实际用的是 `getHotProducts` + `excludeIds`，不是 random）、`chatStream` | 前三个是有意保留的兼容层；后两个是纯死代码 |
 | 6 | `utils/auth.js` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 只有 `token`/`id`/`avatar`，没有 `name`） | 消费方已兜住（`my.vue` 用 `\|\| '微信用户'`），按「不做健壮性改进」不动（与待办第 10 条一致） |
-| 7 | 本文件上文「AI 导购 Agent」章节描述的是 **Spring AI 版 `ai-agent-service`（端口 9008）**，而当前后端实际是 **Python `recommender-python`**，网关路由也已从 `lb://ai-agent-service` 改成静态地址 `${AI_SERVICE_URL}` | 章节已过时，需要重写为 Python 版现状 |
+| 7 | 本文件上文「AI 导购 Agent」章节描述的是 **Spring AI 版 `ai-agent-service`（端口 9008）**，而当前后端实际是 **Python `ecommerce-python`**，网关路由也已从 `lb://ai-agent-service` 改成静态地址 `${AI_SERVICE_URL}` | 章节已过时，需要重写为 Python 版现状 |
 | 8 | `uploadAvatar` 的 `JSON.parse(res.data)` 未兜底、非 JSON 响应会静默失败；且未判断 token 是否存在 | 与待办第 4/5 条重复，仍未处理 |
 
 ### 三个客户端的横向对比

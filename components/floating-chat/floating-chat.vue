@@ -15,6 +15,8 @@
 		</view>
 
 		<!-- 聊天面板：底部浮层，点遮罩关闭 -->
+		<!-- 键盘弹起时不让微信自动推页面（input 的 adjust-position=false），
+		     改由 keyboardHeight 给遮罩加 padding-bottom 把面板顶到键盘上方 -->
 		<view
 			v-if="store.visible"
 			class="chat-mask"
@@ -96,6 +98,8 @@
 					</view>
 				</scroll-view>
 
+				<!-- 输入框：adjust-position=false 阻止微信自动推页面，
+				     键盘高度靠 bindkeyboardheightchange 拿，避免面板被顶到屏幕顶部 -->
 				<view class="chat-input">
 					<input
 						class="input"
@@ -103,6 +107,8 @@
 						placeholder="问点什么…"
 						confirm-type="send"
 						:cursor-spacing="20"
+						:adjust-position="false"
+						@keyboardheightchange="onKeyboardHeightChange"
 						@confirm="send"
 					/>
 					<view
@@ -164,7 +170,8 @@
 					return {}
 				}
 				return {
-					height: 'calc(100vh - ' + this.keyboardHeight + 'px - 48px)'
+					// 遮罩已加 padding-bottom，这里只需把面板高度压到键盘上方
+					height: 'calc(74vh - ' + this.keyboardHeight + 'px)'
 				}
 			}
 		},
@@ -186,19 +193,28 @@
 		},
 		mounted() {
 			this.initBallPos()
+			// App 端用全局监听，小程序端用 input 的 bindkeyboardheightchange（见模板）
+			// #ifdef APP-PLUS
 			if (typeof uni.onKeyboardHeightChange === 'function') {
 				this._keyboardHandler = (res) => {
 					this.keyboardHeight = res.height || 0
 				}
 				uni.onKeyboardHeightChange(this._keyboardHandler)
 			}
+			// #endif
 		},
 		beforeUnmount() {
+			// #ifdef APP-PLUS
 			if (typeof uni.offKeyboardHeightChange === 'function' && this._keyboardHandler) {
 				uni.offKeyboardHeightChange(this._keyboardHandler)
 			}
+			// #endif
 		},
 		methods: {
+			// 小程序端：input 的 keyboardheightchange 事件
+			onKeyboardHeightChange(e) {
+				this.keyboardHeight = (e && e.detail && e.detail.height) || 0
+			},
 			// 首次进入默认右侧中间；之后使用 store 里记住的位置
 			initBallPos() {
 				const info = this.sysInfo
@@ -300,6 +316,10 @@
 					this.scrollTop += 10000
 				})
 			},
+			handoffToHuman() {
+				if (this.store.sending) return
+				this.store.handoffToHuman('人工客服')
+			},
 			goFeedback() {
 				this.store.close()
 				uni.navigateTo({
@@ -355,6 +375,8 @@
 		display: flex;
 		align-items: flex-end;
 		justify-content: center;
+		/* padding-bottom 用来给键盘让位，border-box 保证不撑出屏幕 */
+		box-sizing: border-box;
 	}
 
 	.chat-panel {
@@ -513,6 +535,16 @@
 		background: #FFF3E8;
 		font-size: 20rpx;
 		color: #B25B00;
+	}
+
+	.human-tag {
+		display: inline-block;
+		margin-top: 8rpx;
+		padding: 2rpx 10rpx;
+		border-radius: 6rpx;
+		background: #E6F7FF;
+		font-size: 20rpx;
+		color: #1677FF;
 	}
 
 	/* 页面级自动答复提示条 */

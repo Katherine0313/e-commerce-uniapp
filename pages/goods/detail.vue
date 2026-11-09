@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<!-- 页面内容：随页面原生滚动，底部固定栏用 fixed 盖在最上层 -->
 		<view class="content">
 			<!-- 主图：单图（商品数据只有一张 image，无多图轮播） -->

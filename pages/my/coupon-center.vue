@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="领券中心" :show-back="true" />
 
 		<view v-if="list.length" class="coupon-list">

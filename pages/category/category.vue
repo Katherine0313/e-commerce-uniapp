@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<!-- 自定义顶部导航栏：搜索框 -->
 		<CustomNavbar :showSearch="true" @heightChange="handleNavHeightChange" @search="goSearch" />
 

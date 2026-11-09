@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="售后服务" :show-back="true" />
 
 		<!-- 退款商品卡片：整单商品逐件展示 -->

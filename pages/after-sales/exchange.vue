@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="申请换货" :show-back="true" />
 
 		<!-- 换货商品 -->

@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<CustomNavbar title="关于我们" :show-back="true" />
 
 		<!-- 品牌头卡：Logo + 名称 + 标语 + 版本 -->

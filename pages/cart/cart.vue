@@ -1,6 +1,5 @@
-<template>
-	<FloatingChat />
-	<view class="page">
+﻿<template>
+<view class="page">
 		<!-- 自定义顶部导航栏：tabBar 页没有上一级，只留标题 -->
 		<CustomNavbar />
 
@@ -20,10 +19,10 @@
 					<text class="batch-del" @click="removeSelected">删除选中</text>
 				</view>
 
-				<view class="cart-item" v-for="item in items" :key="item.productId">
+				<view class="cart-item" v-for="item in items" :key="item.skuId || item.productId">
 					<!-- 单选圆圈 -->
-					<view class="check" :class="{ on: isSelected(item.productId) }" @click="toggleSelect(item.productId)">
-						<text v-if="isSelected(item.productId)" class="check-mark">✓</text>
+					<view class="check" :class="{ on: isSelected(item.skuId || item.productId) }" @click="toggleSelect(item.skuId || item.productId)">
+						<text v-if="isSelected(item.skuId || item.productId)" class="check-mark">✓</text>
 					</view>
 
 					<!-- 商品图 -->
@@ -32,6 +31,7 @@
 					<!-- 商品信息 -->
 					<view class="item-info">
 						<text class="item-name">{{ item.name }}</text>
+						<text v-if="item.specJson" class="item-spec">{{ fmtSpec(item.specJson) }}</text>
 						<view class="item-price-row">
 							<text class="item-price">单价 ¥{{ fmt(item.price) }}</text>
 							<text v-if="item.originalPrice" class="item-origin">¥{{ fmt(item.originalPrice) }}</text>
@@ -94,9 +94,10 @@
 			}
 		},
 		computed: {
+			rowKey(item) { return item.skuId || item.productId },
 			// 选中的条目
 			selectedItems() {
-				return this.items.filter(i => this.selectedIds.includes(i.productId))
+				return this.items.filter(i => this.selectedIds.includes(this.rowKey(i)))
 			},
 			// 选中件数（按数量求和，不是条目数）
 			selectedCount() {
@@ -121,7 +122,7 @@
 				this.loading = true
 				return ensureLogin().then(() => getCart()).then((list) => {
 					this.items = list || []
-					const ids = this.items.map(i => i.productId)
+					const ids = this.items.map(i => this.rowKey(i))
 					this.selectedIds = this.selectedIds.filter(id => ids.includes(id))
 					// 同步全局购物车件数，刷新底部角标
 					this.syncCount()
@@ -145,14 +146,14 @@
 			},
 			// 全选/取消全选
 			toggleSelectAll() {
-				this.selectedIds = this.allSelected ? [] : this.items.map(i => i.productId)
+				this.selectedIds = this.allSelected ? [] : this.items.map(i => this.rowKey(i))
 			},
 			// 数量变化（+/- 或输入框提交）：本地乐观更新，后端为权威；subTotal 按快照单价重算
 			changeQuantity(item, next) {
 				if (next < 1) {
 					return
 				}
-				updateQuantity(item.productId, next).then(() => {
+				updateQuantity(item.productId, next, item.skuId).then(() => {
 					item.quantity = next
 					item.subTotal = (this.num(item.price) + this.num(item.insuranceFee)) * next
 					// 数量变了，同步全局购物车件数
@@ -171,7 +172,7 @@
 						if (!res.confirm) {
 							return
 						}
-						removeItem(item.productId).then(() => {
+						removeItem(item.productId, item.skuId).then(() => {
 							this.loadCart()
 						}).catch(() => {})
 					}
@@ -187,7 +188,9 @@
 						if (!res.confirm) {
 							return
 						}
-						clearCart(this.selectedIds).then(() => {
+						const skuIds = this.selectedItems.map(i => i.skuId).filter(Boolean)
+						const productIds = this.selectedItems.map(i => i.productId).filter(Boolean)
+						clearCart(productIds, skuIds).then(() => {
 							this.selectedIds = []
 							this.loadCart()
 						}).catch(() => {})
@@ -223,6 +226,16 @@
 			// 安全转数字：null/undefined 归 0
 			num(n) {
 				return Number(n) || 0
+			},
+			// 规格快照 JSON → 展示文案 "曜石黑 / 256G"
+			// 兼容后端 specJson 可能是字符串或对象
+			fmtSpec(specJson) {
+				if (!specJson) return ''
+				const obj = typeof specJson === 'string'
+					? (() => { try { return JSON.parse(specJson) } catch (e) { return null } })()
+					: specJson
+				if (!obj || typeof obj !== 'object') return ''
+				return Object.keys(obj).map(k => obj[k]).filter(Boolean).join(' / ')
 			},
 			// 把当前购物车总件数同步到全局 store，供底部 tabBar 角标显示
 			syncCount() {
@@ -340,6 +353,16 @@
 		font-size: 28rpx;
 		color: #333333;
 		/* 名字超长省略 */
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.item-spec {
+		font-size: 22rpx;
+		color: #999999;
+		margin-top: 4rpx;
+		/* 规格文字超长省略 */
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
