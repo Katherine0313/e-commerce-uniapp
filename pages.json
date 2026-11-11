@@ -37,67 +37,67 @@
 			}
 		},
 		{
-			"path":"pages/my/personal-info",
+			"path":"pages/my/personal-info/personal-info",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/address",
+			"path":"pages/my/address/address",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/address-edit",
+			"path":"pages/my/address/address-edit",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/favorites",
+			"path":"pages/my/favorites/favorites",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/coupons",
+			"path":"pages/my/coupons/coupons",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/coupon-center",
+			"path":"pages/my/coupons/coupon-center",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/member",
+			"path":"pages/my/member/member",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/about-us",
+			"path":"pages/my/about-us/about-us",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/feedback",
+			"path":"pages/my/feedback/feedback",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/logistics",
+			"path":"pages/my/logistics/logistics",
 			"style": {
 				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path":"pages/my/customer-service",
+			"path":"pages/my/customer-service/customer-service",
 			"style": {
 				"navigationStyle": "custom"
 			}

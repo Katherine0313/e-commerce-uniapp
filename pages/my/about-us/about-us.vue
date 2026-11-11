@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 <view class="page">
 		<CustomNavbar title="关于我们" :show-back="true" />
 
@@ -98,7 +98,7 @@
 						icon: 'phone',
 						text: '联系我们',
 						action: 'contact',
-						url: '/pages/my/customer-service'
+						url: '/pages/my/customer-service/customer-service'
 					}
 				]
 			}

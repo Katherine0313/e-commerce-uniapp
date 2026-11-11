@@ -27,10 +27,11 @@
 				<view class="chat-head">
 					<image class="head-avatar" src="/static/zongjie.jpg" mode="aspectFill"></image>
 					<view class="head-info">
-						<text class="head-title">客服助手</text>
-						<text class="head-sub">常见咨询 · 固定知识库答复</text>
+						<text class="head-title">{{ store.humanMode ? '人工客服' : '客服助手' }}</text>
+						<text class="head-sub">{{ store.humanMode ? '人工客服接待中，请直接留言' : '常见问题自动答复' }}</text>
 					</view>
 					<view class="head-actions">
+						<text v-if="!store.humanMode" class="head-action" @click="handoffToHuman('人工客服')">转人工</text>
 						<text class="head-action" @click="resetChat">新对话</text>
 						<text class="head-close" @click="store.close()">×</text>
 					</view>
@@ -57,11 +58,12 @@
 								<text v-if="msg.typing" class="bubble-text typing-text">正在查询…</text>
 								<text v-else class="bubble-text">{{ msg.text }}</text>
 								<text v-if="msg.ai && !msg.typing" class="ai-tag">自动答复</text>
+								<text v-else-if="msg.human && !msg.typing" class="human-tag">人工客服</text>
 								<view v-if="msg.contact || msg.feedback" class="bubble-actions">
 									<button
 										v-if="msg.contact"
 										class="bubble-btn"
-										open-type="contact"
+										@click="handoffToHuman(msg.handoffText)"
 										hover-class="none"
 									>联系人工客服</button>
 									<button
@@ -316,14 +318,15 @@
 					this.scrollTop += 10000
 				})
 			},
-			handoffToHuman() {
+			handoffToHuman(text) {
 				if (this.store.sending) return
-				this.store.handoffToHuman('人工客服')
+				// 卡片按钮传 msg.handoffText：后端已落库时为空串，避免重复写入用户消息
+				this.store.handoffToHuman(text)
 			},
 			goFeedback() {
 				this.store.close()
 				uni.navigateTo({
-					url: '/pages/my/feedback'
+					url: '/pages/my/feedback/feedback'
 				})
 			}
 		}

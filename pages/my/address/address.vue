@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 <view class="page">
 		<CustomNavbar title="收货地址" :show-back="true" />
 
@@ -74,7 +74,7 @@
 			},
 			// 新增地址
 			goAdd() {
-				uni.navigateTo({ url: '/pages/my/address-edit' })
+				uni.navigateTo({ url: '/pages/my/address/address-edit' })
 			},
 			// 编辑地址（点卡片本身或编辑按钮都进）
 			goEdit(item) {

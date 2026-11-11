@@ -7,7 +7,7 @@ import {
 	DEFAULT_REPLY
 } from '../utils/auto-reply.js'
 import {
-	askAgent,
+	chatStream,
 	handoff,
 	getConversation,
 	getMessages
@@ -30,8 +30,8 @@ const HUMAN_POLL_INTERVAL = 3000
  * 全局客服对话状态：悬浮球和「专属客服」页共用，
  * 放在 Pinia 里，切换页面不会丢消息。
  *
- * 回答优先走后端知识库（/api/agent/chat），后端不可用时才用本地规则兜底；
- * 「人工客服」在本地拦截，保证能立刻拉起微信原生客服会话。
+ * 回答走后端客服（/api/mall/ai/chat/stream 流式，与商城网页端同一套），
+ * 接口不可用时才用本地规则兜底；「人工客服」转接后端人工会话。
  */
 export const useAiChatStore = defineStore('aiChat', {
 	state: () => ({
@@ -101,17 +101,18 @@ export const useAiChatStore = defineStore('aiChat', {
 					id: m.id,
 					role: m.type === 'user' ? 'user' : 'bot',
 					text: m.content || '',
-					human: m.type === 'assistant'
+					// 后台客服回复带管理员头像，自动答复没有，据此区分标识
+					human: m.type === 'assistant' && !!m.senderAvatar
 				}))
 
-				// 客服结束会话后切回 AI
+				// 客服结束会话后切回自动答复
 				if (convRes && !convRes.humanMode && this.humanMode) {
 					this.humanMode = false
 					this.stopHumanPolling()
 					this.messages.push({
 						id: 'local-close',
 						role: 'bot',
-						text: '人工客服已结束本次会话，如有其他问题可以继续咨询 AI 客服。',
+						text: '人工客服已结束本次会话，如有其他问题可以继续咨询客服助手。',
 						human: true
 					})
 				}
@@ -123,7 +124,7 @@ export const useAiChatStore = defineStore('aiChat', {
 			if (this.sending) return false
 			this.sending = true
 			try {
-				const res = await handoff(this.conversationId || undefined, content || '人工客服')
+				const res = await handoff(this.conversationId || undefined, content || '')
 				if (res.conversationId) {
 					this.conversationId = res.conversationId
 					this.humanMode = true
@@ -157,8 +158,8 @@ export const useAiChatStore = defineStore('aiChat', {
 			}
 		},
 		/**
-		 * 发送一条消息：先请求后端知识库，失败/超时才用本地规则兜底。
-		 * 命中「人工客服」意图时本地直接展示微信原生客服按钮。
+		 * 发送一条消息：走后台客服（流式），失败/超时才用本地规则兜底。
+		 * 命中「人工客服」意图时转接后台人工会话，之后消息直达人工客服。
 		 */
 		async send(text) {
 			const content = String(text || '').trim()
@@ -166,50 +167,106 @@ export const useAiChatStore = defineStore('aiChat', {
 				return false
 			}
 			this.ensureSession()
+
+			// 已经在人工模式：直接走人工通道发消息
+			if (this.humanMode) {
+				this.messages.push({
+					id: 'local-' + (++msgId),
+					role: 'user',
+					text: content
+				})
+				return await this.sendHumanMessage(content)
+			}
+
+			// 命中「人工客服」意图：先出确认卡片，点卡片再接人工
+			const human = matchHumanIntent(content)
+			if (human) {
+				this.messages.push({
+					id: 'local-' + (++msgId),
+					role: 'user',
+					text: content,
+				})
+				this.messages.push({
+					id: 'local-' + (++msgId),
+					role: 'bot',
+					text: '需要人工客服协助的话，点击下方「联系人工客服」即可接入，工作时间 9:00~18:00。',
+					contact: true,
+					handoffText: content,
+				})
+				return true
+			}
+
 			this.sending = true
 			this.messages.push({
 				id: 'local-' + (++msgId),
 				role: 'user',
 				text: content
 			})
-
-			// 已经在人工模式：直接走人工通道发消息
-			if (this.humanMode) {
-				return await this.sendHumanMessage(content)
-			}
-
-			// 命中「人工客服」意图：转接后端人工客服
-			const human = matchHumanIntent(content)
-			if (human) {
-				return await this.handoffToHuman(content)
-			}
+			// 先占位一个「正在查询」，收到增量再逐字填
+			this.messages.push({
+				id: 'local-' + (++msgId),
+				role: 'bot',
+				text: '',
+				typing: true
+			})
+			const idx = this.messages.length - 1
 
 			try {
-				const result = await askAgent({
-					message: content,
-					sessionId: this.sessionId
+				await new Promise((resolve, reject) => {
+					chatStream({
+						message: content,
+						conversationId: this.conversationId || undefined,
+						onMeta: (meta) => {
+							if (meta && meta.conversationId) {
+								this.conversationId = meta.conversationId
+							}
+						},
+						onOffer: (offer) => {
+							if (offer && offer.conversationId) {
+								this.conversationId = offer.conversationId
+							}
+							const msg = this.messages[idx]
+							if (msg) {
+								msg.typing = false
+								// 复用当前气泡挂确认卡片；用户消息后端已落库，点击时无需再传
+								msg.contact = true
+								msg.handoffText = ''
+							}
+						},
+						onChunk: (piece) => {
+							const msg = this.messages[idx]
+							if (!msg) return
+							if (msg.typing) {
+								msg.typing = false
+								msg.text = ''
+							}
+							msg.text += piece
+						},
+						onDone: resolve,
+						onError: reject
+					})
 				})
-				this.messages.push({
-					id: 'local-' + (++msgId),
-					role: 'bot',
-					text: result.reply || DEFAULT_REPLY.text,
-					contact: !!result.contact,
-					feedback: !!result.feedback,
-					ai: true // 展示「自动答复」标识
-				})
+				const msg = this.messages[idx]
+				if (msg) {
+					msg.typing = false
+					if (!msg.text) msg.text = DEFAULT_REPLY.text
+					msg.ai = true // 展示「自动答复」标识
+				}
 			} catch (e) {
 				// 后端不可用：本地规则兜底，保证用户总能收到一句回复
 				const reply = matchAutoReply(content) || {
 					...DEFAULT_REPLY
 				}
-				this.messages.push({
-					id: 'local-' + (++msgId),
-					role: 'bot',
-					text: reply.text,
-					contact: !!reply.contact,
-					feedback: !!reply.feedback,
-					ai: true
-				})
+				const msg = this.messages[idx]
+				if (msg) {
+					msg.typing = false
+					msg.ai = true
+					if (!msg.text) {
+						msg.text = reply.text
+						msg.contact = !!reply.contact
+						msg.feedback = !!reply.feedback
+					}
+				}
 			} finally {
 				this.sending = false
 			}

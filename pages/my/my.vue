@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 <view class="page">
 		<!-- 自定义顶部导航栏：tabBar 页没有上一级，只留标题 -->
 		<CustomNavbar />
@@ -19,13 +19,13 @@
 				<text class="user-tip">{{ isLogin ? '点击头像可更换' : '点击头像可登录' }}</text>
 			</view>
 			<!-- 设置入口：右上角齿轮，进个人信息页 -->
-			<view class="setting-btn" @click="handleNav('/pages/my/personal-info')">
+			<view class="setting-btn" @click="handleNav('/pages/my/personal-info/personal-info')">
 				<uni-icons type="gear" size="22" color="#999999"></uni-icons>
 			</view>
 		</view>
 
 		<!-- 会员卡：展示当前等级 / 成长值，点进会员中心 -->
-		<view class="vip-card" v-if="features.vip" @click="handleNav('/pages/my/member')">
+		<view class="vip-card" v-if="features.vip" @click="handleNav('/pages/my/member/member')">
 			<uni-icons type="vip-filled" size="22" color="#7A5410"></uni-icons>
 			<view class="vip-meta">
 				<text class="vip-title">{{ memberProfile ? memberProfile.levelName : '杰米电商会员' }}</text>
@@ -177,7 +177,7 @@
 				statList: [{
 						text: '优惠券',
 						value: 0,
-						url: '/pages/my/coupons'
+						url: '/pages/my/coupons/coupons'
 					},
 					{
 						text: '积分',
@@ -187,7 +187,7 @@
 					{
 						text: '专属客服',
 						icon: 'headphones',
-						url: '/pages/my/customer-service'
+						url: '/pages/my/customer-service/customer-service'
 					}
 				],
 				// 功能入口：url 留空的（如优惠券/积分）点击时给「功能开发中」占位提示
@@ -195,31 +195,31 @@
 						text: '物流查询',
 						fontIcon: 'icon-wuliuchaxun',
 						icon: 'map-pin',
-						url: '/pages/my/logistics'
+						url: '/pages/my/logistics/logistics'
 					},
 					{
 						text: '收藏与浏览',
 						fontIcon: '',
 						icon: 'star',
-						url: '/pages/my/favorites'
+						url: '/pages/my/favorites/favorites'
 					},
 					{
 						text: '收货地址',
 						fontIcon: '',
 						icon: 'location',
-						url: '/pages/my/address'
+						url: '/pages/my/address/address'
 					},
 					{
 						text: '意见反馈',
 						fontIcon: '',
 						icon: 'chat',
-						url: '/pages/my/feedback'
+						url: '/pages/my/feedback/feedback'
 					},
 					{
 						text: '关于我们',
 						fontIcon: '',
 						icon: 'info',
-						url: '/pages/my/about-us'
+						url: '/pages/my/about-us/about-us'
 					}
 				]
 			}

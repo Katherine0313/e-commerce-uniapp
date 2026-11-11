@@ -1,34 +1,47 @@
 import { BASE_URL, request } from '../utils/server-api.js'
 import { getToken } from '../utils/token.js'
+import { getAnonymousId } from '../utils/anonymous.js'
+
+const CHAT_PATH = '/api/mall/ai/chat/stream'
+const JSON_HEADER = { 'content-type': 'application/json' }
 
 /**
- * AI 客服对话（SSE 流式）。
- * 微信小程序用 wx.request + enableChunked 接收分片；基础库不支持时降级为非流式。
+ * 商城客服对话（SSE 流式）。
+ * 与商城网页端共用同一套后端：POST /api/mall/ai/chat/stream
+ * - 已登录：Authorization 头带用户令牌
+ * - 未登录：X-Anonymous-Id 头标识匿名访客（后端按访客维度限流并保存会话）
+ *
+ * SSE 事件：meta / token / products / confirm / done / error
+ * 微信小程序用 wx.request + enableChunked 接收分片；基础库不支持时降级为整段解析。
  *
  * @param {Object} opts
- * @param {string} opts.message   用户输入
- * @param {string} opts.sessionId 会话 ID（后端用它把多轮历史存 Redis）
- * @param {(text:string)=>void} opts.onChunk 每收到一段增量文本回调
- * @param {(text:string)=>void} opts.onDone  流结束回调（完整文本）
- * @param {(err:any)=>void} opts.onError     失败回调
+ * @param {string} opts.message        用户输入
+ * @param {number} [opts.conversationId] 会话 ID（后端用它保存多轮历史，首轮不传）
+ * @param {(meta:Object)=>void} [opts.onMeta] 收到会话信息（含 conversationId）
+ * @param {(offer:Object)=>void} [opts.onOffer] 后端建议转人工（handoff_offer）：前端挂确认卡片
+ * @param {(text:string)=>void} [opts.onChunk] 每收到一段增量文本回调
+ * @param {(text:string, meta:Object)=>void} [opts.onDone] 流结束回调
+ * @param {(err:any)=>void} [opts.onError] 失败回调
  */
-export function chatStream({ message, sessionId, onChunk, onDone, onError }) {
+export function chatStream({ message, conversationId, onMeta, onOffer, onChunk, onDone, onError }) {
 	// #ifdef MP-WEIXIN
-	// 低版本基础库没有分片能力：直接走非流式接口
+	// 低版本基础库没有分片能力：直接走整段解析
 	const canChunk = (typeof wx.canIUse === 'function' &&
 			wx.canIUse('request.object.enableChunked')) ||
 		(typeof wx.getSystemInfoSync === 'function' &&
 			compareVersion(wx.getSystemInfoSync().SDKVersion, '2.20.0') >= 0)
 	if (!canChunk) {
-		chatOnce({ message, sessionId, onChunk, onDone, onError })
+		chatOnce({ message, conversationId, onMeta, onOffer, onChunk, onDone, onError })
 		return
 	}
 
 	let finished = false
 	let buffer = new Uint8Array(0)
 	let fullText = ''
-	// 首字看门狗：15 秒还没收到任何分片就主动断开，页面走规则兜底
+	let convId = conversationId || null
+	// 首字看门狗：15 秒还没收到任何分片就主动断开，页面走本地兜底
 	let firstChunkTimer = null
+
 	const clearFirstChunkTimer = () => {
 		if (firstChunkTimer) {
 			clearTimeout(firstChunkTimer)
@@ -40,7 +53,7 @@ export function chatStream({ message, sessionId, onChunk, onDone, onError }) {
 		if (finished) return
 		finished = true
 		clearFirstChunkTimer()
-		onDone && onDone(fullText)
+		onDone && onDone(fullText, { conversationId: convId })
 	}
 	const fail = (err) => {
 		if (finished) return
@@ -49,20 +62,15 @@ export function chatStream({ message, sessionId, onChunk, onDone, onError }) {
 		onError && onError(err)
 	}
 
-	const header = { 'content-type': 'application/json' }
-	const token = getToken()
-	if (token) {
-		header.Authorization = 'Bearer ' + token
-	}
-
 	const task = wx.request({
-		url: BASE_URL + '/api/agent/chat/stream',
+		url: BASE_URL + CHAT_PATH,
 		method: 'POST',
-		header,
+		header: buildHeader(),
 		data: {
 			message,
-			sessionId,
-			scene: 'customer-service'
+			conversationId: conversationId || undefined,
+			// 标识小程序端：后端据此过滤「AI」字样（网页商城不受影响）
+			client: 'miniapp'
 		},
 		enableChunked: true,
 		timeout: 60000,
@@ -70,7 +78,7 @@ export function chatStream({ message, sessionId, onChunk, onDone, onError }) {
 			if (res.statusCode < 200 || res.statusCode >= 300) {
 				fail({
 					statusCode: res.statusCode,
-					message: '请求失败（' + res.statusCode + '）'
+					message: backendMessage(res.data) || '服务暂时不可用，请稍后再试'
 				})
 				return
 			}
@@ -93,15 +101,12 @@ export function chatStream({ message, sessionId, onChunk, onDone, onError }) {
 		} catch (e) {
 			// 忽略 abort 异常
 		}
-		fail({ message: 'AI 响应超时' })
+		fail({ message: '响应超时，请稍后再试' })
 	}, 15000)
 
-	let gotFirstChunk = false
 	task.onChunkReceived((res) => {
-		if (!gotFirstChunk) {
-			gotFirstChunk = true
-			clearFirstChunkTimer()
-		}
+		if (finished) return
+		clearFirstChunkTimer()
 		appendBytes(new Uint8Array(res.data))
 		flush(false)
 	})
@@ -128,94 +133,168 @@ export function chatStream({ message, sessionId, onChunk, onDone, onError }) {
 		const end = cut === -1 ? buffer.length : cut
 		const text = utf8Decode(buffer.slice(0, end))
 		buffer = buffer.slice(end)
-		parseEvents(text)
+		parseSse(text, handleEvent)
 	}
 
-	// 解析 SSE：取 data: 行；没有 data: 前缀的普通行按续行处理，
-	// 兼容服务端把换行原样写进 data 的情况（避免丢内容）
-	function parseEvents(text) {
-		text.split('\n\n').forEach((event) => {
-			if (!event) return
-			const parts = []
-			event.split('\n').forEach((raw) => {
-				const line = raw.replace(/\r$/, '')
-				if (line.startsWith('data:')) {
-					parts.push(line.slice(5).replace(/^ /, ''))
-				} else if (line.startsWith('event:') || line.startsWith('id:') ||
-					line.startsWith('retry:') || line === '') {
-					// 其余 SSE 字段忽略
-				} else {
-					parts.push(line)
-				}
-			})
-			const data = parts.join('\n')
-			if (!data) return
-			fullText += data
-			onChunk && onChunk(data)
-		})
+	function handleEvent(ev) {
+		if (finished || !ev || !ev.type) return
+		if (ev.type === 'meta') {
+			if (ev.conversationId) {
+				convId = ev.conversationId
+				onMeta && onMeta(ev)
+			}
+		} else if (ev.type === 'handoff_offer') {
+			onOffer && onOffer({ conversationId: ev.conversationId || convId, text: ev.text || '' })
+		} else if (ev.type === 'token') {
+			const piece = ev.text || ''
+			fullText += piece
+			onChunk && onChunk(piece)
+		} else if (ev.type === 'error') {
+			fail({ message: ev.message || '服务暂时不可用，请稍后再试', code: ev.code })
+		}
 	}
 	// #endif
 
 	// #ifndef MP-WEIXIN
-	chatOnce({ message, sessionId, onChunk, onDone, onError })
+	chatOnce({ message, conversationId, onMeta, onOffer, onChunk, onDone, onError })
 	// #endif
 }
 
 /**
- * 非流式兜底：H5 / 低版本小程序用。
- * 不走 request 封装，是为了把错误交给页面决定（页面要展示兜底气泡，而不是弹 toast）。
+ * 整段解析兜底：H5 / 低版本小程序用。
+ * 一次请求拿完整 SSE 文本，再按事件逐条回放，最终一次性给出全文。
  */
-function chatOnce({ message, sessionId, onChunk, onDone, onError }) {
-	const header = { 'content-type': 'application/json' }
-	const token = getToken()
-	if (token) {
-		header.Authorization = 'Bearer ' + token
-	}
+function chatOnce({ message, conversationId, onMeta, onOffer, onChunk, onDone, onError }) {
+	let fullText = ''
+	let convId = conversationId || null
+	let failed = null
+
 	uni.request({
-		url: BASE_URL + '/api/agent/chat',
+		url: BASE_URL + CHAT_PATH,
 		method: 'POST',
-		header,
+		header: buildHeader(),
 		data: {
 			message,
-			sessionId,
-			scene: 'customer-service'
+			conversationId: conversationId || undefined,
+			// 标识小程序端：后端据此过滤「AI」字样（网页商城不受影响）
+			client: 'miniapp'
 		},
+		dataType: 'text',
 		timeout: 60000,
 		success: (res) => {
-			if (res.statusCode < 200 || res.statusCode >= 300 ||
-				!res.data || !res.data.success) {
+			if (res.statusCode < 200 || res.statusCode >= 300) {
 				onError && onError({
 					statusCode: res.statusCode,
-					message: (res.data && res.data.message) || 'AI 服务暂不可用'
+					message: backendMessage(res.data) || '服务暂时不可用，请稍后再试'
 				})
 				return
 			}
-			const data = res.data.data || {}
-			const reply = data.reply || ''
-			onChunk && onChunk(reply)
-			onDone && onDone(reply, data)
+			parseSse(String(res.data || ''), (ev) => {
+				if (!ev || failed) return
+				if (ev.type === 'meta') {
+					if (ev.conversationId) {
+						convId = ev.conversationId
+						onMeta && onMeta(ev)
+					}
+				} else if (ev.type === 'handoff_offer') {
+					onOffer && onOffer({ conversationId: ev.conversationId || convId, text: ev.text || '' })
+				} else if (ev.type === 'token') {
+					const piece = ev.text || ''
+					fullText += piece
+					onChunk && onChunk(piece)
+				} else if (ev.type === 'error') {
+					failed = { message: ev.message || '服务暂时不可用，请稍后再试', code: ev.code }
+				}
+			})
+			if (failed) {
+				onError && onError(failed)
+				return
+			}
+			onDone && onDone(fullText, { conversationId: convId })
 		},
 		fail: (err) => onError && onError(err)
 	})
 }
 
-/**
- * 非流式问答的 Promise 封装：客服页默认走这条。
- * 返回 { reply, contact, matched }，失败时抛错由页面走本地兜底。
- */
-export function askAgent({ message, sessionId }) {
-	return new Promise((resolve, reject) => {
-		chatOnce({
-			message,
-			sessionId,
-			onDone: (text, data) => resolve({
-				reply: text || '',
-				contact: !!(data && data.contact),
-				feedback: !!(data && data.feedback),
-				matched: !!(data && data.matched)
-			}),
-			onError: reject
+// 客服接口统一请求头：登录态带令牌，未登录带匿名访客标识
+function buildHeader() {
+	const header = Object.assign({}, JSON_HEADER, {
+		'X-Anonymous-Id': getAnonymousId()
+	})
+	const token = getToken()
+	if (token) {
+		header.Authorization = 'Bearer ' + token
+	}
+	return header
+}
+
+// 非 2xx 时尽量透出后端 message，便于定位
+function backendMessage(data) {
+	if (!data) return ''
+	if (typeof data === 'string') {
+		try {
+			const parsed = JSON.parse(data)
+			return parsed.message || parsed.msg || ''
+		} catch (e) {
+			return ''
+		}
+	}
+	return data.message || data.msg || ''
+}
+
+// 解析 SSE：取 data: 行；兼容纯文本块（老接口）
+function parseSse(text, onEvent) {
+	if (!text) return
+	text.split('\n\n').forEach((block) => {
+		if (!block) return
+		const parts = []
+		block.split('\n').forEach((raw) => {
+			const line = raw.replace(/\r$/, '')
+			if (line.startsWith('data:')) {
+				parts.push(line.slice(5).replace(/^ /, ''))
+			}
 		})
+		const data = parts.join('\n')
+		if (!data) return
+		let ev
+		try {
+			ev = JSON.parse(data)
+		} catch (e) {
+			// 半截 JSON（流被截断）直接丢弃，其余按纯文本块兼容老接口
+			if (data.trim().charAt(0) === '{') return
+			ev = { type: 'token', text: data }
+		}
+		onEvent(ev)
+	})
+}
+
+/**
+ * 转人工：创建/复用会话并标记人工模式。
+ * 之后在人工模式下重复调用本接口，会把 message 存为当前会话的用户消息。
+ */
+export function handoff(conversationId, message) {
+	return request('/api/mall/ai/handoff', {
+		method: 'POST',
+		header: Object.assign({}, JSON_HEADER, {
+			'X-Anonymous-Id': getAnonymousId()
+		}),
+		data: { conversationId, message }
+	})
+}
+
+/** 查询单个会话状态（含 humanMode） */
+export function getConversation(id) {
+	return request(`/api/mall/ai/conversations/${id}`, {
+		silent: true,
+		header: { 'X-Anonymous-Id': getAnonymousId() }
+	})
+}
+
+/** 查询会话消息列表 */
+export function getMessages(id) {
+	return request(`/api/mall/ai/conversations/${id}/messages`, {
+		silent: true,
+		header: { 'X-Anonymous-Id': getAnonymousId() }
 	})
 }
 
@@ -256,28 +335,4 @@ function utf8Decode(bytes) {
 		}
 	}
 	return out
-}
-
-const JSON_HEADER = { 'content-type': 'application/json' }
-
-/**
- * 转人工：创建/复用商城 AI 会话并标记 human_mode。
- * 之后在 human_mode 下重复调用本接口，会把 message 存为当前会话的用户消息。
- */
-export function handoff(conversationId, message) {
-	return request('/api/mall/ai/handoff', {
-		method: 'POST',
-		header: JSON_HEADER,
-		data: { conversationId, message }
-	})
-}
-
-/** 查询单个会话状态（含 humanMode） */
-export function getConversation(id) {
-	return request(`/api/mall/ai/conversations/${id}`, { silent: true })
-}
-
-/** 查询会话消息列表 */
-export function getMessages(id) {
-	return request(`/api/mall/ai/conversations/${id}/messages`, { silent: true })
 }

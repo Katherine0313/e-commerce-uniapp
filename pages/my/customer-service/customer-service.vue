@@ -6,9 +6,9 @@
 		<view class="service-bar">
 			<view class="service-info">
 				<text class="service-title">{{ store.humanMode ? '人工客服' : '客服助手' }}</text>
-				<text class="service-tip">{{ store.humanMode ? '人工客服接待中，请直接留言' : '固定知识库自动答复，人工客服请点右侧按钮' }}</text>
+				<text class="service-tip">{{ store.humanMode ? '人工客服接待中，请直接留言' : '常见问题自动答复，人工客服请点右侧按钮' }}</text>
 			</view>
-			<button v-if="!store.humanMode" class="contact-btn" @click="handoffToHuman" hover-class="none">联系人工客服</button>
+			<button v-if="!store.humanMode" class="contact-btn" @click="handoffToHuman('人工客服')" hover-class="none">联系人工客服</button>
 		</view>
 
 		<!-- 页面显著位置说明：自动答复内容仅供参考 -->
@@ -41,7 +41,7 @@
 							<button
 								v-if="msg.contact"
 								class="bubble-btn"
-								@click="handoffToHuman"
+								@click="handoffToHuman(msg.handoffText)"
 								hover-class="none"
 							>联系人工客服</button>
 							<button
@@ -169,13 +169,14 @@
 					this.scrollTop += 10000
 				})
 			},
-			handoffToHuman() {
+			handoffToHuman(text) {
 				if (this.store.sending) return
-				this.store.handoffToHuman('人工客服')
+				// 卡片按钮传 msg.handoffText：后端已落库时为空串，避免重复写入用户消息
+				this.store.handoffToHuman(text)
 			},
 			goFeedback() {
 				uni.navigateTo({
-					url: '/pages/my/feedback'
+					url: '/pages/my/feedback/feedback'
 				})
 			}
 		}

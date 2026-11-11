@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 <view class="page">
 		<CustomNavbar title="会员中心" :show-back="true" />
 
@@ -88,7 +88,7 @@
 					.catch(() => {})
 			},
 			goCoupons() {
-				uni.navigateTo({ url: '/pages/my/coupon-center' })
+				uni.navigateTo({ url: '/pages/my/coupons/coupon-center' })
 			}
 		}
 	}

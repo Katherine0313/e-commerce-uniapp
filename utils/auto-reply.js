@@ -66,11 +66,26 @@ export function matchAutoReply(input) {
 }
 
 /**
- * 只匹配「人工客服」意图：命中返回规则，否则 null。
- * 页面用它做本地拦截，其余消息一律交给后端知识库。
+ * 只匹配「转人工」意图：命中返回规则，否则 null。
+ * 页面用它做本地拦截，其余消息（含人工客服时间/收费等信息类问题）交给后端知识库。
  */
+const HANDOFF_INFO = /(几点|时间|上班|下班|电话|在哪|怎么联系|如何联系|能做什么|是谁|收费|机器人|真人吗)/
+const BARE_HANDOFF = [
+	'人工', '人工客服', '人工服务', '真人', '真人客服', '客服',
+	'转人工', '转接人工', '要人工', '找人工', '叫人工', '请人工', '我要人工', '我要转人工'
+]
+const HANDOFF_TEXT = /(转人工|转接人工|找人工|要人工|叫人工|请人工|人工服务|真人客服|人工客服)/
+
 export function matchHumanIntent(input) {
-	const rule = matchAutoReply(input)
+	const raw = String(input || '').trim()
+	if (!raw || raw.length > 30 || HANDOFF_INFO.test(raw)) {
+		return null
+	}
+	const text = normalize(raw)
+	if (!BARE_HANDOFF.includes(text) && !HANDOFF_TEXT.test(text)) {
+		return null
+	}
+	const rule = matchAutoReply(raw)
 	return rule && rule.intent === 'human' ? rule : null
 }
 

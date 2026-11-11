@@ -244,12 +244,10 @@
 					: []
 			},
 			// 图文详情富文本：body 里 img 的 src 是相对路径 /image/body/xxx，rich-text 不会自动补域名，
-			// 这里统一补成完整 URL，并把空 style 换成 width:100%，否则图片按原始尺寸撑破容器
+			// 统一补成完整 URL；body 已清成只剩 <img>，不需要剥参数/段落
 			bodyHtml() {
-				const body = this.product.body
-				if (!body) {
-					return ''
-				}
+				let body = this.product.body
+				if (!body) return ''
 				return body
 					.replace(/style=""/g, 'style="width:100%;display:block;"')
 					.replace(/\/image\//g, BASE_URL + '/image/')
@@ -867,6 +865,8 @@
 	.body-detail {
 		width: 100%;
 		margin-top: 16rpx;
+		padding: 0 30rpx;
+		box-sizing: border-box;
 	}
 
 	/* 图文详情标题：居中 + 左右装饰线，和增值保障的普通小标题区分开 */
