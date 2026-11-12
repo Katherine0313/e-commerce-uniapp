@@ -9,8 +9,6 @@ import CustomSwiper from './components/custom-swiper.vue'
 import Guess from './components/Guess.vue'
 // 登录弹窗，未登录点加购时弹出，静默登录后继续加购
 import LoginPopup from './components/login-popup.vue'
-// 飞入购物车动画，加购成功后各页面调 play() 触发
-import FlyToCart from './components/fly-to-cart.vue'
 // 数量步进器（- / 可输入数字 / +），购物车页与加购弹窗共用
 import QuantityStepper from './components/quantity-stepper.vue'
 // 收货地址弹窗（列表 + 新增/编辑），下单/我的等页面共用
@@ -26,7 +24,6 @@ Vue.component('CustomTabBar', CustomTabBar)
 Vue.component('CustomSwiper',CustomSwiper)
 Vue.component('Guess',Guess)
 Vue.component('LoginPopup', LoginPopup)
-Vue.component('FlyToCart', FlyToCart)
 Vue.component('QuantityStepper', QuantityStepper)
 Vue.component('AddressPopup', AddressPopup)
 Vue.component('FloatingChat', FloatingChat)
@@ -57,8 +54,6 @@ export function createApp() {
 	app.component('Guess',Guess)
 	// 全局注册登录弹窗组件
 	app.component('LoginPopup', LoginPopup)
-	// 全局注册飞入购物车动画组件
-	app.component('FlyToCart', FlyToCart)
 	// 全局注册数量步进器组件
 	app.component('QuantityStepper', QuantityStepper)
 	// 全局注册收货地址弹窗组件

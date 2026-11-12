@@ -55,10 +55,10 @@
 </template>
 
 <script>
-	import { useUserStore } from '../../store/user.js'
-	import { ensureLogin, login, logout, isManualLogout } from '../../utils/auth.js'
-	import { getProfile, uploadAvatar, updateName, bindPhone, deactivateAccount } from '../../api/login.js'
-	import { parseOrderTime } from '../../utils/format.js'
+	import { useUserStore } from '../../../store/user.js'
+	import { ensureLogin, login, logout, isManualLogout } from '../../../utils/auth.js'
+	import { getProfile, uploadAvatar, updateName, bindPhone, deactivateAccount } from '../../../api/login.js'
+	import { parseOrderTime } from '../../../utils/format.js'
 
 	export default {
 		data() {

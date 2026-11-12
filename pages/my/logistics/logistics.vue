@@ -25,11 +25,11 @@
 	import {
 		listOrders,
 		finishOrder
-	} from '../../api/order.js'
+	} from '../../../api/order.js'
 	import {
 		ensureLogin
-	} from '../../utils/auth.js'
-	import OrderCard from '../../components/order-card/order-card.vue'
+	} from '../../../utils/auth.js'
+	import OrderCard from '../../../components/order-card/order-card.vue'
 
 	export default {
 		components: {

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 <view class="page">
 		<!-- 自定义导航栏：二级页，带返回按钮 -->
 		<CustomNavbar title="提交订单" :show-back="true" />
@@ -75,8 +75,22 @@
 				<QuantityStepper :value="item.quantity" :max="itemStock(item)" @change="setItemQuantity(item, $event)" />
 			</view>
 
-			<!-- 增值服务：详情页/购物车已选，确认页只展示 -->
-			<view class="sku-row opt-row">
+			<!-- 增值保障：由商品详情页迁来，在这里按件勾选；后端不返回可选项时退回一行纯展示 -->
+			<view class="insurance-block" v-if="itemInsuranceOptions(item).length">
+				<view class="insurance-head">
+					<text class="insurance-title">增值保障</text>
+					<text class="insurance-tip">可多选 · 按件计费</text>
+				</view>
+				<view class="insurance-cards">
+					<view class="insurance-card" v-for="opt in itemInsuranceOptions(item)" :key="opt.code"
+						:class="{ active: isInsuranceSelected(item, opt.code) }"
+						@click="toggleInsurance(item, opt.code)">
+						<text class="insurance-name">{{ opt.name }}</text>
+						<text class="insurance-price">¥{{ fmt(opt.fee) }}</text>
+					</view>
+				</view>
+			</view>
+			<view class="sku-row opt-row" v-else>
 				<text class="sku-label">服务</text>
 				<text class="service-text">{{ itemServiceText(item) }}</text>
 			</view>
@@ -226,6 +240,30 @@
 	} from './subscribe.js'
 	import PayPopup from './pay-popup.vue'
 
+	// 购物车快照里的 insuranceDetail 可能是 JSON 字符串，也可能是数组。
+	// 统一成数组，既避免下单时 JSON.stringify 二次序列化，也方便恢复勾选态。
+	// 老数据可能只有 name/fee 没有 code，这里用 name 兜底当标识，绝不能直接丢掉。
+	function normalizeInsuranceDetail(value) {
+		let arr = value
+		if (typeof value === 'string') {
+			try {
+				arr = JSON.parse(value)
+			} catch (e) {
+				arr = []
+			}
+		}
+		if (!Array.isArray(arr)) {
+			return []
+		}
+		return arr
+			.filter((d) => d && (d.code || d.name))
+			.map((d) => ({
+				code: d.code || d.name,
+				name: d.name || d.code,
+				fee: Number(d.fee) || 0
+			}))
+	}
+
 	export default {
 		components: {
 			PayPopup
@@ -261,9 +299,9 @@
 			totalAmount() {
 				return this.items.reduce((sum, i) => sum + this.itemSubTotal(i), 0)
 			},
-			// 增值保障总额：保险不参与促销
+			// 增值保障总额：保险不参与促销；一律走派生值，不读快照字段
 			insuranceTotal() {
-				return this.items.reduce((sum, i) => sum + this.num(i.insuranceFee) * this.num(i.quantity), 0)
+				return this.items.reduce((sum, i) => sum + this.itemInsuranceFee(i) * this.num(i.quantity), 0)
 			},
 			// 活动前金额 = 报价原价 + 保险
 			originalTotal() {
@@ -287,8 +325,20 @@
 			}
 		},
 		onLoad() {
-			// 从 store 读购物车去结算传入的选中商品；复制一份，规格选择只在本页生效
-			this.items = (useCartStore().checkoutItems || []).map(i => Object.assign({}, i, { specJson: {} }))
+			// 从 store 读待结算商品；复制一份，规格选择与保障勾选只在本页生效
+			this.items = (useCartStore().checkoutItems || []).map((i) => {
+				const detail = normalizeInsuranceDetail(i.insuranceDetail)
+				return Object.assign({}, i, {
+					specJson: {},
+					insuranceDetail: detail,
+					insuranceFee: Number(i.insuranceFee) || 0,
+					// 可选项由 loadSkuInfo 拉到商品详情后填入；在此之前不显示选择区
+					insuranceOptions: [],
+					selectedInsurance: detail.map((d) => d.code),
+					// 用户是否在本页动过勾选：没动过时购物车快照优先，避免已选保障丢失
+					insuranceTouched: false
+				})
+			})
 			// 幂等键一次下单意图一个：进入页面生成，本页内失败重试复用同一个 key
 			this.idempotencyKey = genIdempotencyKey()
 			if (!this.items.length) {
@@ -341,6 +391,24 @@
 						item.priceMin = p.priceMin != null ? p.priceMin : p.price
 						item.marketPrice = p.marketPrice
 						item.stock = p.stock
+						// 增值保障可选项由后端按商品属性下发（配件类 / 低价商品返回空数组）
+						// 统一成 { code, name, fee }，避免脏数据让卡片 key 重复或金额显示 NaN
+						item.insuranceOptions = (Array.isArray(p.insuranceOptions) ? p.insuranceOptions : [])
+							.filter((opt) => opt && opt.code)
+							.map((opt) => ({
+								code: opt.code,
+								name: opt.name || opt.code,
+								fee: Number(opt.fee) || 0
+							}))
+						if (item.insuranceOptions.length) {
+							// 把购物车带过来的已选保障映射到当前可选项的 code
+							// （老快照可能只有 name 没有 code，两种都比对）
+							const picked = Array.isArray(item.insuranceDetail) ? item.insuranceDetail : []
+							item.selectedInsurance = item.insuranceOptions
+								.filter((opt) => picked.some((d) => d.code === opt.code || d.name === opt.name))
+								.map((opt) => opt.code)
+							this.syncInsurance(item)
+						}
 						// 只有一个值的维度自动选中，省一次点击
 						item.skuSpecs.forEach((g) => {
 							if (Array.isArray(g.values) && g.values.length === 1) {
@@ -387,9 +455,9 @@
 				}
 				return this.num(item.originalPrice) || this.num(item.marketPrice)
 			},
-			// 单品小计 = (单价 + 保障费) × 数量
+			// 单品小计 = (单价 + 保障费) × 数量；保障费取派生值
 			itemSubTotal(item) {
-				return (this.itemPrice(item) + this.num(item.insuranceFee)) * this.num(item.quantity)
+				return (this.itemPrice(item) + this.itemInsuranceFee(item)) * this.num(item.quantity)
 			},
 			// 数量上限：选全用 SKU 库存，否则用商品汇总库存（null 表示不限制）
 			itemStock(item) {
@@ -441,11 +509,69 @@
 				}
 				item.quantity = n
 			},
+			// ===== 增值保障：从商品详情页迁入，按件勾选 =====
+			// 详情页原有的 insuranceDetail / insuranceFee 两个 computed 在这里改为按件派生：
+			// 确认页是多商品，computed 不能带参数，但「勾选态 → 明细 → 费用」依然自动派生，
+			// 不依赖任何手动刷新；所有金额与下单参数统一走下面两个方法。
+			itemInsuranceOptions(item) {
+				return Array.isArray(item.insuranceOptions) ? item.insuranceOptions : []
+			},
+			// 选中的增值保障明细（对应原详情页 insuranceDetail）
+			// 可选项还没拉到 / 后端未下发，或用户没动过勾选但对不上最新 code 时，
+			// 一律沿用购物车快照，避免已买保障凭空消失
+			itemInsuranceDetail(item) {
+				const snapshot = Array.isArray(item.insuranceDetail) ? item.insuranceDetail : []
+				const opts = this.itemInsuranceOptions(item)
+				if (!opts.length) {
+					return snapshot
+				}
+				const selected = item.selectedInsurance || []
+				const picked = opts
+					.filter((opt) => selected.indexOf(opt.code) > -1)
+					.map((opt) => ({
+						code: opt.code,
+						name: opt.name,
+						fee: Number(opt.fee) || 0
+					}))
+				if (!picked.length && !item.insuranceTouched && snapshot.length) {
+					return snapshot
+				}
+				return picked
+			},
+			// 单件保障费合计（对应原详情页 insuranceFee）
+			itemInsuranceFee(item) {
+				return this.itemInsuranceDetail(item)
+					.reduce((sum, opt) => sum + (Number(opt.fee) || 0), 0)
+			},
+			// 该保障项是否已勾选
+			isInsuranceSelected(item, code) {
+				return (item.selectedInsurance || []).indexOf(code) > -1
+			},
+			// 点卡片切换：只改勾选态，明细/费用自动派生；保障费不参与促销/券，无需重拉报价
+			toggleInsurance(item, code) {
+				const list = (item.selectedInsurance || []).slice()
+				const idx = list.indexOf(code)
+				if (idx > -1) {
+					list.splice(idx, 1)
+				} else {
+					list.push(code)
+				}
+				item.selectedInsurance = list
+				item.insuranceTouched = true
+				// 同步快照字段，供后续可能直接读 item.insuranceDetail 的地方使用
+				this.syncInsurance(item)
+			},
+			// 把派生结果写回快照字段（只是兼容，不是金额来源）
+			syncInsurance(item) {
+				const fee = this.itemInsuranceFee(item)
+				item.insuranceDetail = this.itemInsuranceDetail(item)
+				item.insuranceFee = fee
+			},
 			// 服务行文案：已选保障展示名称和费用，没选给「可选增值服务」
 			itemServiceText(item) {
-				const detail = Array.isArray(item.insuranceDetail) ? item.insuranceDetail : []
+				const detail = this.itemInsuranceDetail(item)
 				if (detail.length) {
-					return detail.map(d => d.name).join('、') + '  ¥' + this.fmt(item.insuranceFee)
+					return detail.map(d => d.name).join('、') + '  ¥' + this.fmt(this.itemInsuranceFee(item))
 				}
 				return '可选增值服务'
 			},
@@ -594,14 +720,14 @@
 					couponId: this.selectedCouponId,
 					// 把授权结果随下单一起保存到 orders.is_subscribe_unpaid
 					subscribeUnpaid: subscribeUnpaid,
-					// 购物车 insuranceDetail 是数组，下单接口要字符串，这里序列化一下
+					// 保障明细与费用一律取当前勾选的派生值，后端据此重算应付金额
 					// 选全规格时带 skuId + 规格快照，订单明细据此锁价和展示
 					items: this.items.map(i => {
 						const row = {
 							productId: i.productId,
 							quantity: i.quantity,
-							insuranceDetail: JSON.stringify(i.insuranceDetail || []),
-							insuranceFee: i.insuranceFee || 0
+							insuranceDetail: JSON.stringify(this.itemInsuranceDetail(i)),
+							insuranceFee: this.itemInsuranceFee(i)
 						}
 						const sku = this.selectedSku(i)
 						if (sku && sku.id != null) {
@@ -936,6 +1062,70 @@
 		flex: 1;
 		font-size: 26rpx;
 		color: #999999;
+	}
+
+	/* ═══ 增值保障：按件勾选 ═══ */
+	.insurance-block {
+		padding: 18rpx 0 8rpx;
+		border-top: 1rpx solid #f5f5f5;
+	}
+
+	.insurance-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+	}
+
+	.insurance-title {
+		font-size: 26rpx;
+		font-weight: 600;
+		color: #333333;
+	}
+
+	.insurance-tip {
+		font-size: 22rpx;
+		color: #999999;
+	}
+
+	.insurance-cards {
+		display: flex;
+		flex-wrap: wrap;
+		margin-top: 16rpx;
+	}
+
+	.insurance-card {
+		flex: 1;
+		min-width: 180rpx;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		margin-right: 12rpx;
+		padding: 4rpx 8rpx;
+		background: #ffffff;
+		border: 2rpx solid #e8e8e8;
+		border-radius: 12rpx;
+		box-sizing: border-box;
+	}
+
+	.insurance-card:last-child {
+		margin-right: 0;
+	}
+
+	.insurance-card.active {
+		border-color: #FF6700;
+		background: #FFF7F0;
+	}
+
+	.insurance-name {
+		font-size: 24rpx;
+		color: #555555;
+	}
+
+	.insurance-price {
+		margin-top: 6rpx;
+		font-size: 26rpx;
+		font-weight: 700;
+		color: #FF6700;
 	}
 
 	/* ═══ 明细行 ═══ */

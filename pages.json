@@ -110,22 +110,11 @@
 			}
 		}
 	],
-	// ===== 分包：商品 / 搜索 / 订单 / 售后 =====
-	// root 是物理目录，path 是相对 root 的路径；页面完整路由不变（仍为 /pages/order/list 等）
+	// ===== 分包：搜索 / 订单（含商品详情） / 售后 =====
+	// root 是物理目录，path 是相对 root 的路径
+	// 商品详情已从 pages/goods/detail.vue 挪到 pages/order/detail.vue，
+	// 路由随之改为 /pages/order/detail（见下方 order 分包第一项）
 	"subPackages": [
-		{
-			"root": "pages/goods",
-			"pages": [
-				{
-					"path": "detail",
-					"style": {
-						"navigationBarTitleText": "商品详情",
-						"navigationBarTextStyle": "black",
-						"navigationBarBackgroundColor": "#ffffff"
-					}
-				}
-			]
-		},
 		{
 			"root": "pages/search",
 			"pages": [
@@ -140,6 +129,15 @@
 		{
 			"root": "pages/order",
 			"pages": [
+				{
+					// 商品详情页：用原生导航栏（页面内没有 CustomNavbar）
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "商品详情",
+						"navigationBarTextStyle": "black",
+						"navigationBarBackgroundColor": "#ffffff"
+					}
+				},
 				{
 					"path": "list",
 					"style": {

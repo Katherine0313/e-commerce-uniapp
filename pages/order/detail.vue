@@ -43,17 +43,7 @@
 				<QuantityStepper :value="quantity" :max="product.stock" @change="setQuantity" />
 			</view>
 
-			<!-- 增值保障：可选项由后端按商品属性返回（配件类、低价商品后端不返回，整块不显示） -->
-			<view class="insurance-section" v-if="insuranceOptions.length">
-				<text class="section-title">增值保障</text>
-				<view class="insurance-cards">
-					<view class="insurance-card" v-for="opt in insuranceOptions" :key="opt.code"
-						:class="{ active: isInsuranceSelected(opt.code) }" @click="toggleInsurance(opt.code)">
-						<text class="insurance-name">{{ opt.name }}</text>
-						<text class="insurance-price">¥{{ opt.fee }}</text>
-					</view>
-				</view>
-			</view>
+			<!-- 增值保障的勾选已挪到下单确认页（/pages/order/confirm），本页只管数量与加购/立即购买 -->
 
 			<!-- 商品评价：放在商品参数之前（先给结论：评分/好评率），默认只展示 3 条 -->
 			<view class="review-section" v-if="reviewTotal > 0">
@@ -158,8 +148,9 @@
 	import { getProductDetail } from '../../api/product.js'
 	import { addToCart } from '../../api/cart.js'
 	import { checkFavorite, addFavorite, removeFavorite } from '../../api/favorite.js'
-	import { getProductReviews, getReviewSummary } from './api/review.js'
-	import { parseReviewMedia, reviewMediaUrl } from './utils/review-media.js'
+	// 评价接口与媒体工具已挪到根 api/ 目录；本页在分包 pages/order/ 下，需回退两级
+	import { getProductReviews, getReviewSummary } from '../../api/review.js'
+	import { parseReviewMedia, reviewMediaUrl } from '../../api/review-media.js'
 	import { ensureLogin } from '../../utils/auth.js'
 	import { useUserStore } from '../../store/user.js'
 	import { useCartStore } from '../../store/cart.js'
@@ -170,7 +161,6 @@
 			return {
 				product: {}, // 商品详情，onLoad 按 id 拉取
 				quantity: 1, // 购买数量，最少 1 件
-				selectedInsurance: [], // 已勾选的增值保障项 code（可选项由后端返回）
 				adding: false, // 正在请求加购接口，按钮置灰防重复点
 				favorited: false, // 是否已收藏（后端账号级数据）
 				favoriteLoading: false, // 收藏请求中，防重复点击
@@ -205,16 +195,16 @@
 		// 详情未加载完时退回默认文案，避免分享出空标题
 		onShareAppMessage() {
 			return {
-				title: this.product.name || '杰米多多小店｜全新正品3C数码',
+				title: this.product.name || this.product.title || '杰米多多小店｜全新正品3C数码',
 				imageUrl: this.cover,
 				// 带上商品 id，好友点开直接进同一个商品
-				path: '/pages/goods/detail?id=' + this.product.id
+				path: '/pages/order/detail?id=' + this.product.id
 			}
 		},
 		// 胶囊菜单「分享到朋友圈」
 		onShareTimeline() {
 			return {
-				title: this.product.name || '杰米多多小店｜全新正品3C数码',
+				title: this.product.name || this.product.title || '杰米多多小店｜全新正品3C数码',
 				imageUrl: this.cover,
 				query: 'id=' + this.product.id
 			}
@@ -222,7 +212,7 @@
 		// 胶囊菜单「收藏」
 		onAddToFavorites() {
 			return {
-				title: this.product.name || '杰米多多小店｜全新正品3C数码',
+				title: this.product.name || this.product.title || '杰米多多小店｜全新正品3C数码',
 				imageUrl: this.cover,
 				query: 'id=' + this.product.id
 			}
@@ -251,21 +241,6 @@
 				return body
 					.replace(/style=""/g, 'style="width:100%;display:block;"')
 					.replace(/\/image\//g, BASE_URL + '/image/')
-			},
-			// 可选增值保障项：后端按商品属性算出（配件类、低价商品返回空数组）
-			insuranceOptions() {
-				return Array.isArray(this.product.insuranceOptions) ? this.product.insuranceOptions : []
-			},
-			// 选中的增值保障明细（数组，随加购/下单一起交给后端）
-			insuranceDetail() {
-				return this.insuranceOptions
-					.filter((opt) => this.isInsuranceSelected(opt.code))
-					.map((opt) => ({ code: opt.code, name: opt.name, fee: Number(opt.fee) }))
-			},
-			// 单件保障费合计
-			insuranceFee() {
-				const fee = this.insuranceDetail.reduce((sum, opt) => sum + Number(opt.fee), 0)
-				return fee.toFixed(2)
 			},
 			// 评价总条数
 			reviewTotal() {
@@ -299,19 +274,6 @@
 			}
 		},
 		methods: {
-			// 该保障项是否已勾选
-			isInsuranceSelected(code) {
-				return this.selectedInsurance.indexOf(code) > -1
-			},
-			// 点卡片切换勾选状态
-			toggleInsurance(code) {
-				const index = this.selectedInsurance.indexOf(code)
-				if (index > -1) {
-					this.selectedInsurance.splice(index, 1)
-				} else {
-					this.selectedInsurance.push(code)
-				}
-			},
 			// 拉商品详情
 			loadDetail(id) {
 				getProductDetail(id).then((res) => {
@@ -410,6 +372,7 @@
 				})
 			},
 			// 点加入购物车：未登录先弹登录弹窗；已登录调后端落库，成功 toast + 角标累加
+			// 增值保障唯一勾选入口在确认页，购物车不存保障，这里按「未选」入购物车
 			handleAdd() {
 				if (this.adding) {
 					return
@@ -422,13 +385,10 @@
 					return
 				}
 				this.adding = true
-				addToCart(this.product.id, this.quantity, this.insuranceDetail, Number(this.insuranceFee)).then(() => {
+				addToCart(this.product.id, this.quantity, [], 0).then(() => {
 					this.adding = false
 					// 同步底部购物车角标件数（详情页没有购物车 tab 落点，不再做飞入动画）
-					const cartStore = useCartStore()
-					console.log('[加购] 加购前 count:', cartStore.count, '本次加:', this.quantity, '类型:', typeof this.quantity)
-					cartStore.addQuantity(this.quantity)
-					console.log('[加购] 加购后 count:', cartStore.count)
+					useCartStore().addQuantity(this.quantity)
 					uni.showToast({
 						title: '已加入购物车',
 						icon: 'success'
@@ -447,18 +407,20 @@
 				if (!this.product.id) {
 					return
 				}
-				// 组装单个商品的待结算项，字段对齐购物车 CartVO（下单确认页统一读 store.checkoutItems）
+			// 组装单个商品的待结算项，字段对齐购物车 CartVO（下单确认页统一读 store.checkoutItems）
+			// 原 insuranceDetail / insuranceFee 两个 computed 已迁到确认页，改为
+			// itemInsuranceDetail(item) / itemInsuranceFee(item) 按件派生；
+			// 本页不再提供勾选，所以这里传空，由确认页现选现算
 				const unitPrice = Number(this.product.price) || 0
-				const fee = Number(this.insuranceFee) || 0
 				useCartStore().setCheckoutItems([{
 					productId: this.product.id,
-					name: this.product.name,
+					name: this.product.name || this.product.title || '',
 					image: this.product.image,
 					price: unitPrice,
 					quantity: this.quantity,
-					insuranceDetail: this.insuranceDetail,
-					insuranceFee: fee,
-					subTotal: (unitPrice + fee) * this.quantity
+					insuranceDetail: [],
+					insuranceFee: 0,
+					subTotal: unitPrice * this.quantity
 				}])
 				uni.navigateTo({
 					url: '/pages/order/confirm'
@@ -577,7 +539,7 @@
 		color: #666666;
 	}
 
-	/* ===== 数量 / 增值保障 通用行 ===== */
+	/* ===== 数量行 ===== */
 	.quantity-row {
 		display: flex;
 		align-items: center;
@@ -590,58 +552,6 @@
 	.row-label {
 		font-size: 26rpx;
 		color: #333333;
-	}
-
-	.section-title {
-		font-size: 26rpx;
-		font-weight: 600;
-		color: #333333;
-	}
-
-	.insurance-section {
-		display: flex;
-		flex-direction: column;
-		margin-top: 16rpx;
-		padding: 20rpx 30rpx;
-		background: #ffffff;
-	}
-
-	.insurance-cards {
-		display: flex;
-		margin-top: 16rpx;
-	}
-
-	.insurance-card {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		flex: 1;
-		margin-right: 16rpx;
-		padding: 14rpx 8rpx;
-		background: #ffffff;
-		border: 3rpx solid #e8e8e8;
-		border-radius: 24rpx;
-	}
-
-	.insurance-card:last-child {
-		margin-right: 0;
-	}
-
-	.insurance-card.active {
-		border-color: #FF6700;
-		background: #FFF7F0;
-	}
-
-	.insurance-name {
-		font-size: 24rpx;
-		color: #555555;
-	}
-
-	.insurance-price {
-		margin-top: 8rpx;
-		font-size: 26rpx;
-		font-weight: 700;
-		color: #FF6700;
 	}
 
 	/* ===== 商品评价 ===== */
@@ -816,7 +726,6 @@
 		color: #FF6700;
 	}
 
-	/* ===== 图文详情 ===== */
 	/* ===== 商品参数 ===== */
 	.specs-section {
 		margin: 20rpx 24rpx 0;
@@ -869,7 +778,7 @@
 		box-sizing: border-box;
 	}
 
-	/* 图文详情标题：居中 + 左右装饰线，和增值保障的普通小标题区分开 */
+	/* 图文详情标题：居中 + 左右装饰线，和其他卡片的小标题区分开 */
 	.body-title {
 		display: flex;
 		align-items: center;

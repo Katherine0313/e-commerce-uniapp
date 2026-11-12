@@ -5,6 +5,9 @@
 	import {
 		useCartStore
 	} from './store/cart.js'
+	import {
+		useAiChatStore
+	} from './store/ai-chat.js'
 
 	export default {
 		globalData: {
@@ -21,6 +24,10 @@
 		},
 		onShow: function() {
 			console.log('App Show')
+			// 切到别的 App 再回来：小程序定时器会暂停，人工会话要续上轮询
+			try {
+				useAiChatStore().resumeSession()
+			} catch (e) {}
 		},
 		onHide: function() {
 			console.log('App Hide')

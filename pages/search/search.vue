@@ -110,7 +110,7 @@
 			},
 			// 点商品跳详情
 			goDetail(id) {
-				uni.navigateTo({ url: '/pages/goods/detail?id=' + id })
+				uni.navigateTo({ url: '/pages/order/detail?id=' + id })
 			}
 		}
 	}

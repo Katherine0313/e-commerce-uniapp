@@ -27,7 +27,7 @@ export function handleBannerTap(item){
 	// 点击量统计失败不影响跳转
 	if (item.id) reportBannerBrowse(item.id).catch(() => {})
 	if (item.linkType === 1) {
-		uni.navigateTo({ url: '/pages/goods/detail?id=' + item.linkValue })
+		uni.navigateTo({ url: '/pages/order/detail?id=' + item.linkValue })
 	} else if (item.linkType === 2) {
 		uni.navigateTo({ url: '/pages/article/detail?id=' + item.linkValue })
 	} else if (item.linkType === 3) {

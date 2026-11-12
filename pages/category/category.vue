@@ -235,7 +235,7 @@
 			// 点击商品：跳商品详情页（独立 page，不再弹加购弹窗）
 			handleProductClick(item) {
 				uni.navigateTo({
-					url: '/pages/goods/detail?id=' + item.id
+					url: '/pages/order/detail?id=' + item.id
 				})
 			}
 		}

@@ -23,7 +23,7 @@
 			:style="{ paddingBottom: keyboardHeight + 'px' }"
 			@click="store.close()"
 		>
-			<view class="chat-panel" :style="panelStyle" @click.stop>
+			<view class="chat-panel" :class="{ fullscreen }" :style="panelStyle" @click.stop>
 				<view class="chat-head">
 					<image class="head-avatar" src="/static/zongjie.jpg" mode="aspectFill"></image>
 					<view class="head-info">
@@ -32,6 +32,7 @@
 					</view>
 					<view class="head-actions">
 						<text v-if="!store.humanMode" class="head-action" @click="handoffToHuman('人工客服')">转人工</text>
+						<text class="head-action" @click="toggleFullscreen">{{ fullscreen ? '还原' : '全屏' }}</text>
 						<text class="head-action" @click="resetChat">新对话</text>
 						<text class="head-close" @click="store.close()">×</text>
 					</view>
@@ -150,6 +151,8 @@
 				inputText: '',
 				scrollTop: 0,
 				keyboardHeight: 0,
+				// 面板是否全屏（聊天记录长时可放大看）
+				fullscreen: false,
 				quickQuestions: ['什么时候发货', '怎么退换货', '运费怎么算', '查订单物流'],
 				sysInfo,
 				ballSize,
@@ -173,7 +176,7 @@
 				}
 				return {
 					// 遮罩已加 padding-bottom，这里只需把面板高度压到键盘上方
-					height: 'calc(74vh - ' + this.keyboardHeight + 'px)'
+					height: 'calc(' + (this.fullscreen ? '100vh' : '74vh') + ' - ' + this.keyboardHeight + 'px)'
 				}
 			}
 		},
@@ -190,11 +193,16 @@
 			'store.visible'(visible) {
 				if (visible) {
 					this.scrollToBottom()
+				} else {
+					// 关掉面板后回到常规尺寸，下次打开不会突然全屏
+					this.fullscreen = false
 				}
 			}
 		},
 		mounted() {
 			this.initBallPos()
+			// 小程序被系统回收后重新进入：恢复当天会话，人工会话续上轮询
+			this.store.resumeSession()
 			// App 端用全局监听，小程序端用 input 的 bindkeyboardheightchange（见模板）
 			// #ifdef APP-PLUS
 			if (typeof uni.onKeyboardHeightChange === 'function') {
@@ -312,6 +320,11 @@
 				this.inputText = ''
 				this.store.reset()
 			},
+			// 全屏 / 还原：聊天记录长时占满整屏看
+			toggleFullscreen() {
+				this.fullscreen = !this.fullscreen
+				this.scrollToBottom()
+			},
 			// 持续贴底：scroll-top 每次递增，值变化才触发滚动
 			scrollToBottom() {
 				this.$nextTick(() => {
@@ -393,6 +406,20 @@
 		display: flex;
 		flex-direction: column;
 		animation: panel-in 0.22s ease-out;
+	}
+
+	/* 全屏：撑满整屏，去掉圆角和外边距 */
+	.chat-panel.fullscreen {
+		width: 100%;
+		max-width: none;
+		height: 100vh;
+		margin-bottom: 0;
+		border-radius: 0;
+	}
+
+	/* 全屏时头部顶到状态栏底下，补一段安全区，避免标题被时间/刘海遮住 */
+	.chat-panel.fullscreen .chat-head {
+		padding-top: calc(20rpx + env(safe-area-inset-top));
 	}
 
 	@keyframes panel-in {

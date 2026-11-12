@@ -75,8 +75,8 @@
 </template>
 
 <script>
-	import { claimCoupon, getCouponCenter, getMyCoupons } from '../../api/coupon.js'
-	import { ensureLogin } from '../../utils/auth.js'
+	import { claimCoupon, getCouponCenter, getMyCoupons } from '../../../api/coupon.js'
+	import { ensureLogin } from '../../../utils/auth.js'
 
 	// 「可使用」页签收纳所有还没用掉的券：AVAILABLE（现在就能用）/ NOT_STARTED（未生效）/ LOCKED（使用中）
 	// 后端只会返回这几种状态；按状态各开一个页签会让后台发到手的券在某个状态下彻底看不见，

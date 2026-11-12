@@ -208,7 +208,7 @@
 			// 猜你喜欢商品点击：跳商品详情页（独立 page，不再弹加购弹窗）
 			handleGuessSelect(id) {
 				uni.navigateTo({
-					url: '/pages/goods/detail?id=' + id
+					url: '/pages/order/detail?id=' + id
 				})
 			},
 			// 商品主图：后端 image 是 /image/upload/N.webp 相对路径，需补 BASE_URL；没有则回退后端同命名商品图

@@ -26,6 +26,32 @@ const newSessionId = () =>
 
 const HUMAN_POLL_INTERVAL = 3000
 
+// 会话缓存：小程序被系统回收/重新进入后，当天会话还能接着看
+const CACHE_KEY = 'aiChat:session'
+const CACHE_MAX_MESSAGES = 60
+
+// 本地日期串，用于判断缓存是否还是「当天」
+const dayKey = (ts) => {
+	const d = new Date(ts)
+	return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate()
+}
+
+const loadCache = () => {
+	try {
+		const raw = uni.getStorageSync(CACHE_KEY)
+		if (!raw) return null
+		const data = typeof raw === 'string' ? JSON.parse(raw) : raw
+		if (!data || !data.savedAt || !Array.isArray(data.messages) || !data.messages.length) {
+			return null
+		}
+		// 只恢复当天的会话，隔天自动作废
+		if (dayKey(data.savedAt) !== dayKey(Date.now())) return null
+		return data
+	} catch (e) {
+		return null
+	}
+}
+
 /**
  * 全局客服对话状态：悬浮球和「专属客服」页共用，
  * 放在 Pinia 里，切换页面不会丢消息。
@@ -34,23 +60,75 @@ const HUMAN_POLL_INTERVAL = 3000
  * 接口不可用时才用本地规则兜底；「人工客服」转接后端人工会话。
  */
 export const useAiChatStore = defineStore('aiChat', {
-	state: () => ({
-		visible: false, // 聊天面板是否打开
-		sessionId: '',
-		sending: false,
-		messages: greeting(),
-		// 悬浮球位置（px）：null 表示还没拖过，由组件按右侧中间初始化
-		ballLeft: null,
-		ballTop: null,
-		// 人工客服相关
-		conversationId: null,
-		humanMode: false,
-		humanTimer: null
-	}),
+	state: () => {
+		const cache = loadCache()
+		if (cache) {
+			// 用当前时间戳做自增起点，避免新消息 id 和缓存里的 local-N 撞号
+			msgId = Date.now()
+		}
+		return {
+			visible: false, // 聊天面板是否打开
+			sessionId: cache ? cache.sessionId || '' : '',
+			sending: false,
+			messages: cache ? cache.messages : greeting(),
+			// 悬浮球位置（px）：null 表示还没拖过，由组件按右侧中间初始化
+			ballLeft: null,
+			ballTop: null,
+			// 人工客服相关
+			conversationId: cache ? cache.conversationId || null : null,
+			humanMode: cache ? !!cache.humanMode : false,
+			humanTimer: null,
+			// 缓存签名：内容没变就不重复写 storage
+			cacheSig: ''
+		}
+	},
 	actions: {
 		ensureSession() {
 			if (!this.sessionId) {
 				this.sessionId = newSessionId()
+			}
+		},
+		// ===== 本地缓存（只保留当天） =====
+		persist() {
+			try {
+				const msgs = this.messages
+					.filter(m => !m.typing && (m.text || m.contact))
+					.slice(-CACHE_MAX_MESSAGES)
+				if (!msgs.length) return
+				const last = msgs[msgs.length - 1]
+				const sig = [
+					this.conversationId,
+					this.humanMode ? 1 : 0,
+					msgs.length,
+					last.id,
+					(last.text || '').length
+				].join('|')
+				if (sig === this.cacheSig) return
+				this.cacheSig = sig
+				uni.setStorageSync(CACHE_KEY, JSON.stringify({
+					savedAt: Date.now(),
+					sessionId: this.sessionId,
+					conversationId: this.conversationId,
+					humanMode: this.humanMode,
+					messages: msgs
+				}))
+			} catch (e) {
+				// 存储失败不影响聊天
+			}
+		},
+		clearCache() {
+			try {
+				this.cacheSig = ''
+				uni.removeStorageSync(CACHE_KEY)
+			} catch (e) {}
+		},
+		// 回到前台/重新进入页面：人工会话续上轮询，并从服务端拉一次最新消息
+		async resumeSession() {
+			this.ensureSession()
+			if (!this.conversationId) return
+			if (this.humanMode && !this.humanTimer) {
+				await this.refreshHuman()
+				this.startHumanPolling()
 			}
 		},
 		// 记住悬浮球位置，切页面不回到默认位置
@@ -68,6 +146,7 @@ export const useAiChatStore = defineStore('aiChat', {
 		// 新对话：换 sessionId + 清空消息
 		reset() {
 			this.stopHumanPolling()
+			this.clearCache()
 			this.sessionId = newSessionId()
 			this.conversationId = null
 			this.humanMode = false
@@ -97,13 +176,16 @@ export const useAiChatStore = defineStore('aiChat', {
 				if (id !== this.conversationId) return
 
 				const list = (msgRes || []).filter(m => m.type === 'user' || m.type === 'assistant')
-				this.messages = list.map(m => ({
-					id: m.id,
-					role: m.type === 'user' ? 'user' : 'bot',
-					text: m.content || '',
-					// 后台客服回复带管理员头像，自动答复没有，据此区分标识
-					human: m.type === 'assistant' && !!m.senderAvatar
-				}))
+				// 接口偶发返回空列表时不覆盖已有历史，避免界面被清空
+				if (list.length) {
+					this.messages = list.map(m => ({
+						id: m.id,
+						role: m.type === 'user' ? 'user' : 'bot',
+						text: m.content || '',
+						// 后台客服回复带管理员头像，自动答复没有，据此区分标识
+						human: m.type === 'assistant' && !!m.senderAvatar
+					}))
+				}
 
 				// 客服结束会话后切回自动答复
 				if (convRes && !convRes.humanMode && this.humanMode) {
@@ -116,6 +198,7 @@ export const useAiChatStore = defineStore('aiChat', {
 						human: true
 					})
 				}
+				this.persist()
 			} catch (e) {
 				// 轮询失败静默，下一轮重试
 			}
@@ -131,6 +214,7 @@ export const useAiChatStore = defineStore('aiChat', {
 				}
 				await this.refreshHuman()
 				this.startHumanPolling()
+				this.persist()
 				return true
 			} catch (e) {
 				this.messages.push({
@@ -175,7 +259,9 @@ export const useAiChatStore = defineStore('aiChat', {
 					role: 'user',
 					text: content
 				})
-				return await this.sendHumanMessage(content)
+				const ok = await this.sendHumanMessage(content)
+				this.persist()
+				return ok
 			}
 
 			// 命中「人工客服」意图：先出确认卡片，点卡片再接人工
@@ -193,6 +279,7 @@ export const useAiChatStore = defineStore('aiChat', {
 					contact: true,
 					handoffText: content,
 				})
+				this.persist()
 				return true
 			}
 
@@ -270,6 +357,7 @@ export const useAiChatStore = defineStore('aiChat', {
 			} finally {
 				this.sending = false
 			}
+			this.persist()
 			return true
 		}
 	}

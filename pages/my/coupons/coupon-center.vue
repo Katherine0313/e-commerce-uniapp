@@ -39,8 +39,8 @@
 </template>
 
 <script>
-	import { claimCoupon, getCouponCenter } from '../../api/coupon.js'
-	import { ensureLogin } from '../../utils/auth.js'
+	import { claimCoupon, getCouponCenter } from '../../../api/coupon.js'
+	import { ensureLogin } from '../../../utils/auth.js'
 
 	export default {
 		data() {

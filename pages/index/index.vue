@@ -170,7 +170,7 @@
 			// 点击商品图：跳商品详情页（独立 page，不再弹加购弹窗）
 			handleProductSelect(id) {
 				uni.navigateTo({
-					url: '/pages/goods/detail?id=' + id
+					url: '/pages/order/detail?id=' + id
 				})
 			}
 		}

@@ -38,7 +38,7 @@
 </template>
 
 <script>
-	import { listAddress, addAddress, updateAddress, deleteAddress } from '../../api/address.js'
+	import { listAddress, addAddress, updateAddress, deleteAddress } from '../../../api/address.js'
 
 	export default {
 		data() {

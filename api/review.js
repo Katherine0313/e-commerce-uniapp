@@ -1,4 +1,5 @@
-import { request } from '../../../utils/server-api.js'
+// 本文件位于根 api/ 目录（从 pages/goods/api/ 挪出），request 只需上一级
+import { request } from '../utils/server-api.js'
 
 // ===== 商品评价（公开只读，免登录） =====
 // 商品详情页展示评价列表与星级统计。
@@ -7,11 +8,14 @@ import { request } from '../../../utils/server-api.js'
 // 某商品的评价列表：GET /api/reviews/product/{productId}?page=1&pageSize=10
 // 返回 { list, total, page, pageSize }
 export function getProductReviews(productId, page = 1, pageSize = 10){
-	return request(`/api/reviews/product/${productId}?page=${page}&pageSize=${pageSize}`, { method: 'GET' })
+	const p = Math.max(1, Number(page) || 1)
+	const size = Math.max(1, Number(pageSize) || 10)
+	const id = encodeURIComponent(productId)
+	return request(`/api/reviews/product/${id}?page=${p}&pageSize=${size}`, { method: 'GET' })
 }
 
 // 某商品的评价统计：GET /api/reviews/product/{productId}/summary
 // 返回 { totalCount, avgRating, goodRate, withMediaCount, fiveStar ... oneStar }
 export function getReviewSummary(productId){
-	return request(`/api/reviews/product/${productId}/summary`, { method: 'GET' })
+	return request(`/api/reviews/product/${encodeURIComponent(productId)}/summary`, { method: 'GET' })
 }

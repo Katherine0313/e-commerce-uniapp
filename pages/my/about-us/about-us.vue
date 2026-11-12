@@ -47,7 +47,7 @@
 <script>
 	import {
 		FEATURES
-	} from '../../utils/features.js'
+	} from '../../../utils/features.js'
 
 	// 与 manifest.json 的 versionName 保持一致；改版本时两处一起改
 	const APP_VERSION = '1.0.0'

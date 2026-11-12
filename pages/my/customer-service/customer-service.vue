@@ -99,10 +99,10 @@
 <script>
 	import {
 		useAiChatStore
-	} from '../../store/ai-chat.js'
+	} from '../../../store/ai-chat.js'
 	import {
 		useUserStore
-	} from '../../store/user.js'
+	} from '../../../store/user.js'
 
 	export default {
 		data() {
@@ -143,6 +143,8 @@
 			// 专属客服页是全屏聊天，关掉悬浮面板；会话本身继续共用
 			this.store.close()
 			this.store.ensureSession()
+			// 从缓存恢复当天会话；人工会话会重新拉消息并续上轮询
+			this.store.resumeSession()
 		},
 		methods: {
 			// 小程序端：input 的 keyboardheightchange 事件

@@ -30,9 +30,9 @@
 </template>
 
 <script>
-	import { ensureLogin } from '../../utils/auth.js'
-	import { listFavorites, removeFavorite } from '../../api/favorite.js'
-	import { fmtMoney, goodsImgUrl } from '../../utils/format.js'
+	import { ensureLogin } from '../../../utils/auth.js'
+	import { listFavorites, removeFavorite } from '../../../api/favorite.js'
+	import { fmtMoney, goodsImgUrl } from '../../../utils/format.js'
 
 	export default {
 		data() {
@@ -61,7 +61,7 @@
 			// 点卡片进商品详情（下架商品也可查看）
 			goDetail(item) {
 				uni.navigateTo({
-					url: '/pages/goods/detail?id=' + item.productId
+					url: '/pages/order/detail?id=' + item.productId
 				})
 			},
 			// 取消收藏：成功后从本地列表移除

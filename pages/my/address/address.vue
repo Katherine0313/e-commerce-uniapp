@@ -45,7 +45,7 @@
 </template>
 
 <script>
-	import { listAddress, deleteAddress, updateAddress } from '../../api/address.js'
+	import { listAddress, deleteAddress, updateAddress } from '../../../api/address.js'
 
 	export default {
 		data() {

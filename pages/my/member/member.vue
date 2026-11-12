@@ -53,8 +53,8 @@
 </template>
 
 <script>
-	import { getMemberLevels, getMemberProfile } from '../../api/member.js'
-	import { ensureLogin } from '../../utils/auth.js'
+	import { getMemberLevels, getMemberProfile } from '../../../api/member.js'
+	import { ensureLogin } from '../../../utils/auth.js'
 
 	export default {
 		data() {

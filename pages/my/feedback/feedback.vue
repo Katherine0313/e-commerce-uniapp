@@ -55,11 +55,11 @@
 </template>
 
 <script>
-	import { ensureLogin } from '../../utils/auth.js'
-	import { getProfile } from '../../api/login.js'
-	import { uploadMedia } from '../../api/order.js'
-	import { submitFeedback } from '../../api/feedback.js'
-	import { BASE_URL } from '../../utils/server-api.js'
+	import { ensureLogin } from '../../../utils/auth.js'
+	import { getProfile } from '../../../api/login.js'
+	import { uploadMedia } from '../../../api/order.js'
+	import { submitFeedback } from '../../../api/feedback.js'
+	import { BASE_URL } from '../../../utils/server-api.js'
 
 	export default {
 		data() {
