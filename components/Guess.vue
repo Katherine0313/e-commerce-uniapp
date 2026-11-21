@@ -1,5 +1,5 @@
 <template>
-	<!-- 猜你喜欢：按用户下单记录做个性化推荐，商品列表来自后端 GET /api/products/recommend（免登录，未登录走销量热门兜底） -->
+	<!-- 猜你喜欢：随机上架商品，列表来自后端 GET /api/products/random（首页走后端聚合接口 /api/home） -->
 	<view class="guess">
 		<view class="guess-header">
 			<view class="header-line"></view>
@@ -26,7 +26,7 @@
 </template>
 
 <script>
-	import { getRecommend } from '../api/product.js'
+	import { getRandomProducts } from '../api/product.js'
 	import { BASE_URL } from '../utils/server-api.js'
 
 	export default {
@@ -55,10 +55,10 @@
 			}
 		},
 		methods: {
-			// 拉猜你喜欢推荐：免登录，未登录后端走销量热门兜底
+			// 拉猜你喜欢：随机上架商品，与 GET /api/products/random 同一口径
 			// 返回 Promise，供页面下拉刷新时等请求结束
 			fetchRecommend() {
-				return getRecommend(10).then((list) => {
+				return getRandomProducts(10).then((list) => {
 					this.internalProducts = list || []
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理

@@ -31,11 +31,6 @@ export function getProductDetail(id){
 	return request('/api/products/' + id, { method: 'GET' })
 }
 
-// 获取猜你喜欢推荐列表，对应 GET /api/products/recommend（免登录，未登录走销量热门兜底）
-export function getRecommend(limit){
-	return request('/api/products/recommend?limit=' + (limit || 10), { method: 'GET' })
-}
-
 // 随机取一批商品，对应 GET /api/products/random（首页下拉刷新「换一批」用）
 // excludeIds：当前已展示的商品 id，后端排除它们，避免刷新后和上一批大量重复
 export function getRandomProducts(limit, excludeIds){

@@ -101,7 +101,8 @@
 	} from '../../utils/auth.js'
 	import {
 		getProfile,
-		uploadAvatar
+		uploadAvatar,
+		saveAvatar
 	} from '../../api/login.js'
 	import {
 		listOrders
@@ -177,7 +178,7 @@
 				statList: [{
 						text: '优惠券',
 						value: 0,
-						url: '/pages/my/coupons/coupons'
+						url: '/pages/coupon/coupons'
 					},
 					{
 						text: '积分',
@@ -196,6 +197,12 @@
 						fontIcon: 'icon-wuliuchaxun',
 						icon: 'map-pin',
 						url: '/pages/my/logistics/logistics'
+					},
+					{
+						text: '秒杀订单',
+						fontIcon: '',
+						icon: 'fire',
+						url: '/pages/coupon/seckill/seckill-order-list'
 					},
 					{
 						text: '收藏与浏览',
@@ -321,25 +328,24 @@
 					// 登录失败提示已在 request 封装里统一处理
 				})
 			},
-			// 换头像：chooseAvatar 给的是本地临时路径，必须上传后端换成可访问 URL
+			// 换头像：chooseAvatar 给本地临时路径，先上传拿 URL，再存 DB，最后更新 Pinia
 			onChooseAvatar(e) {
 				const filePath = e.detail.avatarUrl
 				if (!filePath) {
 					return
 				}
-				uploadAvatar(filePath).then((url) => {
-					this.store.setAvatar(url)
-					uni.showToast({
-						title: '头像已更新',
-						icon: 'success'
+				uploadAvatar(filePath)
+					.then((url) => saveAvatar(url))
+					.then((url) => {
+						this.store.setAvatar(url)
+						uni.showToast({ title: '头像已更新', icon: 'success' })
 					})
-				}).catch((err) => {
-					// uploadAvatar 不走 request 封装，错误提示要自己来
-					uni.showToast({
-						title: (err && err.message) || '头像上传失败',
-						icon: 'none'
+					.catch((err) => {
+						uni.showToast({
+							title: (err && err.message) || '头像上传失败',
+							icon: 'none'
+						})
 					})
-				})
 			}
 		}
 	}

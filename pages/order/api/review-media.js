@@ -1,5 +1,5 @@
 /**
- * 评价媒体（晒图/视频）解析工具。
+ * 评价媒体（晒图/视频）解析工具（位于 pages/order 分包内，只给商品详情页用）。
  *
  * product_reviews.images 存的是 JSON 字符串：
  *   [{"url":"/image/review/xxx.png","type":"image"},{"url":"/image/review/v.mp4","type":"video"}]

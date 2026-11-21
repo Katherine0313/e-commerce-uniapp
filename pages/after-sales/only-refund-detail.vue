@@ -1,5 +1,5 @@
-﻿<template>
-<view class="page">
+﻿﻿﻿<template>
+<view class="page" :class="{ 'page-with-footer': refundArrived }">
 		<CustomNavbar title="退款详情" :show-back="true" />
 
 		<!-- 模块1：退款成功头部 + 进度时间轴 -->
@@ -22,15 +22,6 @@
 			</view>
 		</view>
 
-		<!-- 处理进度（售后变更记录） -->
-		<after-sale-log-list :logs="logs" />
-
-		<!-- 模块2：退货物流行（仅退款保留，无物流也展示） -->
-		<view class="row-card">
-			<text class="row-label">{{ courierText }}</text>
-			<view class="arrow"></view>
-		</view>
-
 		<!-- 模块3：退款遇到问题 -->
 		<view class="block-card">
 			<view class="block-header">
@@ -42,15 +33,6 @@
 			</view>
 			<text class="qa-line">问：退款什么时候到账，退到哪里？</text>
 			<text class="qa-line">问：如何查询退款到账情况？</text>
-		</view>
-
-		<!-- 模块4：寄件详情 -->
-		<view class="row-card">
-			<text class="row-label">寄件详情</text>
-			<view class="row-right">
-				<text class="link-text" @click="contactLogistics">物流客服</text>
-				<view class="arrow"></view>
-			</view>
 		</view>
 
 		<!-- 模块5：协商记录 -->
@@ -89,8 +71,8 @@
 			</view>
 		</view>
 
-		<!-- 底部按钮 -->
-		<view class="footer-bar">
+		<!-- 底部按钮：退款到账后才显示 -->
+		<view class="footer-bar" v-if="refundArrived">
 			<view class="btn-outline" @click="applyAgain">再次申请售后</view>
 			<view class="btn-primary" @click="moneyFlow">钱款去向</view>
 		</view>
@@ -99,30 +81,29 @@
 
 <script>
 	import {
-		getAfterSale,
-		getAfterSaleLogs
+		getAfterSale
 	} from '../../api/after-sale.js'
 	import {
 		goodsImgUrl,
 		fmtMoney,
 		formatOrderTime
 	} from '../../utils/format.js'
-	import afterSaleLogList from '../../components/after-sale-log-list/after-sale-log-list.vue'
 
 	export default {
-		components: {
-			afterSaleLogList
-		},
 		data() {
 			return {
 				id: null,
 				detail: null,
 				items: [],
-				refundTotal: 0,
-				logs: []
+				refundTotal: 0
 			}
 		},
 		computed: {
+			// 退款到账（status=refunded 或已有到账时间）后才允许再次申请/查看钱款去向
+			refundArrived() {
+				const d = this.detail
+				return !!d && (d.status === 'refunded' || !!d.refundedAt)
+			},
 			// 时间轴节点：按售后状态动态生成（提交申请 → 商家审核 → 退款处理 → 退款到账）
 			timeline() {
 				const d = this.detail
@@ -139,14 +120,6 @@
 					{ title: '退款处理', time: d.refundAt, done: !!d.refundAt },
 					{ title: '退款到账', time: d.refundedAt, done: !!d.refundedAt }
 				]
-			},
-			// 退货物流：快递公司 + 单号（后端 orders 表带出）
-			courierText() {
-				const d = this.detail
-				if (!d) return '退货物流：—'
-				const courier = d.courierDesc || '—'
-				const tracking = d.trackingNumber || '—'
-				return '退货物流：' + courier + ' ' + tracking
 			}
 		},
 		onLoad(options) {
@@ -165,10 +138,6 @@
 					// 申请金额 = 售后明细单品小计之和
 					this.refundTotal = this.items.reduce((sum, i) => sum + (Number(i.refundAmount) || 0), 0)
 				}).catch(() => {})
-				// 变更记录单独拉，失败不影响详情展示
-				getAfterSaleLogs(this.id).then((logs) => {
-					this.logs = logs || []
-				}).catch(() => {})
 			},
 			// 时间轴时间：后端 LocalDateTime 序列化串 → "MM-dd HH:mm"
 			fmtTime(t) {
@@ -181,9 +150,6 @@
 					data: this.detail.orderNo,
 					success: () => uni.showToast({ title: '已复制', icon: 'none' })
 				})
-			},
-			contactLogistics() {
-				uni.showToast({ title: '物流客服待接入', icon: 'none' })
 			},
 			contactMerchant() {
 				uni.showToast({ title: '联系商家待接入', icon: 'none' })
@@ -204,6 +170,10 @@
 		flex-direction: column;
 		min-height: 100vh;
 		background: #f5f5f5;
+	}
+
+	/* 底部按钮显示时留出固定栏高度，隐藏时不占位 */
+	.page-with-footer {
 		padding-bottom: 160rpx;
 	}
 
@@ -347,17 +317,6 @@
 	.row-label {
 		font-size: 28rpx;
 		color: #333333;
-	}
-
-	.row-right {
-		display: flex;
-		align-items: center;
-	}
-
-	.link-text {
-		font-size: 24rpx;
-		color: #1890ff;
-		margin-right: 8rpx;
 	}
 
 	/* 模块3：退款遇到问题 */

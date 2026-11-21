@@ -238,7 +238,7 @@
 	import {
 		requestUnpaidSubscribe
 	} from './subscribe.js'
-	import PayPopup from './pay-popup.vue'
+	import PayPopup from '../../components/pay-popup.vue'
 
 	// 购物车快照里的 insuranceDetail 可能是 JSON 字符串，也可能是数组。
 	// 统一成数组，既避免下单时 JSON.stringify 二次序列化，也方便恢复勾选态。

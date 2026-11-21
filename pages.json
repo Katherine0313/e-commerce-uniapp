@@ -61,18 +61,6 @@
 			}
 		},
 		{
-			"path":"pages/my/coupons/coupons",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path":"pages/my/coupons/coupon-center",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
 			"path":"pages/my/member/member",
 			"style": {
 				"navigationStyle": "custom"
@@ -235,6 +223,35 @@
 				},
 				{
 					"path": "return-tracking",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				}
+			]
+		},
+		{
+			"root": "pages/coupon",
+			"pages": [
+				{
+					"path": "coupon-center",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "coupons",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "seckill/seckill-detail",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "seckill/seckill-order-list",
 					"style": {
 						"navigationStyle": "custom"
 					}

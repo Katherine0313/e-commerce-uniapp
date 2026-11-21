@@ -41,11 +41,12 @@ export function updateName(name){
 	})
 }
 
-// 上传头像：用 uni.uploadFile 传本地文件，对应 POST /api/user/avatar，返回完整头像 URL
+// 上传头像：uni.uploadFile 调 C 端上传接口 /api/upload，返回图片相对路径（/image/upload/uuid.webp）
+// 拿到 URL 后调用 saveAvatar 存进 user.avatar，完整链路见 onChooseAvatar
 export function uploadAvatar(filePath){
 	return new Promise((resolve, reject) => {
-		uni.uploadFile(({
-			url: BASE_URL + '/api/user/avatar',
+		uni.uploadFile({
+			url: BASE_URL + '/api/upload?type=avatar',
 			filePath: filePath,
 			name: 'file',
 			header:{
@@ -54,7 +55,8 @@ export function uploadAvatar(filePath){
 			success:(res) => {
 				const data = JSON.parse(res.data)
 				if(data.success){
-					resolve(data.data)
+					// UploadVO.url 是相对路径如 /image/upload/uuid.webp
+					resolve(data.data.url || data.data)
 				}else{
 					reject(data)
 				}
@@ -62,6 +64,14 @@ export function uploadAvatar(filePath){
 			fail:(err) => {
 				reject(err)
 			}
-		}))
+		})
+	})
+}
+
+// 存头像 URL 到 user.avatar：对应 POST /api/user/avatar（JSON body），返回入库后的路径
+export function saveAvatar(url){
+	return request('/api/user/avatar', {
+		method: 'POST',
+		data: { avatar: url }
 	})
 }

@@ -301,7 +301,7 @@
 
 | 决策 | 理由 |
 |------|------|
-| 以 `docs/openapi.yaml` + 后端源码为接口权威依据 | `avatar-upload.md` 早先按 `MemberController` 推演，与实际不符，导致了 404 |
+| 以**后端 Swagger**（由 `@Schema`/`@Operation` 注解自动生成，入口见 `e-commerce-boot/docs/swagger-addresses.md`）+ 后端源码为接口权威依据 | 手写的 `e-commerce-boot/docs/openapi.yaml` 已废弃；`avatar-upload.md` 早先按 `MemberController` 推演，与实际不符，导致了 404 —— 手写文档同样不能当权威 |
 | 前端路径 `/api/member/*` 改为 `/api/user/*` | 后端无 `member` 包，原路径会 404，属于"跑不通"，必须修 |
 | 重写 `avatar-upload.md` 而非删除 | 文件仍有参考价值（记录了白名单、大小限制等实现细节），但内容必须准确 |
 | 检查出的 8 条问题一律不修 | 用户明确表示「能跑通就行了」 |
@@ -332,6 +332,7 @@
 | 未登录点加购时商品弹窗不关 | 用户选的数量/增值保障留在原地，静默登录（无感）回来再点一次即可；关掉重开会触发 `watch.show` 里的重置，选择白丢 |
 | 全局登录弹窗「打开即静默登录」，不做「微信登录」按钮 | `POST /api/wxlogin` 在免登录白名单、`uni.login` 不弹授权框，登录可全程无感；加购只需要 token，没有需要用户额外授权的信息 |
 | 登录后总是补一次 `getProfile()` | `ensureLogin()` 已有 token 时直接 return，而重开小程序后 `store.userInfo` 是空的；不补这一次就永远没头像 |
+| 静默登录响应只给 `token`/`id`/`avatar`，昵称与手机号统一走 `/api/user/profile` | 微信静默登录只能换 openid，首次建档时 `User.name` 本来就是 null，后端补 `name` 字段也是空，治标不治本；登录只管令牌、资料单独取，与 `my.vue`/`login-popup.vue` 现有写法一致 |
 | 头像不做成「弹窗打开自动获取微信头像」 | 平台限制：`chooseAvatar` 只在真实用户点击时触发，`getUserProfile` / `getUserInfo` 已废弃（只返回灰色匿名头像）。能自动的只有「拉后端已存的头像」，要换必须用户点一下 |
 | 加购飞入动画用两层 `transform` 合成，不用 JS 逐帧算坐标 | 抛物线拆成「外层匀速横向 + 内层负 y1 贝塞尔纵向 + 缩放」两个 CSS transition，交给合成层跑，比定时器逐帧改坐标省事且不掉帧 |
 | 飞入层放 `uni-popup` 外层，且 `z-index: 1200` | 弹窗收起自带 `transform` 动画，飞入层在弹窗内会被带着一起动；另需盖过弹窗遮罩（1000）和自定义 tabBar（999） |

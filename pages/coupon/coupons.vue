@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 <view class="page">
 		<CustomNavbar title="我的优惠券" :show-back="true" />
 
@@ -56,13 +56,19 @@
 					<text class="coupon-threshold">{{ thresholdText(item) }}</text>
 				</view>
 				<view class="coupon-right">
-					<text class="coupon-name">{{ item.name }}</text>
+					<view class="coupon-name-row">
+						<text class="coupon-name">{{ item.name }}</text>
+						<!-- 秒杀来源券：标「秒杀购得」，与免费领的券区分开 -->
+						<text v-if="item.source === 'SECKILL'" class="seckill-tag">秒杀购得</text>
+					</view>
 					<text class="coupon-scope">{{ item.typeDesc }} · {{ scopeText(item.scopeType) }}</text>
 					<text class="coupon-time">{{ timeText(item) }}</text>
 					<text class="coupon-desc" v-if="item.description">{{ item.description }}</text>
 				</view>
 				<view class="coupon-status">
 					<text v-if="item.status === 'AVAILABLE'" class="use-btn" @click="goUse">去使用</text>
+					<!-- 已退款券：第一期仍展示但置灰，不可使用 -->
+					<text v-else-if="item.status === 'REFUNDED'" class="status-text refunded">已退款</text>
 					<text v-else class="status-text">{{ item.statusDesc }}</text>
 				</view>
 			</view>
@@ -75,8 +81,8 @@
 </template>
 
 <script>
-	import { claimCoupon, getCouponCenter, getMyCoupons } from '../../../api/coupon.js'
-	import { ensureLogin } from '../../../utils/auth.js'
+	import { claimCoupon, getCouponCenter, getMyCoupons } from '../../api/coupon.js'
+	import { ensureLogin } from '../../utils/auth.js'
 
 	// 「可使用」页签收纳所有还没用掉的券：AVAILABLE（现在就能用）/ NOT_STARTED（未生效）/ LOCKED（使用中）
 	// 后端只会返回这几种状态；按状态各开一个页签会让后台发到手的券在某个状态下彻底看不见，
@@ -127,7 +133,8 @@
 			filterByTab(tab) {
 				if (tab === 'USED') return this.allList.filter(c => c.status === 'USED')
 				if (tab === 'EXPIRED') return this.allList.filter(c => c.status === 'EXPIRED')
-				return this.allList.filter(c => USABLE_STATUS.includes(c.status))
+				// 已退款的券第一期仍展示（置灰 + 「已退款」标签），归到「可使用」页签
+				return this.allList.filter(c => USABLE_STATUS.includes(c.status) || c.status === 'REFUNDED')
 			},
 			switchTab(value) {
 				if (this.current === value) return
@@ -284,6 +291,15 @@
 		border-radius: 6rpx;
 	}
 
+	.seckill-tag {
+		margin-left: 10rpx;
+		padding: 0 10rpx;
+		font-size: 20rpx;
+		color: #ffffff;
+		background: linear-gradient(90deg, #FF8A00, #FF4D00);
+		border-radius: 6rpx;
+	}
+
 	.coupon-scope,
 	.coupon-time,
 	.coupon-desc {
@@ -310,6 +326,10 @@
 	.status-text {
 		font-size: 24rpx;
 		color: #999999;
+	}
+
+	.status-text.refunded {
+		color: #bbbbbb;
 	}
 
 	.coupon-action {

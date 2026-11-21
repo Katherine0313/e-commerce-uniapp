@@ -26,8 +26,9 @@ export function getCart() {
 }
 
 // 购物车商品总件数，对应 GET /api/cart/count（首页角标用，不拉完整列表）
+// silent：启动时后台静默刷新角标，未登录/token 失效不弹 toast
 export function getCartCount() {
-	return request('/api/cart/count', { method: 'GET' })
+	return request('/api/cart/count', { method: 'GET', silent: true })
 }
 
 // 更新数量，对应 PUT /api/cart/{productId}?skuId=xxx；quantity 最小 1，由后端兜底

@@ -40,7 +40,7 @@
 | 接口 | 方法 | 入参 | 返回 |
 |------|------|------|------|
 | `/api/wxlogin` | POST | `{ code }` | `Result<WxLoginVO>`：`token` / `id` / `avatar`（**无 `name`**） |
-| `/api/user/profile` | GET | 无（id 从 token 取） | `Result<UserProfileVO>`：`id` / `name` / `avatar` / `phone` / `sex` / `idNumber` / `createTime` |
+| `/api/user/profile` | GET | 无（id 从 token 取） | `Result<UserProfileVO>`：`id` / `name` / `username` / `avatar` / `phone` / `sex` / `createTime`（**无 `idNumber`**） |
 | `/api/user/avatar` | POST | `multipart/form-data` 字段 `file` | `Result<String>`：完整头像 URL |
 | `/api/user/name` | POST | `application/json`：`{ name }` | `Result<String>`：去除首尾空格后的昵称 |
 | `/api/cart` | POST | `application/json`：`{ productId, quantity, insuranceDetail, insuranceFee }` | `Result<Void>`：无 data（**需登录**，已在购物车则累加数量） |
@@ -655,9 +655,10 @@
 9. ~~**增值保障选了不落库**~~ **已解决（2026-10-11）**：`AddCartDTO` 已加 `insuranceDetail` / `insuranceFee`，
    `CartServiceImpl.addItem` 快照落库（不选则空数组 / 0）；前端 `ProductPopup` 勾选随 `addToCart` 请求带上。
    购物车 `subTotal` 与合计均含保障费（`subTotal = (price + insuranceFee) × quantity`）。
-10. `utils/auth.js:12` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 无 `name` 字段，只有
-    `token` / `id` / `avatar`）。消费方都已兜住（`my.vue` 用 `|| '微信用户'`，`LoginPopup` 不展示昵称），
-    按「不做健壮性改进」不动。
+10. ~~`utils/auth.js` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 无 `name` 字段，只有
+    `token` / `id` / `avatar`）。~~ **已解决（2026-11-14）**：前端不再读 `res.name`，
+    登录只取 `token` / `id` / `avatar`，昵称与手机号统一由 `/api/user/profile` 补齐
+    （与 `my.vue` / `login-popup.vue` 现有写法一致）。`avatar-upload.md` 的接口字段表同步更正。
 
 ## 小程序端全面探索（2026-10-30）
 
@@ -687,7 +688,7 @@
 
 ### 与后端的契约核对（逐条比对）
 
-- 小程序调用的接口**全部在���端存在** ✅：
+- 小程序调用的接口**全部在后端存在** ✅：
   - `/api/products/recommend` → `RecommendController`（`GET /api/products/recommend`）
   - `/api/products/random` / `/hot` / `/page` → `ProductController`
   - `/api/feedback` → `FeedbackController`（POST）
@@ -705,7 +706,7 @@
 | 3 | **`<FlyToCart>` 组件完全没被使用**。只在 `main.js` 注册，全仓库无任何页面引用 | 阶段 17「加购链路贯通：服务保障 + 全局登录弹窗 + **飞入动画**」的成果在当前代码里已经不存在。飞入购物车动画实际缺失 |
 | 4 | **401 与 403 被混为一谈**。`utils/server-api.js` 里 `code === 401 || code === 403` 都会 `clearToken()` | 后端 403 的语义是「身份类型不匹配 / 无权访问」（`JwtInterceptor` 的 `requiredType != actualType`），**不是登录过期**。例如后台 admin 令牌误调 C 端接口会 403，此时清 token 属于误伤。应该只对 401 清 token，403 只提示 |
 | 5 | **5 个 API 导出未被引用**：`getProducts` / `getProductsByCategory` / `searchProducts`（老的不分页接口，注释已标注「仅兼容旧版本」）、`getRandomProducts`（首页「换一批」实际用的是 `getHotProducts` + `excludeIds`，不是 random）、`chatStream` | 前三个是有意保留的兼容层；后两个是纯死代码 |
-| 6 | `utils/auth.js` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 只有 `token`/`id`/`avatar`，没有 `name`） | 消费方已兜住（`my.vue` 用 `\|\| '微信用户'`），按「不做健壮性改进」不动（与待办第 10 条一致） |
+| 6 | ~~`utils/auth.js` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 只有 `token`/`id`/`avatar`，没有 `name`）~~ | **已解决（2026-11-14）**：前端不再读 `res.name`，登录只取 `token`/`id`/`avatar`，昵称与手机号统一走 `/api/user/profile`（与待办第 10 条一致） |
 | 7 | 本文件上文「AI 导购 Agent」章节描述的是 **Spring AI 版 `ai-agent-service`（端口 9008）**，而当前后端实际是 **Python `ecommerce-python`**，网关路由也已从 `lb://ai-agent-service` 改成静态地址 `${AI_SERVICE_URL}` | 章节已过时，需要重写为 Python 版现状 |
 | 8 | `uploadAvatar` 的 `JSON.parse(res.data)` 未兜底、非 JSON 响应会静默失败；且未判断 token 是否存在 | 与待办第 4/5 条重复，仍未处理 |
 

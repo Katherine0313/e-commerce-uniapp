@@ -15,7 +15,7 @@ uni-app 电商项目（`e-commerce-uniapp` 前端 + `e-commerce-boot` 后端）�
 - 登录后 `userInfo.avatar` 仍是 `null`。
 
 > 文档更正记录：本文件早期版本按 `MemberController` / `MemberProfileVO` / `/api/member/**` 记录，
-> 与后端实际实现（`ecommerce.user` 包，`UserController`，`/api/user/**`）不符，已按 `docs/openapi.yaml`
+> 与后端实际实现（`ecommerce.user` 包，`UserController`，`/api/user/**`）不符，已按后端 Swagger
 > 和源码更正。前端 `server-api.js` 曾照抄错误路径写成 `/api/member/profile`、`/api/member/avatar`，会导致 404，同批已修正。
 
 ## 根因
@@ -23,16 +23,19 @@ uni-app 电商项目（`e-commerce-uniapp` 前端 + `e-commerce-boot` 后端）�
 `chooseAvatar` 返回的 `avatarUrl` 是小程序**本地临时文件路径**，后端拿这个路径访问不到文件。
 必须用 `uni.uploadFile` 把文件二进制上传到后端存储，后端返回一个可访问的 URL，再写进 `user.avatar`。
 
-## 接口（权威定义见 `e-commerce-boot/docs/openapi.yaml`）
+## 接口（权威定义见后端 Swagger，由 `@Schema` / `@Operation` 注解自动生成，入口见 `e-commerce-boot/docs/swagger-addresses.md`）
 
 | 接口 | 方法 | 入参 | 返回 |
 | --- | --- | --- | --- |
-| `/api/wxlogin` | POST | `{ code }` | `Result<WxLoginVO>`：`token` / `id` / `name` / `avatar` |
-| `/api/user/profile` | GET | 无（用户 id 从 token 取） | `Result<UserProfileVO>`：`id` / `name` / `avatar` / `phone` / `sex` / `idNumber` / `createTime` |
+| `/api/wxlogin` | POST | `{ code }` | `Result<WxLoginVO>`：`token` / `id` / `avatar`（**无 `name`**、无 `phone`） |
+| `/api/user/profile` | GET | 无（用户 id 从 token 取） | `Result<UserProfileVO>`：`id` / `name` / `username` / `avatar` / `phone` / `sex` / `createTime`（**无 `idNumber`**） |
 | `/api/user/avatar` | POST | `multipart/form-data`，字段名 `file` | `Result<String>`：完整头像 URL |
 
-- 两个 `avatar` 字段返回的都是**完整访问 URL**（后端 `UserController.fullUrl` 按当前请求的
-  `scheme://Host` + 相对路径拼好），前端直接展示，不需要再拼域名。
+- 两个 `avatar` 字段返回的都是**完整访问 URL**（按当前请求的 `scheme://Host` + 相对路径拼好），
+  但拼 URL 的类不同：`/api/wxlogin` 是 `WxLoginController.fullUrl`，`/api/user/profile` 是 `UserController.fullUrl`。
+  前端直接展示，不需要再拼域名。
+- 登录响应只有 `token` / `id` / `avatar`：微信静默登录只能换到 openid，昵称和手机号要用户另行授权或填写，
+  所以**登录后一律再调 `/api/user/profile` 补齐资料**（`my.vue`、`login-popup.vue` 都这么写）。
 - 鉴权：`JwtInterceptor` 拦 `/api/**`，豁免清单是 `WebMvcConfig.EXCLUDE_AUTH_PATHS`
   = `/api/wxlogin`、`/api/login`。失败返回真实 HTTP 状态码（400/401/403/413/500），响应体仍是 `Result`。
 - token 由 `JwtUtil.generateUserToken(userId)` 签发，有效期 7 天（`jwt.expire: 604800`）。
@@ -78,7 +81,7 @@ uni-app 电商项目（`e-commerce-uniapp` 前端 + `e-commerce-boot` 后端）�
 - `src/main/java/ecommerce/user/mapper/UserMapper.java` + `src/main/resources/mappers/user/UserMapper.xml`
 - `src/main/java/ecommerce/configuration/WebMvcConfig.java`（拦截器豁免清单、静态资源映射）
 - `src/main/resources/application.yml`（multipart 大小限制）
-- `docs/openapi.yaml`（接口文档，改动接口时同步更新）
+- `docs/swagger-addresses.md`（Swagger 入口；接口文档由 `@Schema`/`@Operation` 注解自动生成，改接口时改注解即可）
 
 前端（`e-commerce-uniapp`）：
 - `utils/server-api.js`

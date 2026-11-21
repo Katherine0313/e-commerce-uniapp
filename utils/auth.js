@@ -35,7 +35,7 @@ export async function ensureLogin(options = {}){
 			const { code } = await uni.login({ provider: 'weixin' })
 			const res = await wxLogin(code)
 			store.setToken(res.token)
-			store.setUserInfo({ id: res.id, name: res.name, avatar: res.avatar })
+			store.setUserInfo({ id: res.id, avatar: res.avatar }) // WxLoginVO 无 name/phone：静默登录拿不到昵称，昵称/手机号统一由 /api/user/profile 补齐
 			// 重新登录成功，清掉手动退出标记，恢复自动登录
 			uni.removeStorageSync(MANUAL_LOGOUT_KEY)
 			return true

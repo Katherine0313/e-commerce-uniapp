@@ -1,5 +1,7 @@
-// 本文件位于根 api/ 目录（从 pages/goods/api/ 挪出），request 只需上一级
-import { request } from '../utils/server-api.js'
+// 本文件位于 pages/order 分包内（原来在根 api/）。
+// 只被分包的商品详情页使用，放在主包会触发微信提示
+// 「主包内不应存在主包未使用的JS文件」，故随分包一起打包。
+import { request } from '../../../utils/server-api.js'
 
 // ===== 商品评价（公开只读，免登录） =====
 // 商品详情页展示评价列表与星级统计。

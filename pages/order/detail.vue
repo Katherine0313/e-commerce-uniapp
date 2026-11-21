@@ -148,9 +148,9 @@
 	import { getProductDetail } from '../../api/product.js'
 	import { addToCart } from '../../api/cart.js'
 	import { checkFavorite, addFavorite, removeFavorite } from '../../api/favorite.js'
-	// 评价接口与媒体工具已挪到根 api/ 目录；本页在分包 pages/order/ 下，需回退两级
-	import { getProductReviews, getReviewSummary } from '../../api/review.js'
-	import { parseReviewMedia, reviewMediaUrl } from '../../api/review-media.js'
+	// 评价接口与媒体工具放在分包内（pages/order/api/），避免主包出现未使用的 JS
+	import { getProductReviews, getReviewSummary } from './api/review.js'
+	import { parseReviewMedia, reviewMediaUrl } from './api/review-media.js'
 	import { ensureLogin } from '../../utils/auth.js'
 	import { useUserStore } from '../../store/user.js'
 	import { useCartStore } from '../../store/cart.js'

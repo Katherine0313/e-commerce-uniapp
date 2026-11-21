@@ -19,11 +19,12 @@ const JSON_HEADER = { 'content-type': 'application/json' }
  * @param {number} [opts.conversationId] 会话 ID（后端用它保存多轮历史，首轮不传）
  * @param {(meta:Object)=>void} [opts.onMeta] 收到会话信息（含 conversationId）
  * @param {(offer:Object)=>void} [opts.onOffer] 后端建议转人工（handoff_offer）：前端挂确认卡片
+ * @param {(items:Array)=>void} [opts.onProducts] 工具查到的商品列表（products）：前端渲染商品卡片
  * @param {(text:string)=>void} [opts.onChunk] 每收到一段增量文本回调
  * @param {(text:string, meta:Object)=>void} [opts.onDone] 流结束回调
  * @param {(err:any)=>void} [opts.onError] 失败回调
  */
-export function chatStream({ message, conversationId, onMeta, onOffer, onChunk, onDone, onError }) {
+export function chatStream({ message, conversationId, onMeta, onOffer, onProducts, onChunk, onDone, onError }) {
 	// #ifdef MP-WEIXIN
 	// 低版本基础库没有分片能力：直接走整段解析
 	const canChunk = (typeof wx.canIUse === 'function' &&
@@ -31,7 +32,7 @@ export function chatStream({ message, conversationId, onMeta, onOffer, onChunk, 
 		(typeof wx.getSystemInfoSync === 'function' &&
 			compareVersion(wx.getSystemInfoSync().SDKVersion, '2.20.0') >= 0)
 	if (!canChunk) {
-		chatOnce({ message, conversationId, onMeta, onOffer, onChunk, onDone, onError })
+		chatOnce({ message, conversationId, onMeta, onOffer, onProducts, onChunk, onDone, onError })
 		return
 	}
 
@@ -39,7 +40,8 @@ export function chatStream({ message, conversationId, onMeta, onOffer, onChunk, 
 	let buffer = new Uint8Array(0)
 	let fullText = ''
 	let convId = conversationId || null
-	// 首字看门狗：15 秒还没收到任何分片就主动断开，页面走本地兜底
+	// 首字看门狗：多轮工具调用（查库存 → 查商品 → 汇总）可能要 15~20 秒才出首字，
+	// 这里给到 45 秒，和 uniapp 请求超时 60 秒、后端总超时 55 秒留出余量
 	let firstChunkTimer = null
 
 	const clearFirstChunkTimer = () => {
@@ -102,7 +104,7 @@ export function chatStream({ message, conversationId, onMeta, onOffer, onChunk, 
 			// 忽略 abort 异常
 		}
 		fail({ message: '响应超时，请稍后再试' })
-	}, 15000)
+	}, 45000)
 
 	task.onChunkReceived((res) => {
 		if (finished) return
@@ -145,6 +147,8 @@ export function chatStream({ message, conversationId, onMeta, onOffer, onChunk, 
 			}
 		} else if (ev.type === 'handoff_offer') {
 			onOffer && onOffer({ conversationId: ev.conversationId || convId, text: ev.text || '' })
+		} else if (ev.type === 'products') {
+			onProducts && onProducts(ev.items || [])
 		} else if (ev.type === 'token') {
 			const piece = ev.text || ''
 			fullText += piece
@@ -156,7 +160,7 @@ export function chatStream({ message, conversationId, onMeta, onOffer, onChunk, 
 	// #endif
 
 	// #ifndef MP-WEIXIN
-	chatOnce({ message, conversationId, onMeta, onOffer, onChunk, onDone, onError })
+	chatOnce({ message, conversationId, onMeta, onOffer, onProducts, onChunk, onDone, onError })
 	// #endif
 }
 
@@ -164,7 +168,7 @@ export function chatStream({ message, conversationId, onMeta, onOffer, onChunk, 
  * 整段解析兜底：H5 / 低版本小程序用。
  * 一次请求拿完整 SSE 文本，再按事件逐条回放，最终一次性给出全文。
  */
-function chatOnce({ message, conversationId, onMeta, onOffer, onChunk, onDone, onError }) {
+function chatOnce({ message, conversationId, onMeta, onOffer, onProducts, onChunk, onDone, onError }) {
 	let fullText = ''
 	let convId = conversationId || null
 	let failed = null
@@ -198,6 +202,8 @@ function chatOnce({ message, conversationId, onMeta, onOffer, onChunk, onDone, o
 					}
 				} else if (ev.type === 'handoff_offer') {
 					onOffer && onOffer({ conversationId: ev.conversationId || convId, text: ev.text || '' })
+				} else if (ev.type === 'products') {
+					onProducts && onProducts(ev.items || [])
 				} else if (ev.type === 'token') {
 					const piece = ev.text || ''
 					fullText += piece

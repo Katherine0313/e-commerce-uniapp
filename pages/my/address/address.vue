@@ -78,7 +78,7 @@
 			},
 			// 编辑地址（点卡片本身或编辑按钮都进）
 			goEdit(item) {
-				uni.navigateTo({ url: '/pages/my/address-edit?id=' + item.id })
+				uni.navigateTo({ url: '/pages/my/address/address-edit?id=' + item.id })
 			},
 			// 设为默认地址
 			toggleDefault(item) {

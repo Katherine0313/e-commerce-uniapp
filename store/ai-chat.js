@@ -320,6 +320,13 @@ export const useAiChatStore = defineStore('aiChat', {
 								msg.handoffText = ''
 							}
 						},
+						onProducts: (items) => {
+							const msg = this.messages[idx]
+							if (msg && items && items.length) {
+								// 挂在当前气泡上，渲染成可点的商品卡片
+								msg.products = items
+							}
+						},
 						onChunk: (piece) => {
 							const msg = this.messages[idx]
 							if (!msg) return

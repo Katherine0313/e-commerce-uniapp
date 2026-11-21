@@ -14,6 +14,9 @@
 				<!-- 首页轮播图：后台配置的 Banner（position=1），没配时用组件自带的默认图 -->
 				<CustomSwiper :list="bannerList.length ? bannerList : undefined" @click="handleBannerClick" />
 
+				<!-- 限时秒杀楼层：只有进行中的活动才显示，没有活动时整个楼层隐藏 -->
+				<SeckillFloor />
+
 				<!-- 前台分类面板：手机 / 电脑 / 平板 / 耳机音箱 / 手表 / 相机 / 数码配件 / 智能家居 -->
 				<CategoryPanel ref="categoryPanel" :list="categories" :limit="8" @select="handleCategorySelect" />
 				<!-- 热门推荐：点商品图跳商品详情页；下拉刷新会换这一批商品 -->
@@ -34,6 +37,8 @@
 	import CategoryPanel from './component/category-panel.vue'
 	// 热门推荐
 	import HotPanel from './component/hot-panel.vue'
+	// 限时秒杀楼层（无进行中活动时自动隐藏）
+	import SeckillFloor from './component/seckill-floor.vue'
 	import { getHome } from '../../api/home.js'
 	import { getHotProducts } from '../../api/product.js'
 	import { getBanners } from '../../api/banner.js'
@@ -49,7 +54,8 @@
 	export default {
 		components: {
 			CategoryPanel,
-			HotPanel
+			HotPanel,
+			SeckillFloor
 		},
 		data() {
 			return {

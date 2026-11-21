@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿﻿﻿﻿﻿<template>
 <view class="page">
 		<CustomNavbar title="个人信息" :show-back="true" />
 
@@ -29,10 +29,10 @@
 					<uni-icons type="right" size="14" color="#c0c0c0"></uni-icons>
 				</view>
 
-				<!-- 手机号：已绑定显示脱敏号码；未绑定走微信手机号授权 -->
+				<!-- 手机号：已绑定显示完整号码；未绑定走微信手机号授权 -->
 				<view class="row">
 					<text class="label">手机号</text>
-					<text v-if="form.phone" class="value">{{ maskPhone(form.phone) }}</text>
+					<text v-if="form.phone" class="value">{{ form.phone }}</text>
 					<button v-else open-type="getPhoneNumber" @getphonenumber="onGetPhone" class="bind-btn">去绑定</button>
 				</view>
 			</view>
@@ -57,7 +57,7 @@
 <script>
 	import { useUserStore } from '../../../store/user.js'
 	import { ensureLogin, login, logout, isManualLogout } from '../../../utils/auth.js'
-	import { getProfile, uploadAvatar, updateName, bindPhone, deactivateAccount } from '../../../api/login.js'
+	import { getProfile, uploadAvatar, saveAvatar, updateName, bindPhone, deactivateAccount } from '../../../api/login.js'
 	import { parseOrderTime } from '../../../utils/format.js'
 
 	export default {
@@ -173,26 +173,25 @@
 					// 登录失败提示已在 request 封装里统一处理
 				})
 			},
-			// 换头像：chooseAvatar 给的是本地临时路径，必须上传后端换成可访问 URL
+			// 换头像：chooseAvatar 给本地临时路径，先上传拿 URL，再存 DB，最后更新 Pinia
 			onChooseAvatar(e) {
 				const filePath = e.detail.avatarUrl
 				if (!filePath) {
 					return
 				}
-				uploadAvatar(filePath).then((url) => {
-					this.form.avatar = url
-					this.store.setAvatar(url)
-					uni.showToast({
-						title: '头像已更新',
-						icon: 'success'
+				uploadAvatar(filePath)
+					.then((url) => saveAvatar(url))      // 拿到 URL 后存进 user.avatar
+					.then((url) => {
+						this.form.avatar = url
+						this.store.setAvatar(url)
+						uni.showToast({ title: '头像已更新', icon: 'success' })
 					})
-				}).catch((err) => {
-					// uploadAvatar 不走 request 封装，错误提示要自己来
-					uni.showToast({
-						title: (err && err.message) || '头像上传失败',
-						icon: 'none'
+					.catch((err) => {
+						uni.showToast({
+							title: (err && err.message) || '头像上传失败',
+							icon: 'none'
+						})
 					})
-				})
 			},
 			// 保存昵称：为空回退，没改动不发请求
 			saveName() {
@@ -247,10 +246,6 @@
 				}).catch(() => {
 					// 错误提示已在 request 封装里统一处理
 				})
-			},
-			// 手机号脱敏：138****8000，非 11 位原样返回
-			maskPhone(phone) {
-				return String(phone || '').replace(/^(\d{3})\d{4}(\d{4})$/, '$1****$2')
 			},
 			// 注册时间展示：兼容 Jackson 3 的 ISO 字符串 / 数组两种序列化
 			formatCreateTime(t) {

@@ -29,6 +29,46 @@ HBuilderX 编译 → unpackage/dist/build/mp-weixin
 - 后端接口改动**必须先发后端**（`./deploy/release.sh <svc>`，auth-service 最后），再传小程序包
 - 提审需要：完整录屏 + 三个合法域名（request / uploadFile / downloadFile）都指向 `https://api.jiemids.com`
 
+## 会话 32：2026-11-14（静默登录响应口径对齐）
+
+### 背景
+
+`WxLoginVO` 只有 `token` / `id` / `avatar`——微信静默登录只能换 openid，昵称和手机号拿不到，
+但前端 `utils/auth.js` 一直读 `res.name`，恒为 `undefined`；`docs/avatar-upload.md` 的接口字段表
+也还是旧契约（写有 `name`、`idNumber`），并指向已废弃的 `e-commerce-boot/docs/openapi.yaml`。
+
+### 已执行操作
+
+1. `utils/auth.js`：`setUserInfo` 去掉 `name: res.name`，登录只取 `token` / `id` / `avatar`；
+   昵称与手机号统一由 `/api/user/profile` 补齐（`my.vue`、`login-popup.vue` 已是这个写法）。
+2. `docs/avatar-upload.md`：更正接口字段表（`/api/wxlogin` **无 `name`**；`UserProfileVO` 是 `username` 不是 `idNumber`），
+   补「登录响应只拿 token/id/avatar，资料一律走 `/api/user/profile`」的说明；
+   `openapi.yaml` 引用改为后端 Swagger 入口（`e-commerce-boot/docs/swagger-addresses.md`）。
+
+### 改动的文件
+
+| 文件 | 改动 |
+|------|------|
+| `utils/auth.js` | 去掉 `name: res.name` |
+| `docs/avatar-upload.md` | 接口字段表更正 + Swagger 引用替换 |
+| `docs/planning/findings.md` | 待办第 10 条、探索问题第 6 条标记为已解决 |
+| `docs/planning/progress.md` | 会话 16 遗留事项标记为已解决 + 本条 |
+
+### 评估后决定不动
+
+- **后端 `WxLoginVO` 不加 `name` 字段**：静默登录那一刻 `User.name` 大概率就是 null（首次建档昵称没值），
+  加回去仍是空，治标不治本。
+- **后端 `WxLoginVO` 与 `PcLoginVO` 不合并**：两端凭据不同（微信 openid vs 账号密码/短信验证码），
+  字段可得性不同，属于各自独立的接口契约，不是重复造轮子。
+
+### 遗留事项
+
+- `docs/avatar-upload.md` 的「前端实现要点」一节仍写着 `utils/server-api.js` 里放 `wxLogin` / `getProfile`，
+  实际这些已挪到 `api/login.js`（`server-api.js` 现在只导出 `BASE_URL` 和 `request`）；
+  `pages/index/index.vue` 的登录代码也早已清理。属另一批文档漂移，本轮未动。
+
+---
+
 ## 会话 31：2026-11-02（商品详情页评价区）
 
 ### 当前状态
@@ -551,8 +591,9 @@ toast 占位，既没有登录判断也没有真请求；同时 `pages/index/ind
 - **增值保障没有落库**：`AddCartDTO` 只有 `productId` / `quantity`，`CartServiceImpl.addItem` 里
   `insuranceDetail("[]")` / `insuranceFee(BigDecimal.ZERO)` 是硬编码的。`ProductPopup` 的
   `insuranceDetail` / `insuranceFee` 两个 computed 先留着，等后端补 DTO 字段后直接加进请求体。
-- `utils/auth.js:12` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 只有 `token` / `id` / `avatar`，
-  没有 `name`）。消费方都已兜住，按「不做健壮性改进」不动它。
+- ~~`utils/auth.js` 的 `name: res.name` 恒为 `undefined`（`WxLoginVO` 只有 `token` / `id` / `avatar`，
+  没有 `name`）。~~ **已解决（2026-11-14）**：前端不再读 `res.name`，登录只取 `token` / `id` / `avatar`，
+  昵称与手机号统一由 `/api/user/profile` 补齐。
 - `pages/cart/cart.vue` 仍是占位页，购物车列表未开发（后端 `GET /api/cart` 已有）。
 
 ---

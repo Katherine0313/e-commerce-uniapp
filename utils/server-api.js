@@ -1,4 +1,5 @@
 import { getToken, clearToken } from "./token.js"
+import { useUserStore } from "../store/user.js"
 
 // 后端 API 网关地址：前端所有请求统一走网关，不直连各微服务端口。
 // 网关按 /api/** 前缀路由到下游服务，各微服务的端口对前端透明，无需（也不应）为每个模块单独配地址。
@@ -28,9 +29,14 @@ export function request(url, options = {}){
 		header
 	}).then((res) => {
 		const code = res.statusCode
-		// 401/403：token 失效或不可用（本项目 token 不匹配时返回 403），先清掉本地 token
+		// 401/403：token 失效或不可用（本项目 token 不匹配时返回 403）
+		// 必须同时清掉 Storage 和 Pinia 内存里的 token：只清 Storage 时 store.token 仍是旧值，
+		// isLogin 会一直是 true，ensureLogin 不再静默重登，本次会话后续请求全部 401
 		if(code === 401 || code === 403){
 			clearToken()
+			try {
+				useUserStore().logout()
+			} catch (e) {}
 			throw { statusCode: 401, message: '登录已过期，请重新登录' }
 		}
 		// 其余非 2xx（网关 502、后端 500 等）：带上状态码，不与业务错误混淆

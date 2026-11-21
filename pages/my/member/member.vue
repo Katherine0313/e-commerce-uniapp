@@ -88,7 +88,7 @@
 					.catch(() => {})
 			},
 			goCoupons() {
-				uni.navigateTo({ url: '/pages/my/coupons/coupon-center' })
+				uni.navigateTo({ url: '/pages/coupon/coupon-center' })
 			}
 		}
 	}

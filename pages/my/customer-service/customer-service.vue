@@ -50,6 +50,22 @@
 								@click="goFeedback"
 							>去意见反馈</button>
 						</view>
+						<!-- 查到的商品：横向卡片，点进去看详情 -->
+						<view v-if="msg.products && msg.products.length" class="prod-list">
+							<view
+								v-for="p in msg.products"
+								:key="p.id"
+								class="prod-card"
+								@click="goProduct(p.id)"
+							>
+								<image class="prod-img" :src="prodImg(p)" mode="aspectFill" lazy-load></image>
+								<text class="prod-name">{{ p.name }}</text>
+								<view class="prod-bottom">
+									<text class="prod-price">¥{{ prodPrice(p.price) }}</text>
+									<text v-if="p.originalPrice" class="prod-origin">¥{{ prodPrice(p.originalPrice) }}</text>
+								</view>
+							</view>
+						</view>
 					</view>
 					<!-- 用户头像：气泡右侧；没拉到微信头像时用「微」占位 -->
 					<image
@@ -103,6 +119,10 @@
 	import {
 		useUserStore
 	} from '../../../store/user.js'
+	import {
+		goodsImgUrl,
+		fmtMoney
+	} from '../../../utils/format.js'
 
 	export default {
 		data() {
@@ -179,6 +199,19 @@
 			goFeedback() {
 				uni.navigateTo({
 					url: '/pages/my/feedback/feedback'
+				})
+			},
+			// 商品卡片：图走 goodsImgUrl 补全域名，价格统一两位小数
+			prodImg(p) {
+				return goodsImgUrl(p && p.mainImage, p && p.id)
+			},
+			prodPrice(v) {
+				return fmtMoney(v)
+			},
+			goProduct(id) {
+				if (!id) return
+				uni.navigateTo({
+					url: '/pages/order/detail?id=' + id
 				})
 			}
 		}
@@ -371,6 +404,58 @@
 		background: #ffffff;
 		color: #ff6700;
 		border: 1rpx solid #ff6700;
+	}
+
+	/* 商品卡片：横向可滑动，避免长列表把气泡撑高 */
+	.prod-list {
+		margin-top: 16rpx;
+		white-space: nowrap;
+		overflow-x: auto;
+	}
+
+	.prod-card {
+		display: inline-block;
+		width: 200rpx;
+		margin-right: 16rpx;
+		vertical-align: top;
+		white-space: normal;
+	}
+
+	.prod-img {
+		width: 200rpx;
+		height: 200rpx;
+		border-radius: 12rpx;
+		background: #f5f5f5;
+	}
+
+	.prod-name {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		overflow: hidden;
+		margin-top: 8rpx;
+		font-size: 24rpx;
+		line-height: 1.4;
+		color: #333333;
+	}
+
+	.prod-bottom {
+		display: flex;
+		align-items: baseline;
+		margin-top: 4rpx;
+	}
+
+	.prod-price {
+		font-size: 26rpx;
+		font-weight: 600;
+		color: #ff6700;
+	}
+
+	.prod-origin {
+		margin-left: 8rpx;
+		font-size: 22rpx;
+		color: #bbbbbb;
+		text-decoration: line-through;
 	}
 
 	/* ═══ 快捷问题 ═══ */
