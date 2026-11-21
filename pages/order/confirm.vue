@@ -496,6 +496,8 @@
 				if (max != null && item.quantity > max) {
 					item.quantity = Math.max(1, max)
 				}
+				// 规格价格不同，重新拉券 + 报价
+				this.refreshCouponQuote()
 			},
 			// 数量变化：受库存上限约束
 			setItemQuantity(item, n) {
@@ -508,6 +510,8 @@
 					return
 				}
 				item.quantity = n
+				// 金额变化会影响券门槛与优惠，重新拉券 + 报价
+				this.refreshCouponQuote()
 			},
 			// ===== 增值保障：从商品详情页迁入，按件勾选 =====
 			// 详情页原有的 insuranceDetail / insuranceFee 两个 computed 在这里改为按件派生：
@@ -620,6 +624,25 @@
 						if (best) {
 							this.selectedCouponId = best.userCouponId
 							this.selectedCoupon = best
+						}
+					})
+					.catch(() => {})
+					.then(() => this.loadQuote())
+			},
+			// 数量 / 规格变化后重算：门槛随金额变化，需重新拉可用券；保留仍可用的已选券，否则自动选最优
+			refreshCouponQuote() {
+				if (!this.items.length) return
+				ensureLogin()
+					.then(() => getAvailableCoupons(this.quoteItems()))
+					.then((list) => {
+						this.availableCoupons = list || []
+						const kept = (list || []).find(c => c.userCouponId === this.selectedCouponId && c.usable)
+						if (kept) {
+							this.selectedCoupon = kept
+						} else {
+							const best = (list || []).find(c => c.usable)
+							this.selectedCouponId = best ? best.userCouponId : null
+							this.selectedCoupon = best || null
 						}
 					})
 					.catch(() => {})
